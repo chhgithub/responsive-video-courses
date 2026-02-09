@@ -83,6 +83,35 @@ const [Form, formApi] = useVbenForm({
       rules: 'required',
     },
     {
+      component: 'Select',
+      componentProps: {
+        placeholder: '请选择课程类型',
+        options: [
+          { label: '微课程', value: 'micro' },
+          { label: '公益课程', value: 'public' },
+          { label: '付费课程', value: 'paid' },
+          { label: '科研赋能', value: 'research' },
+          { label: 'K12集训', value: 'k12' },
+          { label: '成人集训', value: 'adult' },
+        ],
+      },
+      fieldName: 'courseType',
+      label: '课程类型',
+    },
+    {
+      component: 'Select',
+      componentProps: {
+        placeholder: '请选择难度等级',
+        options: [
+          { label: '初级', value: 'beginner' },
+          { label: '中级', value: 'intermediate' },
+          { label: '高级', value: 'advanced' },
+        ],
+      },
+      fieldName: 'difficulty',
+      label: '难度等级',
+    },
+    {
       component: 'InputNumber',
       componentProps: {
         placeholder: '0',
@@ -112,6 +141,38 @@ const [Form, formApi] = useVbenForm({
       },
       fieldName: 'isFree',
       label: '免费课程',
+    },
+    {
+      component: 'Switch',
+      componentProps: {
+        checkedChildren: '是',
+        unCheckedChildren: '否',
+      },
+      fieldName: 'isTrial',
+      label: '可试看',
+    },
+    {
+      component: 'InputNumber',
+      componentProps: {
+        placeholder: '试看时长（秒）',
+        min: 0,
+        class: 'w-full',
+      },
+      fieldName: 'trialDuration',
+      label: '试看时长',
+      dependencies: {
+        show: (values) => values.isTrial === true,
+      },
+    },
+    {
+      component: 'InputNumber',
+      componentProps: {
+        placeholder: '0表示永久',
+        min: 0,
+        class: 'w-full',
+      },
+      fieldName: 'validDays',
+      label: '有效期（天）',
     },
     {
       component: 'ImageUpload',
@@ -150,8 +211,9 @@ const [Form, formApi] = useVbenForm({
       componentProps: {
         placeholder: '请选择状态',
         options: [
-          { label: '上架', value: 'published' },
-          { label: '下架', value: 'draft' },
+          { label: '草稿', value: 'draft' },
+          { label: '已发布', value: 'published' },
+          { label: '已下架', value: 'offline' },
         ],
       },
       fieldName: 'status',

@@ -189,6 +189,21 @@ export const drawerSchema: FormSchemaGetter = () => [
     label: '菜单类型',
   },
   {
+    component: 'RadioGroup',
+    componentProps: {
+      buttonStyle: 'solid',
+      options: [
+        { label: '后台管理', value: 'admin' },
+        { label: '前台展示', value: 'portal' },
+      ],
+      optionType: 'button',
+    },
+    defaultValue: 'admin',
+    fieldName: 'scope',
+    label: '菜单范围',
+    help: '区分前台和后台菜单',
+  },
+  {
     component: 'Input',
     dependencies: {
       // 类型不为按钮时显示
@@ -303,6 +318,25 @@ export const drawerSchema: FormSchemaGetter = () => [
     fieldName: 'isFrame',
     help: '外链为http(s)://开头\n 选择否时, 使用iframe从内部打开页面, 否则新窗口打开',
     label: '是否外链',
+  },
+  {
+    component: 'CheckboxGroup',
+    componentProps: {
+      options: [
+        { label: '移动端', value: 'mobile' },
+        { label: '平板', value: 'tablet' },
+        { label: '桌面', value: 'desktop' },
+      ],
+    },
+    defaultValue: ['mobile', 'tablet', 'desktop'],
+    dependencies: {
+      // 类型不为按钮时显示
+      show: (values) => values.menuType !== 'F',
+      triggerFields: ['menuType'],
+    },
+    fieldName: 'responsive',
+    label: '响应式显示',
+    help: '选择菜单在哪些设备上显示',
   },
   {
     component: 'RadioGroup',

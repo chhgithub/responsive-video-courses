@@ -9,8 +9,8 @@ import {
   getIntroductionByType,
   introductionAdd,
   introductionUpdate,
+  IntroductionTypeMap,
 } from '#/api/introduction';
-import { IntroductionTypeMap } from '#/api/introduction/model';
 import Tinymce from '#/components/tinymce/src/editor.vue';
 
 const emit = defineEmits<{ reload: [] }>();

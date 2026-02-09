@@ -1,6 +1,6 @@
 import type { VxeGridProps } from '#/adapter/vxe-table';
 
-import { IntroductionTypeMap } from '#/api/introduction/model';
+import { IntroductionTypeMap } from '#/api/introduction';
 
 export const columns: VxeGridProps['columns'] = [
   { type: 'checkbox', width: 50 },

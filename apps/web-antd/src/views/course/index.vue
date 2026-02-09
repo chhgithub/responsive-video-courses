@@ -14,12 +14,96 @@ import { Image, message, Popconfirm, Space, Tag } from 'ant-design-vue';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
   categoryTree,
+  chapterList,
   courseList,
   courseRemove,
   teacherList,
 } from '#/api/course';
 
-import { columns, querySchema } from './data';
+import ChapterManager from './chapter-manager.vue';
+
+// 表格列配置
+const columns = [
+  { type: 'checkbox', width: 50 },
+  { field: 'courseId', title: 'ID', width: 80 },
+  { field: 'courseName', title: '课程名称', minWidth: 200 },
+  { field: 'categoryName', title: '分类', width: 120 },
+  { field: 'teacherName', title: '讲师', width: 120 },
+  { field: 'price', title: '价格', width: 120, slots: { default: 'price' } },
+  { field: 'viewCount', title: '观看次数', width: 100 },
+  { field: 'enrollCount', title: '报名人数', width: 100 },
+  { field: 'status', title: '状态', width: 100, slots: { default: 'status' } },
+  { field: 'createTime', title: '创建时间', width: 160 },
+  { field: 'action', title: '操作', width: 200, fixed: 'right', slots: { default: 'action' } },
+];
+
+// 查询表单配置
+const querySchema = () => [
+  {
+    component: 'Input',
+    fieldName: 'courseName',
+    label: '课程名称',
+    componentProps: {
+      placeholder: '请输入课程名称',
+    },
+  },
+  {
+    component: 'TreeSelect',
+    fieldName: 'categoryId',
+    label: '课程分类',
+    componentProps: {
+      placeholder: '请选择分类',
+      options: [],
+      treeCheckable: true,
+    },
+  },
+  {
+    component: 'Select',
+    fieldName: 'teacherId',
+    label: '讲师',
+    componentProps: {
+      placeholder: '请选择讲师',
+      options: [],
+    },
+  },
+  {
+    component: 'Select',
+    fieldName: 'status',
+    label: '状态',
+    componentProps: {
+      placeholder: '请选择状态',
+      options: [
+        { label: '上架', value: 'published' },
+        { label: '下架', value: 'draft' },
+      ],
+    },
+  },
+];
+
+// 章节管理相关
+const [ChapterDrawerComp, chapterDrawerApi] = useVbenDrawer({
+  title: '章节管理',
+  width: 600,
+  onOpened: () => {
+    // 章节管理逻辑
+  },
+});
+
+const showChapterManager = ref(false);
+const currentCourseId = ref<number>();
+const courseChapters = ref<any[]>([]);
+
+async function handleManageChapter(row: Course) {
+  currentCourseId.value = row.courseId;
+  // 加载章节数据
+  try {
+    const data = await chapterList(row.courseId);
+    courseChapters.value = data || [];
+  } catch {
+    courseChapters.value = [];
+  }
+  showChapterManager.value = true;
+}
 
 // 加载选项
 const categoryOptions = ref<any[]>([]);
@@ -248,6 +332,9 @@ function handleMultiDelete() {
           <a-button type="link" size="small" @click="handleEdit(row)">
             编辑
           </a-button>
+          <a-button type="link" size="small" @click="handleManageChapter(row)">
+            章节管理
+          </a-button>
           <Popconfirm
             :get-popup-container="getVxePopupContainer"
             placement="left"
@@ -260,5 +347,25 @@ function handleMultiDelete() {
       </template>
     </BasicTable>
     <CourseDrawerComp />
+
+    <!-- 章节管理弹窗 -->
+    <a-modal
+      v-model:open="showChapterManager"
+      title="章节管理"
+      width="600"
+      :footer="null"
+    >
+      <ChapterManager
+        v-if="showChapterManager && currentCourseId"
+        :course-id="currentCourseId"
+        :chapters="courseChapters"
+        @reload="async () => {
+          if (currentCourseId) {
+            const data = await chapterList(currentCourseId);
+            courseChapters.value = data || [];
+          }
+        }"
+      />
+    </a-modal>
   </Page>
 </template>
