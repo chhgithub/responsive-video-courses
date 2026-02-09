@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-
 import type { Course } from '#/api/course/model';
 
+import { onMounted, ref } from 'vue';
+
 import { courseList } from '#/api/course';
+
 import CourseCard from './components/CourseCard.vue';
 
 // 课程类型
@@ -62,17 +63,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="courses-page py-8 px-4 min-h-screen bg-gray-50">
+  <div class="courses-page min-h-screen bg-gray-50 px-4 py-8">
     <div class="container mx-auto">
       <!-- 页面标题 -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800">课程中心</h1>
-        <p class="text-gray-600 mt-2">精选优质课程，助力您快速成长</p>
+        <p class="mt-2 text-gray-600">精选优质课程，助力您快速成长</p>
       </div>
 
       <!-- 课程类型导航 -->
-      <div class="bg-white rounded-lg shadow-sm p-4 mb-6 overflow-x-auto">
-        <div class="flex gap-2 min-w-max">
+      <div class="mb-6 overflow-x-auto rounded-lg bg-white p-4 shadow-sm">
+        <div class="flex min-w-max gap-2">
           <a-button
             v-for="type in courseTypes"
             :key="type.value"
@@ -87,7 +88,10 @@ onMounted(() => {
 
       <!-- 课程列表 -->
       <a-spin :spinning="loading">
-        <div v-if="courses.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div
+          v-if="courses.length > 0"
+          class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
           <CourseCard
             v-for="course in courses"
             :key="course.courseId"
@@ -101,7 +105,7 @@ onMounted(() => {
       <div v-if="pagination.total > 0" class="mt-8 flex justify-center">
         <a-pagination
           v-model:current="pagination.current"
-          v-model:pageSize="pagination.pageSize"
+          v-model:page-size="pagination.pageSize"
           :total="pagination.total"
           :show-size-changer="false"
           :show-total="(total) => `共 ${total} 门课程`"

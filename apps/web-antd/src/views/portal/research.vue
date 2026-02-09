@@ -26,39 +26,51 @@ function handleEnroll(course: any) {
 </script>
 
 <template>
-  <div class="page-container py-8 px-4 min-h-screen bg-gray-50">
+  <div class="page-container min-h-screen bg-gray-50 px-4 py-8">
     <div class="container mx-auto">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800">科研赋能</h1>
-        <p class="text-gray-600 mt-2">提升科研能力，助力学术发展</p>
+        <p class="mt-2 text-gray-600">提升科研能力，助力学术发展</p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="course in courses"
           :key="course.id"
-          class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+          class="overflow-hidden rounded-lg bg-white shadow-sm transition-shadow hover:shadow-md"
         >
-          <img :src="course.cover" class="w-full h-48 object-cover" />
+          <img :src="course.cover" class="h-48 w-full object-cover" />
           <div class="p-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-2">{{ course.title }}</h3>
-            <p class="text-gray-600 mb-4">{{ course.description }}</p>
+            <h3 class="mb-2 text-xl font-bold text-gray-800">
+              {{ course.title }}
+            </h3>
+            <p class="mb-4 text-gray-600">{{ course.description }}</p>
             <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">讲师：{{ course.instructor }}</span>
-              <a-button type="primary" size="small" @click="handleEnroll(course)">
+              <span class="text-sm text-gray-500"
+                >讲师：{{ course.instructor }}</span
+              >
+              <a-button
+                type="primary"
+                size="small"
+                @click="handleEnroll(course)"
+              >
                 立即报名
               </a-button>
             </div>
-            <div class="flex gap-2 mt-4">
-              <a-tag v-for="tag in course.tags" :key="tag" color="blue">{{ tag }}</a-tag>
+            <div class="mt-4 flex gap-2">
+              <a-tag v-for="tag in course.tags" :key="tag" color="blue">
+                {{ tag }}
+              </a-tag>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 咨询表单 -->
-      <div class="mt-12 bg-white rounded-lg shadow-sm p-8 max-w-2xl mx-auto">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">课程咨询</h2>
+      <div class="mx-auto mt-12 max-w-2xl rounded-lg bg-white p-8 shadow-sm">
+        <h2 class="mb-4 text-center text-2xl font-bold text-gray-800">
+          课程咨询
+        </h2>
         <a-form layout="vertical">
           <a-form-item label="您的姓名">
             <a-input placeholder="请输入姓名" />

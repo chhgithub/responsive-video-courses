@@ -1,5 +1,4 @@
 import type { Introduction, IntroductionQuery } from './model';
-import type { IntroductionTypeMap } from './model';
 
 import type { ID, IDS, PageResult } from '#/api/common';
 

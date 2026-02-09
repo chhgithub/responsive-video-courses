@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { message, Modal } from 'ant-design-vue';
-
 import type { CourseChapter } from '#/api/course/model';
+
+import { computed, ref, watch } from 'vue';
+
+import { message, Modal } from 'ant-design-vue';
 
 import { chapterAdd, chapterRemove } from '#/api/course';
 
@@ -34,7 +35,7 @@ watch(
   (chapters) => {
     expandedKeys.value = chapters.map((c) => c.chapterId);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function handleAddChapter() {
@@ -110,17 +111,19 @@ async function handleToggleFree(chapter: CourseChapter) {
       <div
         v-for="chapter in chapters"
         :key="chapter.chapterId"
-        class="flex items-center justify-between p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow"
+        class="flex items-center justify-between rounded-lg border bg-white p-3 transition-shadow hover:shadow-sm"
       >
-        <div class="flex items-center gap-3 flex-1">
-          <span class="text-gray-400 w-6">{{ chapter.sortOrder }}</span>
+        <div class="flex flex-1 items-center gap-3">
+          <span class="w-6 text-gray-400">{{ chapter.sortOrder }}</span>
           <div class="flex-1">
             <div class="flex items-center gap-2">
               <span class="font-medium">{{ chapter.chapterName }}</span>
-              <a-tag v-if="chapter.isFree" color="green" size="small">免费</a-tag>
+              <a-tag v-if="chapter.isFree" color="green" size="small">
+                免费
+              </a-tag>
               <a-tag v-else color="default" size="small">收费</a-tag>
             </div>
-            <div class="text-xs text-gray-400 mt-1">
+            <div class="mt-1 text-xs text-gray-400">
               时长: {{ Math.floor(chapter.duration / 60) }}分钟
             </div>
           </div>

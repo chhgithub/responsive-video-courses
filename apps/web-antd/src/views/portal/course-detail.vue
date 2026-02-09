@@ -1,10 +1,8 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
 import type { Course, CourseChapter } from '#/api/course/model';
 
-import { courseInfo, chapterList } from '#/api/course';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
 const router = useRouter();
@@ -29,10 +27,11 @@ async function loadCourseDetail() {
     const courseId = Number(route.params.id);
     // 使用模拟数据
     course.value = {
-      courseId: courseId,
+      courseId,
       courseName: 'Vue3 从入门到精通',
       courseCover: 'https://picsum.photos/seed/vue/800/400',
-      courseIntro: '本课程全面讲解Vue3的核心概念和实战技巧，包括Composition API、响应式原理、组件通信、状态管理等核心内容。通过实际项目案例，帮助学员快速掌握Vue3开发技能。',
+      courseIntro:
+        '本课程全面讲解Vue3的核心概念和实战技巧，包括Composition API、响应式原理、组件通信、状态管理等核心内容。通过实际项目案例，帮助学员快速掌握Vue3开发技能。',
       categoryId: 1,
       categoryName: '前端开发',
       teacherId: 1,
@@ -56,11 +55,41 @@ async function loadCourseDetail() {
 
     // 加载章节列表
     chapters.value = [
-      { chapterId: 1, chapterName: 'Vue3简介与环境搭建', duration: 600, isFree: true, sortOrder: 1 },
-      { chapterId: 2, chapterName: 'Composition API基础', duration: 1200, isFree: false, sortOrder: 2 },
-      { chapterId: 3, chapterName: '响应式原理深入', duration: 1800, isFree: false, sortOrder: 3 },
-      { chapterId: 4, chapterName: '组件通信方式', duration: 1500, isFree: false, sortOrder: 4 },
-      { chapterId: 5, chapterName: '状态管理Pinia', duration: 2100, isFree: false, sortOrder: 5 },
+      {
+        chapterId: 1,
+        chapterName: 'Vue3简介与环境搭建',
+        duration: 600,
+        isFree: true,
+        sortOrder: 1,
+      },
+      {
+        chapterId: 2,
+        chapterName: 'Composition API基础',
+        duration: 1200,
+        isFree: false,
+        sortOrder: 2,
+      },
+      {
+        chapterId: 3,
+        chapterName: '响应式原理深入',
+        duration: 1800,
+        isFree: false,
+        sortOrder: 3,
+      },
+      {
+        chapterId: 4,
+        chapterName: '组件通信方式',
+        duration: 1500,
+        isFree: false,
+        sortOrder: 4,
+      },
+      {
+        chapterId: 5,
+        chapterName: '状态管理Pinia',
+        duration: 2100,
+        isFree: false,
+        sortOrder: 5,
+      },
     ] as CourseChapter[];
   } finally {
     loading.value = false;
@@ -70,7 +99,9 @@ async function loadCourseDetail() {
 // 开始学习
 function goToLearn() {
   if (chapters.value.length > 0) {
-    router.push(`/portal/player/${course.value?.courseId}/${chapters.value[0].chapterId}`);
+    router.push(
+      `/portal/player/${course.value?.courseId}/${chapters.value[0].chapterId}`,
+    );
   }
 }
 
@@ -78,7 +109,9 @@ function goToLearn() {
 function goToTrial() {
   const freeChapter = chapters.value.find((c) => c.isFree);
   if (freeChapter) {
-    router.push(`/portal/player/${course.value?.courseId}/${freeChapter.chapterId}`);
+    router.push(
+      `/portal/player/${course.value?.courseId}/${freeChapter.chapterId}`,
+    );
   }
 }
 
@@ -90,7 +123,9 @@ function purchaseCourse() {
 // 播放章节
 function playChapter(chapter: CourseChapter) {
   if (chapter.isFree || userPermission.value === 'owned') {
-    router.push(`/portal/player/${course.value?.courseId}/${chapter.chapterId}`);
+    router.push(
+      `/portal/player/${course.value?.courseId}/${chapter.chapterId}`,
+    );
   } else {
     purchaseCourse();
   }
@@ -113,23 +148,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="course-detail-page bg-gray-50 min-h-screen">
+  <div class="course-detail-page min-h-screen bg-gray-50">
     <a-spin :spinning="loading">
       <div v-if="course" class="container mx-auto px-4 py-8">
         <!-- 课程信息 -->
-        <div class="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-0">
+        <div class="mb-6 overflow-hidden rounded-lg bg-white shadow-sm">
+          <div class="grid grid-cols-1 gap-0 lg:grid-cols-3">
             <!-- 封面 -->
             <div class="lg:col-span-1">
-              <img :src="course.courseCover" class="w-full h-64 lg:h-full object-cover" />
+              <img
+                :src="course.courseCover"
+                class="h-64 w-full object-cover lg:h-full"
+              />
             </div>
             <!-- 信息 -->
-            <div class="lg:col-span-2 p-6">
-              <h1 class="text-2xl lg:text-3xl font-bold text-gray-800 mb-4">
+            <div class="p-6 lg:col-span-2">
+              <h1 class="mb-4 text-2xl font-bold text-gray-800 lg:text-3xl">
                 {{ course.courseName }}
               </h1>
 
-              <div class="flex flex-wrap items-center gap-4 mb-4 text-sm text-gray-600">
+              <div
+                class="mb-4 flex flex-wrap items-center gap-4 text-sm text-gray-600"
+              >
                 <span class="flex items-center gap-1">
                   <span class="icon">👁</span> {{ course.viewCount }} 次观看
                 </span>
@@ -144,15 +184,25 @@ onMounted(() => {
                 </span>
               </div>
 
-              <p class="text-gray-600 mb-6">{{ course.courseIntro }}</p>
+              <p class="mb-6 text-gray-600">{{ course.courseIntro }}</p>
 
               <!-- 标签 -->
-              <div class="flex flex-wrap gap-2 mb-6">
-                <a-tag v-for="tag in (course as any).tags" :key="tag" color="blue">
+              <div class="mb-6 flex flex-wrap gap-2">
+                <a-tag
+                  v-for="tag in (course as any).tags"
+                  :key="tag"
+                  color="blue"
+                >
                   {{ tag }}
                 </a-tag>
                 <a-tag v-if="(course as any).difficulty" color="purple">
-                  {{ (course as any).difficulty === 'beginner' ? '初级' : (course as any).difficulty === 'intermediate' ? '中级' : '高级' }}
+                  {{
+                    (course as any).difficulty === 'beginner'
+                      ? '初级'
+                      : (course as any).difficulty === 'intermediate'
+                        ? '中级'
+                        : '高级'
+                  }}
                 </a-tag>
                 <a-tag v-if="(course as any).validDays" color="green">
                   有效期 {{ (course as any).validDays }} 天
@@ -162,17 +212,23 @@ onMounted(() => {
               <!-- 价格和操作 -->
               <div class="flex items-center gap-4">
                 <div class="text-3xl font-bold text-red-500">
-                  {{ course.isFree || course.price === 0 ? '免费' : `¥${course.price}` }}
+                  {{
+                    course.isFree || course.price === 0
+                      ? '免费'
+                      : `¥${course.price}`
+                  }}
                 </div>
                 <div
-                  v-if="course.originalPrice && course.originalPrice > course.price"
+                  v-if="
+                    course.originalPrice && course.originalPrice > course.price
+                  "
                   class="text-xl text-gray-400 line-through"
                 >
                   ¥{{ course.originalPrice }}
                 </div>
               </div>
 
-              <div class="flex flex-wrap gap-3 mt-6">
+              <div class="mt-6 flex flex-wrap gap-3">
                 <template v-if="userPermission === 'owned' || course.isFree">
                   <a-button type="primary" size="large" @click="goToLearn">
                     开始学习
@@ -197,34 +253,48 @@ onMounted(() => {
         </div>
 
         <!-- 课程目录 -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-          <h2 class="text-xl font-bold text-gray-800 mb-4">课程目录</h2>
+        <div class="rounded-lg bg-white p-6 shadow-sm">
+          <h2 class="mb-4 text-xl font-bold text-gray-800">课程目录</h2>
           <div class="space-y-3">
             <div
               v-for="chapter in chapters"
               :key="chapter.chapterId"
-              class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              class="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors hover:bg-gray-50"
               @click="playChapter(chapter)"
             >
               <div class="flex-1">
                 <div class="flex items-center gap-2">
-                  <span class="text-gray-400 w-6">{{ chapter.sortOrder }}.</span>
-                  <span class="font-medium text-gray-800">{{ chapter.chapterName }}</span>
-                  <a-tag v-if="chapter.isFree" color="green" size="small">免费</a-tag>
-                  <a-tag v-else-if="!chapter.isFree && userPermission !== 'owned'" color="red" size="small">
+                  <span class="w-6 text-gray-400">{{ chapter.sortOrder }}.</span>
+                  <span class="font-medium text-gray-800">{{
+                    chapter.chapterName
+                  }}</span>
+                  <a-tag v-if="chapter.isFree" color="green" size="small">
+                    免费
+                  </a-tag>
+                  <a-tag
+                    v-else-if="!chapter.isFree && userPermission !== 'owned'"
+                    color="red"
+                    size="small"
+                  >
                     <span class="icon">🔒</span> 锁定
                   </a-tag>
                 </div>
-                <div class="text-sm text-gray-400 mt-1 ml-8">
+                <div class="ml-8 mt-1 text-sm text-gray-400">
                   时长: {{ formatDuration(chapter.duration) }}
                 </div>
               </div>
               <a-button
-                :type="chapter.isFree || userPermission === 'owned' ? 'primary' : 'default'"
+                :type="
+                  chapter.isFree || userPermission === 'owned'
+                    ? 'primary'
+                    : 'default'
+                "
                 :disabled="!chapter.isFree && userPermission !== 'owned'"
                 size="small"
               >
-                {{ chapter.isFree || userPermission === 'owned' ? '播放' : '锁定' }}
+                {{
+                  chapter.isFree || userPermission === 'owned' ? '播放' : '锁定'
+                }}
               </a-button>
             </div>
           </div>

@@ -34,7 +34,13 @@ const columns = [
   { field: 'enrollCount', title: '报名人数', width: 100 },
   { field: 'status', title: '状态', width: 100, slots: { default: 'status' } },
   { field: 'createTime', title: '创建时间', width: 160 },
-  { field: 'action', title: '操作', width: 200, fixed: 'right', slots: { default: 'action' } },
+  {
+    field: 'action',
+    title: '操作',
+    width: 200,
+    fixed: 'right',
+    slots: { default: 'action' },
+  },
 ];
 
 // 查询表单配置
@@ -359,12 +365,14 @@ function handleMultiDelete() {
         v-if="showChapterManager && currentCourseId"
         :course-id="currentCourseId"
         :chapters="courseChapters"
-        @reload="async () => {
-          if (currentCourseId) {
-            const data = await chapterList(currentCourseId);
-            courseChapters.value = data || [];
+        @reload="
+          async () => {
+            if (currentCourseId) {
+              const data = await chapterList(currentCourseId);
+              courseChapters.value = data || [];
+            }
           }
-        }"
+        "
       />
     </a-modal>
   </Page>

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-
 import type { Course } from '#/api/course/model';
+
+import { onMounted, ref } from 'vue';
 
 import { courseList } from '#/api/course';
 import CourseCard from '#/views/portal/components/CourseCard.vue';
@@ -36,7 +36,10 @@ onMounted(() => {
 <template>
   <div class="p-6">
     <a-spin :spinning="loading">
-      <div v-if="myCourses.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        v-if="myCourses.length > 0"
+        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      >
         <CourseCard
           v-for="course in myCourses"
           :key="course.courseId"

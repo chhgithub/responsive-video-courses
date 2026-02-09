@@ -42,8 +42,8 @@ async function loadOrders() {
   }, 500);
 }
 
-function getStatusText(status: string): { text: string; color: string } {
-  const statusMap: Record<string, { text: string; color: string }> = {
+function getStatusText(status: string): { color: string; text: string } {
+  const statusMap: Record<string, { color: string; text: string }> = {
     pending: { text: '待支付', color: 'orange' },
     completed: { text: '已完成', color: 'green' },
     cancelled: { text: '已取消', color: 'red' },
@@ -64,19 +64,28 @@ onMounted(() => {
         <div
           v-for="order in orders"
           :key="order.orderId"
-          class="border rounded-lg p-4 hover:shadow-md transition-shadow"
+          class="rounded-lg border p-4 transition-shadow hover:shadow-md"
         >
           <div class="flex items-start justify-between">
             <div class="flex gap-4">
-              <img :src="order.courseCover" class="w-24 h-16 object-cover rounded" />
+              <img
+                :src="order.courseCover"
+                class="h-16 w-24 rounded object-cover"
+              />
               <div>
-                <h3 class="font-semibold text-gray-800">{{ order.courseName }}</h3>
-                <p class="text-sm text-gray-500 mt-1">订单号：{{ order.orderId }}</p>
+                <h3 class="font-semibold text-gray-800">
+                  {{ order.courseName }}
+                </h3>
+                <p class="mt-1 text-sm text-gray-500">
+                  订单号：{{ order.orderId }}
+                </p>
                 <p class="text-sm text-gray-500">{{ order.createTime }}</p>
               </div>
             </div>
             <div class="text-right">
-              <div class="text-xl font-bold text-red-500">¥{{ order.amount }}</div>
+              <div class="text-xl font-bold text-red-500">
+                ¥{{ order.amount }}
+              </div>
               <div class="text-sm text-gray-500">{{ order.paymentMethod }}</div>
               <a-tag :color="getStatusText(order.status).color" class="mt-2">
                 {{ getStatusText(order.status).text }}

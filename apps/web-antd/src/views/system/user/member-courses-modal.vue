@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import type { Course } from '#/api/course/model';
+
+import { computed, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
-
-import type { Course } from '#/api/course/model';
 
 import { Image, Tag } from 'ant-design-vue';
 
@@ -37,9 +37,9 @@ const memberLevel = computed(() => {
 // 计算会员状态颜色
 const memberLevelColor = computed(() => {
   const colors: Record<string, string> = {
-    '注册用户': 'default',
-    'VIP会员': 'blue',
-    'SVIP会员': 'gold',
+    注册用户: 'default',
+    VIP会员: 'blue',
+    SVIP会员: 'gold',
   };
   return colors[memberLevel.value] || 'default';
 });
@@ -99,13 +99,13 @@ defineExpose({
   <Modal>
     <div class="space-y-6">
       <!-- 会员信息 -->
-      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-4">
         <div>
           <div class="text-lg font-semibold">{{ props.userName }}</div>
-          <div class="text-gray-500 mt-1">用户ID: {{ props.userId }}</div>
+          <div class="mt-1 text-gray-500">用户ID: {{ props.userId }}</div>
         </div>
         <div>
-          <Tag :color="memberLevelColor" class="text-lg px-4 py-1">
+          <Tag :color="memberLevelColor" class="px-4 py-1 text-lg">
             {{ memberLevel }}
           </Tag>
         </div>
@@ -117,7 +117,7 @@ defineExpose({
           <div
             v-for="course in userCourses"
             :key="course.courseId"
-            class="flex gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow"
+            class="flex gap-4 rounded-lg border p-4 transition-shadow hover:shadow-sm"
           >
             <Image
               :src="course.courseCover"
@@ -127,15 +127,21 @@ defineExpose({
               class="rounded"
             />
             <div class="flex-1">
-              <h3 class="font-semibold text-gray-800">{{ course.courseName }}</h3>
-              <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ course.courseIntro }}</p>
-              <div class="flex items-center gap-4 mt-3">
+              <h3 class="font-semibold text-gray-800">
+                {{ course.courseName }}
+              </h3>
+              <p class="mt-1 line-clamp-2 text-sm text-gray-500">
+                {{ course.courseIntro }}
+              </p>
+              <div class="mt-3 flex items-center gap-4">
                 <div class="flex-1">
-                  <div class="text-xs text-gray-500 mb-1">学习进度</div>
+                  <div class="mb-1 text-xs text-gray-500">学习进度</div>
                   <a-progress
                     :percent="course.progress || 0"
                     size="small"
-                    :stroke-color="course.progress === 100 ? '#52c41a' : undefined"
+                    :stroke-color="
+                      course.progress === 100 ? '#52c41a' : undefined
+                    "
                   />
                 </div>
                 <div class="text-right">
@@ -148,28 +154,34 @@ defineExpose({
             </div>
           </div>
         </div>
-        <a-empty
-          v-else
-          description="该用户暂无已购课程"
-          class="py-8"
-        />
+        <a-empty v-else description="该用户暂无已购课程" class="py-8" />
       </a-spin>
 
       <!-- 统计信息 -->
-      <div v-if="userCourses.length > 0" class="grid grid-cols-3 gap-4 pt-4 border-t">
+      <div
+        v-if="userCourses.length > 0"
+        class="grid grid-cols-3 gap-4 border-t pt-4"
+      >
         <div class="text-center">
-          <div class="text-2xl font-bold text-blue-600">{{ userCourses.length }}</div>
+          <div class="text-2xl font-bold text-blue-600">
+            {{ userCourses.length }}
+          </div>
           <div class="text-sm text-gray-500">已购课程</div>
         </div>
         <div class="text-center">
           <div class="text-2xl font-bold text-green-600">
-            {{ userCourses.filter(c => c.progress === 100).length }}
+            {{ userCourses.filter((c) => c.progress === 100).length }}
           </div>
           <div class="text-sm text-gray-500">已完成</div>
         </div>
         <div class="text-center">
           <div class="text-2xl font-bold text-purple-600">
-            {{ Math.round(userCourses.reduce((sum, c) => sum + (c.progress || 0), 0) / userCourses.length) }}%
+            {{
+              Math.round(
+                userCourses.reduce((sum, c) => sum + (c.progress || 0), 0) /
+                  userCourses.length,
+              )
+            }}%
           </div>
           <div class="text-sm text-gray-500">平均进度</div>
         </div>

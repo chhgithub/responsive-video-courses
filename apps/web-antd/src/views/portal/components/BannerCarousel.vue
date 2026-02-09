@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
+
 import { Carousel } from 'ant-design-vue';
 
 interface Banner {
@@ -27,8 +28,18 @@ function handleBannerClick(banner: Banner) {
 </script>
 
 <template>
-  <Carousel ref="carouselRef" autoplay dots-class="custom-dots" :after-change="() => {}">
-    <div v-for="banner in banners" :key="banner.id" class="banner-item" @click="handleBannerClick(banner)">
+  <Carousel
+    ref="carouselRef"
+    autoplay
+    dots-class="custom-dots"
+    :after-change="() => {}"
+  >
+    <div
+      v-for="banner in banners"
+      :key="banner.id"
+      class="banner-item"
+      @click="handleBannerClick(banner)"
+    >
       <div class="banner-content">
         <img :src="banner.image" :alt="banner.title" class="banner-image" />
         <div class="banner-overlay">

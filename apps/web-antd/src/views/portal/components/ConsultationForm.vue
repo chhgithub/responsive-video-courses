@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { reactive } from 'vue';
+
 import { message } from 'ant-design-vue';
 
 interface ConsultationData {
@@ -24,11 +25,13 @@ const rules = {
   name: [{ required: true, message: '请输入您的姓名', trigger: 'blur' }],
   phone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' },
+    {
+      pattern: /^1[3-9]\d{9}$/,
+      message: '请输入正确的手机号',
+      trigger: 'blur',
+    },
   ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' },
-  ],
+  email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }],
   content: [
     { required: true, message: '请输入咨询内容', trigger: 'blur' },
     { min: 10, message: '咨询内容至少10个字符', trigger: 'blur' },
@@ -54,15 +57,27 @@ function handleSubmit() {
     @finish="handleSubmit"
   >
     <a-form-item label="姓名" name="name">
-      <a-input v-model:value="formState.name" placeholder="请输入您的姓名" size="large" />
+      <a-input
+        v-model:value="formState.name"
+        placeholder="请输入您的姓名"
+        size="large"
+      />
     </a-form-item>
 
     <a-form-item label="联系电话" name="phone">
-      <a-input v-model:value="formState.phone" placeholder="请输入您的手机号" size="large" />
+      <a-input
+        v-model:value="formState.phone"
+        placeholder="请输入您的手机号"
+        size="large"
+      />
     </a-form-item>
 
     <a-form-item label="邮箱（选填）" name="email">
-      <a-input v-model:value="formState.email" placeholder="请输入您的邮箱" size="large" />
+      <a-input
+        v-model:value="formState.email"
+        placeholder="请输入您的邮箱"
+        size="large"
+      />
     </a-form-item>
 
     <a-form-item label="咨询内容" name="content">

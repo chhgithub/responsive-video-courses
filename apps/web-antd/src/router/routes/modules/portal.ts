@@ -1,7 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { PortalLayout } from '#/layouts';
-import { $t } from '#/locales';
 
 const routes: RouteRecordRaw[] = [
   {

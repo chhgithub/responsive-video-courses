@@ -13,25 +13,27 @@ defineProps<Props>();
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div class="mx-auto max-w-4xl">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div
         v-for="(topic, index) in topics"
         :key="topic.id"
-        class="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
+        class="cursor-pointer rounded-lg bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
       >
         <div class="flex items-center gap-4">
           <div
+            class="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold"
             :class="[
-              'w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg',
-              index < 3 ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white' : 'bg-gray-200 text-gray-600',
+              index < 3
+                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
+                : 'bg-gray-200 text-gray-600',
             ]"
           >
             {{ index + 1 }}
           </div>
           <div class="flex-1">
             <h3 class="font-semibold text-gray-800">{{ topic.title }}</h3>
-            <div class="flex items-center gap-2 mt-1 text-sm text-gray-500">
+            <div class="mt-1 flex items-center gap-2 text-sm text-gray-500">
               <span>🔥</span>
               <span>{{ topic.hot.toLocaleString() }} 热度</span>
             </div>

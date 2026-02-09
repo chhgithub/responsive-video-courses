@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-
 import type { Course } from '#/api/course/model';
 
+import { onMounted, ref } from 'vue';
+
 import { courseList } from '#/api/course';
+
 import BannerCarousel from './components/BannerCarousel.vue';
 import ConsultationForm from './components/ConsultationForm.vue';
 import CourseCard from './components/CourseCard.vue';
@@ -38,9 +39,24 @@ const featuredCourses = ref<Course[]>([]);
 
 // 资讯公告
 const newsList = ref([
-  { id: 1, title: '平台升级通知', date: '2025-01-20', content: '系统将于1月25日进行升级维护' },
-  { id: 2, title: '新课上线预告', date: '2025-01-18', content: '多门精品课程即将上线' },
-  { id: 3, title: '会员权益说明', date: '2025-01-15', content: 'VIP会员可享全部课程' },
+  {
+    id: 1,
+    title: '平台升级通知',
+    date: '2025-01-20',
+    content: '系统将于1月25日进行升级维护',
+  },
+  {
+    id: 2,
+    title: '新课上线预告',
+    date: '2025-01-18',
+    content: '多门精品课程即将上线',
+  },
+  {
+    id: 3,
+    title: '会员权益说明',
+    date: '2025-01-15',
+    content: 'VIP会员可享全部课程',
+  },
 ]);
 
 // 活动日历
@@ -61,11 +77,11 @@ const hotTopics = ref([
 
 // 课程统计数据
 const courseStats = ref([
-  { category: '前端开发', count: 128, totalDuration: 25600 },
-  { category: '后端开发', count: 86, totalDuration: 18900 },
-  { category: '移动开发', count: 64, totalDuration: 12300 },
+  { category: '前端开发', count: 128, totalDuration: 25_600 },
+  { category: '后端开发', count: 86, totalDuration: 18_900 },
+  { category: '移动开发', count: 64, totalDuration: 12_300 },
   { category: '人工智能', count: 45, totalDuration: 9800 },
-  { category: '数据科学', count: 52, totalDuration: 11500 },
+  { category: '数据科学', count: 52, totalDuration: 11_500 },
 ]);
 
 // 当前激活的tab
@@ -96,15 +112,20 @@ onMounted(() => {
     </section>
 
     <!-- 精选课程区域 -->
-    <section class="featured-courses py-12 px-4 bg-white">
+    <section class="featured-courses bg-white px-4 py-12">
       <div class="container mx-auto">
-        <div class="flex items-center justify-between mb-8">
-          <h2 class="text-2xl md:text-3xl font-bold text-gray-800">精选课程</h2>
-          <router-link to="/portal/courses" class="text-blue-600 hover:text-blue-700">
+        <div class="mb-8 flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-gray-800 md:text-3xl">精选课程</h2>
+          <router-link
+            to="/portal/courses"
+            class="text-blue-600 hover:text-blue-700"
+          >
             查看更多 →
           </router-link>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div
+          class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
           <CourseCard
             v-for="course in featuredCourses"
             :key="course.courseId"
@@ -115,22 +136,24 @@ onMounted(() => {
     </section>
 
     <!-- 资讯公告/活动日历/热点聚合 -->
-    <section class="info-tabs py-12 px-4 bg-gray-50">
+    <section class="info-tabs bg-gray-50 px-4 py-12">
       <div class="container mx-auto">
-        <a-tabs v-model:activeKey="activeTab" centered size="large">
+        <a-tabs v-model:active-key="activeTab" centered size="large">
           <a-tab-pane key="news" tab="资讯公告">
             <NewsSection :news-list="newsList" />
           </a-tab-pane>
           <a-tab-pane key="calendar" tab="活动日历">
-            <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-sm p-6">
+            <div class="mx-auto max-w-4xl rounded-lg bg-white p-6 shadow-sm">
               <div
                 v-for="event in calendarEvents"
                 :key="event.id"
-                class="flex items-center justify-between py-4 border-b last:border-0"
+                class="flex items-center justify-between border-b py-4 last:border-0"
               >
                 <div>
-                  <h3 class="text-lg font-semibold text-gray-800">{{ event.title }}</h3>
-                  <p class="text-gray-500 mt-1">
+                  <h3 class="text-lg font-semibold text-gray-800">
+                    {{ event.title }}
+                  </h3>
+                  <p class="mt-1 text-gray-500">
                     <span class="mr-4">{{ event.date }}</span>
                     <span>{{ event.time }}</span>
                   </p>
@@ -147,18 +170,30 @@ onMounted(() => {
     </section>
 
     <!-- 课程统计气泡图 -->
-    <section class="course-stats py-12 px-4 bg-white">
+    <section class="course-stats bg-white px-4 py-12">
       <div class="container mx-auto">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-8 text-center">课程数据统计</h2>
+        <h2
+          class="mb-8 text-center text-2xl font-bold text-gray-800 md:text-3xl"
+        >
+          课程数据统计
+        </h2>
         <CourseStatsChart :stats="courseStats" />
       </div>
     </section>
 
     <!-- 在线咨询表单 -->
-    <section class="consultation py-12 px-4 bg-gradient-to-br from-blue-50 to-purple-50">
+    <section
+      class="consultation bg-gradient-to-br from-blue-50 to-purple-50 px-4 py-12"
+    >
       <div class="container mx-auto max-w-2xl">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 text-center">在线咨询</h2>
-        <p class="text-gray-600 text-center mb-8">有任何问题？请填写以下表单，我们会尽快回复您</p>
+        <h2
+          class="mb-4 text-center text-2xl font-bold text-gray-800 md:text-3xl"
+        >
+          在线咨询
+        </h2>
+        <p class="mb-8 text-center text-gray-600">
+          有任何问题？请填写以下表单，我们会尽快回复您
+        </p>
         <ConsultationForm @submit="handleConsultSubmit" />
       </div>
     </section>

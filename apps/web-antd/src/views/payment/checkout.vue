@@ -1,14 +1,14 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { WechatOutlined, AlipayOutlined } from '@ant-design/icons-vue';
+import { AlipayOutlined, WechatOutlined } from '@ant-design/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
 
 const currentStep = ref(0);
-const paymentMethod = ref<'wechat' | 'alipay'>('wechat');
+const paymentMethod = ref<'alipay' | 'wechat'>('wechat');
 const paying = ref(false);
 
 // 课程信息
@@ -27,7 +27,7 @@ const order = ref({
   createTime: new Date().toLocaleString(),
 });
 
-const paymentStatus = ref<'success' | 'failed' | 'pending'>('pending');
+const paymentStatus = ref<'failed' | 'pending' | 'success'>('pending');
 
 function nextStep() {
   if (currentStep.value < 2) {
@@ -67,7 +67,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="payment-page bg-gray-50 min-h-screen py-8 px-4">
+  <div class="payment-page min-h-screen bg-gray-50 px-4 py-8">
     <div class="container mx-auto max-w-4xl">
       <!-- 步骤条 -->
       <a-steps :current="currentStep" class="mb-8">
@@ -77,23 +77,32 @@ onMounted(() => {
       </a-steps>
 
       <!-- 步骤1: 订单确认 -->
-      <div v-if="currentStep === 0" class="bg-white rounded-lg shadow-sm p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-6">确认订单</h2>
+      <div v-if="currentStep === 0" class="rounded-lg bg-white p-6 shadow-sm">
+        <h2 class="mb-6 text-xl font-bold text-gray-800">确认订单</h2>
         <div class="flex gap-6">
-          <img :src="course.cover" class="w-40 h-28 object-cover rounded" />
+          <img :src="course.cover" class="h-28 w-40 rounded object-cover" />
           <div class="flex-1">
-            <h3 class="text-lg font-semibold text-gray-800">{{ course.name }}</h3>
-            <p class="text-gray-500 mt-2">课程有效期：购买后365天</p>
+            <h3 class="text-lg font-semibold text-gray-800">
+              {{ course.name }}
+            </h3>
+            <p class="mt-2 text-gray-500">课程有效期：购买后365天</p>
           </div>
         </div>
 
-        <div class="mt-6 pt-6 border-t">
-          <div class="flex justify-between items-center">
+        <div class="mt-6 border-t pt-6">
+          <div class="flex items-center justify-between">
             <span class="text-gray-600">订单金额</span>
-            <span class="text-3xl font-bold text-red-500">¥{{ course.price }}</span>
+            <span class="text-3xl font-bold text-red-500"
+              >¥{{ course.price }}</span
+            >
           </div>
-          <div v-if="course.originalPrice > course.price" class="text-right text-gray-400 text-sm mt-1">
-            原价 ¥{{ course.originalPrice }}，已优惠 ¥{{ course.originalPrice - course.price }}
+          <div
+            v-if="course.originalPrice > course.price"
+            class="mt-1 text-right text-sm text-gray-400"
+          >
+            原价 ¥{{ course.originalPrice }}，已优惠 ¥{{
+              course.originalPrice - course.price
+            }}
           </div>
         </div>
 
@@ -105,19 +114,24 @@ onMounted(() => {
       </div>
 
       <!-- 步骤2: 选择支付方式 -->
-      <div v-if="currentStep === 1" class="bg-white rounded-lg shadow-sm p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-6">选择支付方式</h2>
+      <div v-if="currentStep === 1" class="rounded-lg bg-white p-6 shadow-sm">
+        <h2 class="mb-6 text-xl font-bold text-gray-800">选择支付方式</h2>
 
         <div class="mb-6">
-          <img :src="course.cover" class="w-32 h-20 object-cover rounded mb-4" />
+          <img
+            :src="course.cover"
+            class="mb-4 h-20 w-32 rounded object-cover"
+          />
           <div class="text-xl font-bold text-red-500">¥{{ course.price }}</div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div
+            class="payment-option cursor-pointer rounded-lg border-2 p-6 transition-all"
             :class="[
-              'payment-option p-6 border-2 rounded-lg cursor-pointer transition-all',
-              paymentMethod === 'wechat' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300',
+              paymentMethod === 'wechat'
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-200 hover:border-green-300',
             ]"
             @click="paymentMethod = 'wechat'"
           >
@@ -127,9 +141,11 @@ onMounted(() => {
             </div>
           </div>
           <div
+            class="payment-option cursor-pointer rounded-lg border-2 p-6 transition-all"
             :class="[
-              'payment-option p-6 border-2 rounded-lg cursor-pointer transition-all',
-              paymentMethod === 'alipay' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300',
+              paymentMethod === 'alipay'
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-blue-300',
             ]"
             @click="paymentMethod = 'alipay'"
           >
@@ -142,18 +158,27 @@ onMounted(() => {
 
         <div class="flex justify-between">
           <a-button size="large" @click="prevStep">上一步</a-button>
-          <a-button type="primary" size="large" :loading="paying" @click="createPayment">
+          <a-button
+            type="primary"
+            size="large"
+            :loading="paying"
+            @click="createPayment"
+          >
             确认支付
           </a-button>
         </div>
       </div>
 
       <!-- 步骤3: 支付结果 -->
-      <div v-if="currentStep === 2" class="bg-white rounded-lg shadow-sm p-8">
+      <div v-if="currentStep === 2" class="rounded-lg bg-white p-8 shadow-sm">
         <a-result
           :status="paymentStatus === 'success' ? 'success' : 'error'"
           :title="paymentStatus === 'success' ? '支付成功' : '支付失败'"
-          :sub-title="paymentStatus === 'success' ? '您已成功购买课程，现在可以开始学习了' : '支付未完成，请重试'"
+          :sub-title="
+            paymentStatus === 'success'
+              ? '您已成功购买课程，现在可以开始学习了'
+              : '支付未完成，请重试'
+          "
         >
           <template #extra>
             <a-space>
@@ -165,8 +190,8 @@ onMounted(() => {
           </template>
         </a-result>
 
-        <div v-if="paymentStatus === 'success'" class="mt-6 pt-6 border-t">
-          <h3 class="font-semibold text-gray-800 mb-4">订单详情</h3>
+        <div v-if="paymentStatus === 'success'" class="mt-6 border-t pt-6">
+          <h3 class="mb-4 font-semibold text-gray-800">订单详情</h3>
           <div class="space-y-2 text-sm">
             <div class="flex justify-between">
               <span class="text-gray-500">订单号</span>
@@ -174,11 +199,13 @@ onMounted(() => {
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">支付方式</span>
-              <span>{{ paymentMethod === 'wechat' ? '微信支付' : '支付宝' }}</span>
+              <span>{{
+                paymentMethod === 'wechat' ? '微信支付' : '支付宝'
+              }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">支付金额</span>
-              <span class="text-red-500 font-bold">¥{{ order.amount }}</span>
+              <span class="font-bold text-red-500">¥{{ order.amount }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-500">支付时间</span>

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
+import type { Course } from '#/api/course/model';
+
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-
-import type { Course } from '#/api/course/model';
 
 interface Props {
   course: Course;
@@ -32,7 +32,7 @@ function handleCardClick() {
 <template>
   <a-card
     :body-style="{ padding: '16px' }"
-    class="course-card hover:shadow-lg transition-all duration-300 cursor-pointer"
+    class="course-card cursor-pointer transition-all duration-300 hover:shadow-lg"
     hoverable
     @click="handleCardClick"
   >
@@ -40,52 +40,44 @@ function handleCardClick() {
     <div class="relative mb-3">
       <img
         :src="course.courseCover"
-        class="w-full h-40 object-cover rounded"
+        class="h-40 w-full rounded object-cover"
         :alt="course.courseName"
       />
-      <a-tag
-        v-if="course.isFree"
-        color="green"
-        class="absolute top-2 right-2"
-      >
+      <a-tag v-if="course.isFree" color="green" class="absolute right-2 top-2">
         免费
       </a-tag>
       <a-tag
         v-else-if="course.price && course.price > 0"
         color="orange"
-        class="absolute top-2 right-2"
+        class="absolute right-2 top-2"
       >
         付费
       </a-tag>
     </div>
 
     <!-- 课程信息 -->
-    <h3 class="font-semibold text-gray-800 line-clamp-2 min-h-[48px]">
+    <h3 class="line-clamp-2 min-h-[48px] font-semibold text-gray-800">
       {{ course.courseName }}
     </h3>
-    <p class="text-gray-500 text-sm mt-2 line-clamp-2 min-h-[40px]">
+    <p class="mt-2 line-clamp-2 min-h-[40px] text-sm text-gray-500">
       {{ course.courseIntro }}
     </p>
 
     <!-- 课程元信息 -->
-    <div class="flex items-center gap-4 mt-3 text-xs text-gray-400">
-      <span>
-        <span class="icon">👁</span> {{ course.viewCount }}
-      </span>
-      <span>
-        <span class="icon">👥</span> {{ course.enrollCount }}
-      </span>
+    <div class="mt-3 flex items-center gap-4 text-xs text-gray-400">
+      <span> <span class="icon">👁</span> {{ course.viewCount }} </span>
+      <span> <span class="icon">👥</span> {{ course.enrollCount }} </span>
       <span>{{ course.categoryName || '未分类' }}</span>
     </div>
 
     <!-- 价格显示 -->
     <div v-if="showPrice" class="mt-3 flex items-center justify-between">
-      <span :class="['font-bold text-xl', priceDisplay.color]">
+      <span class="text-xl font-bold" :class="[priceDisplay.color]">
         {{ priceDisplay.text }}
       </span>
       <span
         v-if="course.originalPrice && course.originalPrice > course.price"
-        class="text-gray-400 line-through text-sm"
+        class="text-sm text-gray-400 line-through"
       >
         ¥{{ course.originalPrice }}
       </span>
@@ -106,7 +98,9 @@ function handleCardClick() {
 .course-card {
   border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .course-card:hover {

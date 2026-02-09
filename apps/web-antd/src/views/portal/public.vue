@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
-
 import type { Course } from '#/api/course/model';
 
+import { onMounted, ref } from 'vue';
+
 import { courseList } from '#/api/course';
+
 import CourseCard from './components/CourseCard.vue';
 
 const courses = ref<Course[]>([]);
@@ -26,18 +27,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page-container py-8 px-4 min-h-screen bg-gray-50">
+  <div class="page-container min-h-screen bg-gray-50 px-4 py-8">
     <div class="container mx-auto">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800">公益课程</h1>
-        <p class="text-gray-600 mt-2">免费优质课程，助力全民学习</p>
+        <p class="mt-2 text-gray-600">免费优质课程，助力全民学习</p>
       </div>
 
       <a-spin :spinning="loading">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          <CourseCard v-for="course in courses" :key="course.courseId" :course="course" />
+        <div
+          class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
+          <CourseCard
+            v-for="course in courses"
+            :key="course.courseId"
+            :course="course"
+          />
         </div>
-        <a-empty v-if="!loading && courses.length === 0" description="暂无公益课程" class="py-16" />
+        <a-empty
+          v-if="!loading && courses.length === 0"
+          description="暂无公益课程"
+          class="py-16"
+        />
       </a-spin>
     </div>
   </div>

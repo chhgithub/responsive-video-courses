@@ -16,8 +16,8 @@ const props = defineProps<Props>();
 // 格式化时长
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
-  if (hours >= 10000) {
-    return `${(hours / 10000).toFixed(1)}万小时`;
+  if (hours >= 10_000) {
+    return `${(hours / 10_000).toFixed(1)}万小时`;
   }
   if (hours >= 1000) {
     return `${(hours / 1000).toFixed(1)}千小时`;
@@ -32,7 +32,9 @@ function getBubbleSize(count: number): number {
   const maxCount = Math.max(...props.stats.map((s) => s.count));
   const minCount = Math.min(...props.stats.map((s) => s.count));
   if (maxCount === minCount) return maxSize;
-  return minSize + ((count - minCount) / (maxCount - minCount)) * (maxSize - minSize);
+  return (
+    minSize + ((count - minCount) / (maxCount - minCount)) * (maxSize - minSize)
+  );
 }
 
 // 生成随机位置（模拟气泡图效果）
@@ -55,12 +57,18 @@ const bubbles = computed(() => {
 </script>
 
 <template>
-  <div class="course-stats-chart relative w-full h-[400px] bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-8 overflow-hidden">
+  <div
+    class="course-stats-chart relative h-[400px] w-full overflow-hidden rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-8"
+  >
     <!-- 中心标题 -->
-    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div
+      class="pointer-events-none absolute inset-0 flex items-center justify-center"
+    >
       <div class="text-center">
-        <div class="text-5xl font-bold text-blue-600">{{ stats.reduce((sum, s) => sum + s.count, 0) }}</div>
-        <div class="text-gray-600 mt-2">课程总数</div>
+        <div class="text-5xl font-bold text-blue-600">
+          {{ stats.reduce((sum, s) => sum + s.count, 0) }}
+        </div>
+        <div class="mt-2 text-gray-600">课程总数</div>
       </div>
     </div>
 
@@ -68,7 +76,7 @@ const bubbles = computed(() => {
     <div
       v-for="(bubble, index) in bubbles"
       :key="index"
-      class="absolute bubble-item cursor-pointer transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition-transform"
+      class="bubble-item absolute -translate-x-1/2 -translate-y-1/2 transform cursor-pointer transition-transform hover:scale-110"
       :style="{
         left: `${bubble.position.left}%`,
         top: `${bubble.position.top}%`,
@@ -77,12 +85,12 @@ const bubbles = computed(() => {
       }"
     >
       <div
-        class="w-full h-full rounded-full flex flex-col items-center justify-center text-white shadow-lg"
+        class="flex h-full w-full flex-col items-center justify-center rounded-full text-white shadow-lg"
         :style="{
           background: `linear-gradient(135deg, hsl(${index * 60}, 70%, 50%), hsl(${index * 60 + 40}, 70%, 60%))`,
         }"
       >
-        <div class="font-bold text-lg">{{ bubble.count }}</div>
+        <div class="text-lg font-bold">{{ bubble.count }}</div>
         <div class="text-xs opacity-90">{{ bubble.category }}</div>
       </div>
     </div>
@@ -103,7 +111,8 @@ const bubbles = computed(() => {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(-50%, -50%) translateY(0);
   }
   50% {

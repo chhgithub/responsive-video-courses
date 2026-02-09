@@ -52,26 +52,30 @@ function goToRegister() {
 <template>
   <div class="portal-layout min-h-screen bg-gray-50">
     <!-- 响应式导航栏 -->
-    <header class="portal-navbar bg-white shadow-sm sticky top-0 z-50">
+    <header class="portal-navbar sticky top-0 z-50 bg-white shadow-sm">
       <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between h-16">
+        <div class="flex h-16 items-center justify-between">
           <!-- Logo -->
           <div class="flex-shrink-0">
             <router-link to="/portal" class="flex items-center gap-2">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span class="text-white font-bold text-lg">V</span>
+              <div
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600"
+              >
+                <span class="text-lg font-bold text-white">V</span>
               </div>
-              <span class="text-xl font-bold text-gray-800 hidden sm:inline">课程平台</span>
+              <span class="hidden text-xl font-bold text-gray-800 sm:inline"
+                >课程平台</span
+              >
             </router-link>
           </div>
 
           <!-- Desktop Menu -->
-          <nav class="hidden md:flex space-x-1">
+          <nav class="hidden space-x-1 md:flex">
             <router-link
               v-for="item in menuItems"
               :key="item.path"
               :to="item.path"
-              class="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors"
+              class="rounded-lg px-4 py-2 text-gray-700 transition-colors hover:bg-gray-100 hover:text-blue-600"
               active-class="bg-blue-50 text-blue-600 font-medium"
             >
               {{ item.title }}
@@ -79,14 +83,18 @@ function goToRegister() {
           </nav>
 
           <!-- User Actions -->
-          <div class="hidden md:flex items-center space-x-3">
+          <div class="hidden items-center space-x-3 md:flex">
             <template v-if="isLoggedIn">
               <a-dropdown>
-                <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 px-3 py-2 rounded-lg transition-colors">
+                <div
+                  class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-gray-100"
+                >
                   <a-avatar :size="32" :src="userStore.userInfo?.avatar">
                     <UserOutlined />
                   </a-avatar>
-                  <span class="text-gray-700">{{ userStore.userInfo?.realName || '用户' }}</span>
+                  <span class="text-gray-700">{{
+                    userStore.userInfo?.realName || '用户'
+                  }}</span>
                 </div>
                 <template #overlay>
                   <a-menu>
@@ -124,23 +132,35 @@ function goToRegister() {
     </main>
 
     <!-- Footer -->
-    <footer class="portal-footer bg-gray-800 text-gray-300 py-12 mt-auto">
+    <footer class="portal-footer mt-auto bg-gray-800 py-12 text-gray-300">
       <div class="container mx-auto px-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div>
-            <h3 class="text-white font-bold text-lg mb-4">关于我们</h3>
+            <h3 class="mb-4 text-lg font-bold text-white">关于我们</h3>
             <p class="text-sm">专业的在线视频课程学习平台</p>
           </div>
           <div>
-            <h3 class="text-white font-bold text-lg mb-4">快速链接</h3>
+            <h3 class="mb-4 text-lg font-bold text-white">快速链接</h3>
             <ul class="space-y-2 text-sm">
-              <li><router-link to="/portal/courses" class="hover:text-white">课程中心</router-link></li>
-              <li><router-link to="/portal/public" class="hover:text-white">公益课程</router-link></li>
-              <li><router-link to="/portal/research" class="hover:text-white">科研赋能</router-link></li>
+              <li>
+                <router-link to="/portal/courses" class="hover:text-white">
+                  课程中心
+                </router-link>
+              </li>
+              <li>
+                <router-link to="/portal/public" class="hover:text-white">
+                  公益课程
+                </router-link>
+              </li>
+              <li>
+                <router-link to="/portal/research" class="hover:text-white">
+                  科研赋能
+                </router-link>
+              </li>
             </ul>
           </div>
           <div>
-            <h3 class="text-white font-bold text-lg mb-4">帮助中心</h3>
+            <h3 class="mb-4 text-lg font-bold text-white">帮助中心</h3>
             <ul class="space-y-2 text-sm">
               <li><a href="#" class="hover:text-white">常见问题</a></li>
               <li><a href="#" class="hover:text-white">联系客服</a></li>
@@ -148,12 +168,12 @@ function goToRegister() {
             </ul>
           </div>
           <div>
-            <h3 class="text-white font-bold text-lg mb-4">联系我们</h3>
+            <h3 class="mb-4 text-lg font-bold text-white">联系我们</h3>
             <p class="text-sm">电话：400-123-4567</p>
             <p class="text-sm">邮箱：support@example.com</p>
           </div>
         </div>
-        <div class="border-t border-gray-700 mt-8 pt-8 text-center text-sm">
+        <div class="mt-8 border-t border-gray-700 pt-8 text-center text-sm">
           <p>&copy; 2025 视频课程平台. All rights reserved.</p>
         </div>
       </div>
@@ -172,7 +192,7 @@ function goToRegister() {
           <div
             v-for="item in menuItems"
             :key="item.path"
-            class="px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+            class="cursor-pointer rounded-lg px-4 py-3 transition-colors hover:bg-gray-100"
             @click="handleMenuClick(item.path)"
           >
             {{ item.title }}
@@ -183,19 +203,31 @@ function goToRegister() {
 
         <!-- 用户操作 -->
         <template v-if="isLoggedIn">
-          <div class="px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer" @click="goToProfile">
+          <div
+            class="cursor-pointer rounded-lg px-4 py-3 hover:bg-gray-100"
+            @click="goToProfile"
+          >
             <UserOutlined class="mr-2" />
             个人中心
           </div>
-          <div class="px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer text-red-500" @click="handleLogout">
+          <div
+            class="cursor-pointer rounded-lg px-4 py-3 text-red-500 hover:bg-gray-100"
+            @click="handleLogout"
+          >
             退出登录
           </div>
         </template>
         <template v-else>
-          <div class="px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer" @click="goToLogin">
+          <div
+            class="cursor-pointer rounded-lg px-4 py-3 hover:bg-gray-100"
+            @click="goToLogin"
+          >
             登录
           </div>
-          <div class="px-4 py-3 rounded-lg bg-blue-50 text-blue-600 cursor-pointer text-center mt-2" @click="goToRegister">
+          <div
+            class="mt-2 cursor-pointer rounded-lg bg-blue-50 px-4 py-3 text-center text-blue-600"
+            @click="goToRegister"
+          >
             注册账号
           </div>
         </template>
