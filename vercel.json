@@ -1,10 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd apps/web-antd && pnpm run build",
+  "buildCommand": "pnpm run build:antd",
   "outputDirectory": "apps/web-antd/dist",
-  "devCommand": "cd apps/web-antd && pnpm dev",
-  "installCommand": "pnpm install",
-  "framework": "vite",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
