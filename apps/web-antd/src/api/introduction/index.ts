@@ -1,12 +1,12 @@
-import type { Introduction, IntroductionQuery } from './model';
+import type { Introduction, IntroductionQuery } from './model.d';
 
 import type { ID, IDS, PageResult } from '#/api/common';
 
 import { requestClient } from '#/api/request';
 
 // 重新导出类型，方便其他模块导入
-export type { Introduction, IntroductionQuery } from './model';
-export { IntroductionTypeMap } from './model';
+export type { Introduction, IntroductionQuery } from './model.d';
+export { IntroductionTypeMap } from './model.d';
 
 enum Api {
   introInfo = '/introduction',

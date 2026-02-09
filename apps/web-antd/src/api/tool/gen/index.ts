@@ -1,4 +1,4 @@
-import type { GenInfo } from './model';
+import type { GenInfo } from './model.d';
 
 import type { ID, IDS, PageQuery } from '#/api/common';
 

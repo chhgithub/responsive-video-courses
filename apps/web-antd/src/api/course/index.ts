@@ -1,4 +1,4 @@
-import type { Course, CourseChapter, CourseQuery } from './model';
+import type { Course, CourseChapter, CourseQuery } from './model.d';
 
 import type { ID, IDS, PageResult } from '#/api/common';
 

@@ -1,4 +1,4 @@
-import type { OnlineUser } from './model';
+import type { OnlineUser } from './model.d';
 
 import type { PageQuery, PageResult } from '#/api/common';
 

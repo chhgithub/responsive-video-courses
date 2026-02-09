@@ -120,9 +120,9 @@ function handleDownloadExcel() {
   });
 }
 
-const { hasAccessByCodes, hasAccessByRoles } = useAccess();
+const { hasAccessByCodes } = useAccess();
 
-const isSuperAdmin = computed(() => hasAccessByRoles(['superadmin']));
+const isSuperAdmin = computed(() => hasAccessByCodes(['*:*:*']));
 
 const [RoleAuthModal, authModalApi] = useVbenModal({
   connectedComponent: roleAuthModal,

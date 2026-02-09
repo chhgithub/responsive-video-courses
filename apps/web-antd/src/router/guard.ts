@@ -62,7 +62,12 @@ function setupAccessGuard(router: Router) {
       return true;
     }
 
-    // accessToken 检查
+    // 前台展示页面（/portal/*）公开访问，不需要登录
+    if (to.path.startsWith('/portal')) {
+      return true;
+    }
+
+    // accessToken 检查（仅针对后台管理页面）
     if (!accessStore.accessToken) {
       // 明确声明忽略权限访问权限，则可以访问
       if (to.meta.ignoreAccess) {

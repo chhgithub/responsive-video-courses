@@ -1,5 +1,5 @@
 import type { TaskInfo } from '../task/model';
-import type { FlowInfoResponse } from './model';
+import type { FlowInfoResponse } from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 
@@ -18,16 +18,16 @@ export function getTaskByBusinessId(businessId: string) {
 /**
  * 分页查询正在运行的流程实例
  * @param params
- * @returns
+ * @returns 分页结果
  */
 export function pageByRunning(params?: PageQuery) {
   return requestClient.get('/workflow/instance/pageByRunning', { params });
 }
 
 /**
- * pageByFinish
+ * 分页查询已完成的流程实例
  * @param params
- * @returns
+ * @returns 分页结果
  */
 export function pageByFinish(params?: PageQuery) {
   return requestClient.get('/workflow/instance/pageByFinish', { params });
@@ -55,7 +55,8 @@ export function deleteByInstanceIds(instanceIds: IDS) {
 
 /**
  * 撤销流程
- * @param data
+ * @param data.businessId 业务id
+ * @param data.message 撤销原因
  */
 export function cancelProcessApply(data: { businessId: ID; message?: string }) {
   return requestClient.putWithMsg<void>(

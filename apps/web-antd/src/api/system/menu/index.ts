@@ -1,4 +1,4 @@
-import type { Menu, MenuOption, MenuQuery, MenuResp } from './model';
+import type { Menu, MenuOption, MenuQuery, MenuResp } from './model.d';
 
 import type { ID, IDS } from '#/api/common';
 

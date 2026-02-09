@@ -1,4 +1,4 @@
-import type { LoginLog } from './model';
+import type { LoginLog } from './model.d';
 
 import type { IDS, PageQuery, PageResult } from '#/api/common';
 

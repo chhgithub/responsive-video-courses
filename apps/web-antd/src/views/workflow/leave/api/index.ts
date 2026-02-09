@@ -1,4 +1,4 @@
-import type { LeaveForm, LeaveQuery, LeaveVO } from './model';
+import type { LeaveForm, LeaveQuery, LeaveVO } from './model.d';
 
 import type { ID, IDS, PageResult } from '#/api/common';
 

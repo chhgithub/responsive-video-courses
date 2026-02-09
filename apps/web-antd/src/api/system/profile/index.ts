@@ -1,4 +1,4 @@
-import type { FileCallBack, UpdatePasswordParam, UserProfile } from './model';
+import type { FileCallBack, UpdatePasswordParam, UserProfile } from './model.d';
 
 import { buildUUID } from '@vben/utils';
 

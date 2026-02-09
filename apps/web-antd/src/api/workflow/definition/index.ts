@@ -1,4 +1,4 @@
-import type { ProcessDefinition } from './model';
+import type { ProcessDefinition } from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 

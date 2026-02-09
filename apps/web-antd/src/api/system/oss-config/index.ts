@@ -1,4 +1,4 @@
-import type { OssConfig } from './model';
+import type { OssConfig } from './model.d';
 
 import type { ID, IDS, PageQuery } from '#/api/common';
 

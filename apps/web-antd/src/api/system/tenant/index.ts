@@ -1,4 +1,4 @@
-import type { Tenant } from './model';
+import type { Tenant } from './model.d';
 
 import type { ID, IDS, PageQuery } from '#/api/common';
 

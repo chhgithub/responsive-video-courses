@@ -38,9 +38,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       loginLoading.value = true;
 
-      // ===== 模拟登录模式（原型开发使用） =====
-      // 跳过真实的后端 API 调用，直接使用模拟数据
-      const mockToken = `mock_access_token_${Date.now()}`;
+      // ===== 原型模式：完全模拟登录，不调用真实 API =====
+      const mockToken = `mock_token_${Date.now()}`;
 
       // 将 accessToken 存储到 accessStore 中
       accessStore.setAccessToken(mockToken);
@@ -54,7 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: 'admin@example.com',
         permissions: ['*:*:*'], // 所有权限
         realName: '管理员',
-        roles: ['admin'],
+        roles: ['admin', 'superadmin'],
         userId: 1,
         username: params.username || 'admin',
       };
@@ -127,7 +126,7 @@ export const useAuthStore = defineStore('auth', () => {
       email: 'admin@example.com',
       permissions: ['*:*:*'],
       realName: '管理员',
-      roles: ['admin'],
+      roles: ['admin', 'superadmin'],
       userId: 1,
       username: 'admin',
     };

@@ -25,7 +25,7 @@ export const overridesPreferences = defineOverridesPreferences({
      */
     name: import.meta.env.VITE_APP_TITLE,
     /**
-     * 默认首页路径 - 设置为个人中心页面
+     * 默认首页路径 - 后台管理系统默认页
      */
     defaultHomePath: '/course/list',
     /**

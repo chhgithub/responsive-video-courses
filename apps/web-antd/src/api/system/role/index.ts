@@ -1,5 +1,5 @@
 import type { User } from '../user/model';
-import type { DeptResp, Role } from './model';
+import type { DeptResp, Role } from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 

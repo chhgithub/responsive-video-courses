@@ -19,7 +19,7 @@ export const MOCK_USERS: UserInfo[] = [
     id: 1,
     password: '123456',
     realName: 'Admin',
-    roles: ['admin'],
+    roles: ['admin', 'superadmin'],
     username: 'admin',
     homePath: '/workspace',
   },

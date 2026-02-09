@@ -1,4 +1,4 @@
-import type { OperationLog } from './model';
+import type { OperationLog } from './model.d';
 
 import type { IDS, PageQuery, PageResult } from '#/api/common';
 

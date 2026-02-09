@@ -1,4 +1,4 @@
-import type { SysConfig } from './model';
+import type { SysConfig } from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 

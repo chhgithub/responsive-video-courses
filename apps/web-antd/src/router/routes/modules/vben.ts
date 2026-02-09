@@ -14,6 +14,7 @@ import { $t } from '#/locales';
 const routes: RouteRecordRaw[] = [
   {
     meta: {
+      hideInMenu: true,
       badgeType: 'dot',
       icon: VBEN_LOGO_URL,
       order: 9998,

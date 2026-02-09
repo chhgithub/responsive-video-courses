@@ -44,6 +44,7 @@ export interface Menu {
  */
 export async function getAllMenusApi() {
   // 模拟菜单数据（原型开发使用）
+  // 注意：系统管理路由已在 router/routes/modules/course.ts 中定义，这里不需要重复返回
   return new Promise<Menu[]>((resolve) => {
     setTimeout(() => {
       resolve([
@@ -87,46 +88,6 @@ export async function getAllMenusApi() {
               meta: {
                 title: '介绍信息管理',
                 icon: 'lucide:list',
-              },
-            },
-          ],
-        },
-        {
-          path: '/system',
-          name: 'System',
-          component: 'BasicLayout',
-          redirect: '/system/user',
-          meta: {
-            title: 'system.title',
-            icon: 'lucide:settings',
-            order: 999,
-          },
-          children: [
-            {
-              path: '/system/user',
-              name: 'SystemUser',
-              component: 'system/user/index',
-              meta: {
-                title: 'system.user.title',
-                icon: 'lucide:users',
-              },
-            },
-            {
-              path: '/system/role',
-              name: 'SystemRole',
-              component: 'system/role/index',
-              meta: {
-                title: 'system.role.title',
-                icon: 'lucide:shield',
-              },
-            },
-            {
-              path: '/system/menu',
-              name: 'SystemMenu',
-              component: 'system/menu/index',
-              meta: {
-                title: 'system.menu.title',
-                icon: 'lucide:menu',
               },
             },
           ],

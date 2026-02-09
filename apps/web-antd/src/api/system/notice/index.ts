@@ -1,4 +1,4 @@
-import type { Notice } from './model';
+import type { Notice } from './model.d';
 
 import type { ID, IDS, PageQuery } from '#/api/common';
 

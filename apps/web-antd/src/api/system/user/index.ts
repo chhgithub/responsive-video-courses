@@ -4,7 +4,7 @@ import type {
   User,
   UserImportParam,
   UserInfoResponse,
-} from './model';
+} from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 

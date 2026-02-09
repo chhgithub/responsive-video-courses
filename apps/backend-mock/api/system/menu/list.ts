@@ -1,12 +1,7 @@
-import { verifyAccessToken } from '~/utils/jwt-utils';
 import { MOCK_MENU_LIST } from '~/utils/mock-data';
-import { unAuthorizedResponse, useResponseSuccess } from '~/utils/response';
+import { useResponseSuccess } from '~/utils/response';
 
-export default eventHandler(async (event) => {
-  const userinfo = verifyAccessToken(event);
-  if (!userinfo) {
-    return unAuthorizedResponse(event);
-  }
-
+export default eventHandler(async () => {
+  // 原型模式：跳过 token 验证
   return useResponseSuccess(MOCK_MENU_LIST);
 });

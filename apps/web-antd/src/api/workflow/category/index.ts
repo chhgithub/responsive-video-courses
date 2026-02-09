@@ -3,7 +3,7 @@ import type {
   CategoryQuery,
   CategoryTree,
   CategoryVO,
-} from './model';
+} from './model.d';
 
 import type { ID, IDS } from '#/api/common';
 

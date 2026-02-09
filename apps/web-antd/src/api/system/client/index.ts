@@ -1,4 +1,4 @@
-import type { Client } from './model';
+import type { Client } from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 

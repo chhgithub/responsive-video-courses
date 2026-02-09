@@ -1,4 +1,4 @@
-import type { TreeForm, TreeQuery, TreeVO } from './model';
+import type { TreeForm, TreeQuery, TreeVO } from './model.d';
 
 import type { ID, IDS } from '#/api/common';
 

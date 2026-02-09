@@ -1,12 +1,12 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
-import { preferences } from '@vben/preferences';
 
 import { $t } from '#/locales';
 
 const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
+const PortalLayout = () => import('#/layouts/portal.vue');
 /** 全局404页面 */
 const fallbackNotFoundRoute: RouteRecordRaw = {
   component: () => import('#/views/_core/fallback/not-found.vue'),
@@ -35,7 +35,7 @@ const coreRoutes: RouteRecordRaw[] = [
     },
     name: 'Root',
     path: '/',
-    redirect: preferences.app.defaultHomePath,
+    redirect: '/portal', // 默认重定向到前台首页
     children: [],
   },
   {
@@ -97,6 +97,121 @@ const coreRoutes: RouteRecordRaw[] = [
         meta: {
           title: $t('page.auth.register'),
         },
+      },
+    ],
+  },
+  /**
+   * 前台页面路由
+   * 前台是公开访问的课程展示平台，不需要权限验证
+   */
+  {
+    component: PortalLayout,
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      title: '前台',
+    },
+    name: 'Portal',
+    path: '/portal',
+    children: [
+      {
+        name: 'PortalHome',
+        path: '',
+        component: () => import('#/views/portal/index.vue'),
+        meta: {
+          title: '首页',
+        },
+      },
+      {
+        name: 'PortalAbout',
+        path: 'about',
+        component: () => import('#/views/portal/about.vue'),
+        meta: {
+          title: '关于我们',
+        },
+      },
+      {
+        name: 'PortalCourses',
+        path: 'courses',
+        component: () => import('#/views/portal/courses.vue'),
+        meta: {
+          title: '课程中心',
+        },
+      },
+      {
+        name: 'PortalCert',
+        path: 'cert',
+        component: () => import('#/views/portal/cert.vue'),
+        meta: {
+          title: '认证中心',
+        },
+      },
+      {
+        name: 'PortalTeachers',
+        path: 'teachers',
+        component: () => import('#/views/portal/teachers.vue'),
+        meta: {
+          title: '师资队伍',
+        },
+      },
+      {
+        name: 'PortalGeneral',
+        path: 'general',
+        component: () => import('#/views/portal/general.vue'),
+        meta: {
+          title: '通识教育',
+        },
+      },
+    ],
+  },
+  /**
+   * 会员中心路由
+   * 需要登录后才能访问的个人中心功能
+   */
+  {
+    component: PortalLayout,
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      title: '会员中心',
+    },
+    name: 'Member',
+    path: '/member',
+    children: [
+      {
+        name: 'MemberProfile',
+        path: 'profile',
+        component: () => import('#/views/member/profile/index.vue'),
+        meta: {
+          title: '个人中心',
+        },
+        redirect: '/member/profile/courses',
+        children: [
+          {
+            name: 'MemberCourses',
+            path: 'courses',
+            component: () => import('#/views/member/profile/courses.vue'),
+            meta: {
+              title: '我的课程',
+            },
+          },
+          {
+            name: 'MemberOrders',
+            path: 'orders',
+            component: () => import('#/views/member/profile/orders.vue'),
+            meta: {
+              title: '订单记录',
+            },
+          },
+          {
+            name: 'MemberSettings',
+            path: 'settings',
+            component: () => import('#/views/member/profile/settings.vue'),
+            meta: {
+              title: '账号设置',
+            },
+          },
+        ],
       },
     ],
   },

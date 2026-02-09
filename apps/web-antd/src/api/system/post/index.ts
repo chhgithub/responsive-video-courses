@@ -1,4 +1,4 @@
-import type { Post } from './model';
+import type { Post } from './model.d';
 
 import type { ID, IDS, PageQuery } from '#/api/common';
 

@@ -1,4 +1,4 @@
-import type { Dept } from './model';
+import type { Dept } from './model.d';
 
 import type { ID } from '#/api/common';
 

@@ -1,4 +1,4 @@
-import type { DemoForm, DemoQuery, DemoVO } from './model';
+import type { DemoForm, DemoQuery, DemoVO } from './model.d';
 
 import type { ID, IDS, PageResult } from '#/api/common';
 

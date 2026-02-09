@@ -1,4 +1,4 @@
-import type { SocialInfo } from './model';
+import type { SocialInfo } from './model.d';
 
 import type { ID } from '#/api/common';
 

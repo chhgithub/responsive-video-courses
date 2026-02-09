@@ -1,6 +1,6 @@
 import type { AxiosRequestConfig } from '@vben/request';
 
-import type { OssFile } from './model';
+import type { OssFile } from './model.d';
 
 import type { ID, IDS, PageQuery, PageResult } from '#/api/common';
 
