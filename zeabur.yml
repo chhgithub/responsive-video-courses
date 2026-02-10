@@ -1,12 +1,8 @@
-# Zeabur 部署配置
-# Zeabur 会自动识别并部署 Vite 项目
-
-# Zeabur 使用不同的配置格式
-# 请在 Zeabur 控制台中配置以下设置：
-# Service Type: Prebuilt
-# Build Command: pnpm run build:antd
-# Output Directory: apps/web-antd/dist
-#
-# 对于 SPA 路由，需要在 Zeabur 控制台设置：
-# Routing > Rewrite Rules > Add Rule
-# Source: /*    Destination: /index.html
+services:
+  - type: prebuilt
+    name: web-antd
+    buildCommand: pnpm run build:antd
+    outputDirectory: apps/web-antd/dist
+    environment:
+      - NODE_VERSION=22
+      - PNPM_VERSION=10.10.0
