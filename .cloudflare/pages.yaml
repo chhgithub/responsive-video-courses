@@ -1,0 +1,23 @@
+# Cloudflare Pages 部署配置
+# 用于在 Dashboard 中手动配置时参考
+
+项目名称: responsive-video-courses
+生产分支: main
+框架预设: None
+
+# 构建命令 (重要！需要包含安装依赖的步骤)
+Build command: pnpm install --no-frozen-lockfile && pnpm run build:antd
+
+# 构建输出目录
+Build output directory: apps/web-antd/dist
+
+# 根目录
+Root directory: / (留空)
+
+# 环境变量
+Environment variables:
+  - NODE_VERSION = 22
+  - PNPM_VERSION = 10.10.0
+
+# 说明
+# Vercel 配置中有 installCommand，Cloudflare 需要合并到 build_command 中
