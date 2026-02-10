@@ -7,28 +7,29 @@ import { cn } from '@vben-core/shared/utils';
 
 import { ScrollArea, ScrollBar } from '../../ui';
 
-interface ScrollbarProps {
-  class?: ClassType;
-  horizontal?: boolean;
-  scrollBarClass?: ClassType;
-  shadow?: boolean;
-  shadowBorder?: boolean;
-  shadowBottom?: boolean;
-  shadowLeft?: boolean;
-  shadowRight?: boolean;
-  shadowTop?: boolean;
-}
-
-const props = withDefaults(defineProps<ScrollbarProps>(), {
-  class: '',
-  horizontal: false,
-  shadow: false,
-  shadowBorder: false,
-  shadowBottom: true,
-  shadowLeft: false,
-  shadowRight: false,
-  shadowTop: true,
-});
+const props = withDefaults(
+  defineProps<{
+    class?: ClassType;
+    horizontal?: boolean;
+    scrollBarClass?: ClassType;
+    shadow?: boolean;
+    shadowBorder?: boolean;
+    shadowBottom?: boolean;
+    shadowLeft?: boolean;
+    shadowRight?: boolean;
+    shadowTop?: boolean;
+  }>(),
+  {
+    class: '',
+    horizontal: false,
+    shadow: false,
+    shadowBorder: false,
+    shadowBottom: true,
+    shadowLeft: false,
+    shadowRight: false,
+    shadowTop: true,
+  }
+);
 
 const emit = defineEmits<{
   scrollAt: [{ bottom: boolean; left: boolean; right: boolean; top: boolean }];
