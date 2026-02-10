@@ -1,0 +1,6 @@
+# Zeabur 路由配置
+# 将所有请求重定向到 index.html，由 Vue Router 处理
+
+- src: /.*
+  dest: /index.html
+  status: 200
