@@ -1,0 +1,22 @@
+# Zeabur 部署配置
+# Zeabur 会自动识别这是 Vite 项目并部署
+
+services:
+  # 前端应用
+  - name: responsive-video-courses
+    type: static
+    buildCommand: pnpm run build:antd
+    publishDir: apps/web-antd/dist
+    environment:
+      - NODE_VERSION=22
+      - PNPM_VERSION=10.10.0
+    # 自动路由配置（SPA 支持）
+    routes:
+      - /*
+      - /assets/*
+      - /*.js
+      - /*.css
+      - /*.html
+    # 404 重定向到 index.html（Vue Router）
+    errorPages:
+      404: /index.html
