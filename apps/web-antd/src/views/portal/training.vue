@@ -98,16 +98,14 @@ function handleEnroll(plan: any) {
                 v-for="feature in plan.features"
                 :key="feature"
                 color="green"
-              >{{ feature }}</a-tag>
+              >
+                {{ feature }}
+              </a-tag>
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <span class="text-2xl font-bold text-red-500"
-                  >¥{{ plan.price }}</span
-                >
-                <span class="ml-2 text-gray-400 line-through"
-                  >¥{{ plan.originalPrice }}</span
-                >
+                <span class="text-2xl font-bold text-red-500">¥{{ plan.price }}</span>
+                <span class="ml-2 text-gray-400 line-through">¥{{ plan.originalPrice }}</span>
               </div>
               <a-button type="primary" @click="handleEnroll(plan)">
                 立即报名
@@ -141,16 +139,14 @@ function handleEnroll(plan: any) {
                 v-for="feature in plan.features"
                 :key="feature"
                 color="blue"
-              >{{ feature }}</a-tag>
+              >
+                {{ feature }}
+              </a-tag>
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <span class="text-2xl font-bold text-red-500"
-                  >¥{{ plan.price }}</span
-                >
-                <span class="ml-2 text-gray-400 line-through"
-                  >¥{{ plan.originalPrice }}</span
-                >
+                <span class="text-2xl font-bold text-red-500">¥{{ plan.price }}</span>
+                <span class="ml-2 text-gray-400 line-through">¥{{ plan.originalPrice }}</span>
               </div>
               <a-button type="primary" @click="handleEnroll(plan)">
                 立即报名
