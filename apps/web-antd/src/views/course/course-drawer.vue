@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { CourseCategory, CourseTeacher } from '#/api/course/model';
 
-import { onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 
-import { useVbenForm } from '@vben/common-ui';
+import { useVbenDrawer } from '@vben/common-ui';
+import { $t } from '@vben/locales';
+import { cloneDeep } from '@vben/utils';
 
+import { useVbenForm } from '#/adapter/form';
 import { message } from 'ant-design-vue';
 
 import {
@@ -18,6 +21,9 @@ import {
 const emit = defineEmits<{ reload: [] }>();
 
 const isUpdate = ref(false);
+const title = computed(() => {
+  return isUpdate.value ? $t('pages.common.edit') : $t('pages.common.add');
+});
 
 // 分类选项
 const categoryOptions = ref<CourseCategory[]>([]);
@@ -37,10 +43,6 @@ async function loadOptions() {
     console.error('加载选项失败:', error);
   }
 }
-
-onMounted(() => {
-  loadOptions();
-});
 
 const [Form, formApi] = useVbenForm({
   commonConfig: {
@@ -178,7 +180,7 @@ const [Form, formApi] = useVbenForm({
       component: 'ImageUpload',
       componentProps: {
         class: 'w-full',
-        limit: 1,
+        maxCount: 1,
         text: '上传封面',
       },
       fieldName: 'courseCover',
@@ -225,55 +227,56 @@ const [Form, formApi] = useVbenForm({
   submitButtonOptions: {
     text: '提交',
   },
-  showDefaultActions: true,
+  showDefaultActions: false,
 });
 
-// 加载数据
-async function loadData(id: number) {
-  try {
-    const data = await getCourseForEdit(id);
-    await formApi.setValues(data);
-  } catch {
-    message.error('加载课程信息失败');
-  }
-}
-
-// 提交表单
-async function handleSubmit() {
-  const { valid } = await formApi.validate();
-  if (!valid) {
-    return;
-  }
-  const values = await formApi.getValues();
-  try {
-    if (isUpdate.value) {
-      await courseUpdate({
-        ...values,
-        courseId: values.courseId,
-      });
-      message.success('更新成功');
-    } else {
-      await courseAdd(values);
-      message.success('新增成功');
+const [BasicDrawer, drawerApi] = useVbenDrawer({
+  onClosed: handleClosed,
+  onConfirm: handleConfirm,
+  async onOpenChange(isOpen) {
+    if (!isOpen) {
+      return null;
     }
+    drawerApi.drawerLoading(true);
+    const { id } = drawerApi.getData() as { id?: number | string };
+    isUpdate.value = !!id;
+    // 初始化选项
+    await loadOptions();
+    // 更新 && 赋值
+    if (isUpdate.value && id) {
+      const data = await getCourseForEdit(id as number);
+      await formApi.setValues(data);
+    }
+    drawerApi.drawerLoading(false);
+  },
+});
+
+async function handleConfirm() {
+  try {
+    drawerApi.lock(true);
+    const { valid } = await formApi.validate();
+    if (!valid) {
+      return;
+    }
+    const data = cloneDeep(await formApi.getValues());
+    await (isUpdate.value ? courseUpdate(data) : courseAdd(data));
     emit('reload');
-    return true;
+    message.success(isUpdate.value ? '更新成功' : '新增成功');
+    drawerApi.close();
   } catch {
     message.error(isUpdate.value ? '更新失败' : '新增失败');
-    return false;
+  } finally {
+    drawerApi.lock(false);
   }
 }
 
-// 暴露方法给父组件调用
-defineExpose({
-  loadData,
-  setTitle: (update: boolean) => {
-    isUpdate.value = update;
-  },
-  handleSubmit,
-});
+async function handleClosed() {
+  await formApi.resetForm();
+}
 </script>
 
 <template>
-  <Form />
+  <BasicDrawer :title="title" class="w-[600px]">
+    <Form />
+  </BasicDrawer>
 </template>

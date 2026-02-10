@@ -13,6 +13,7 @@ import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { introductionList, introductionRemove } from '#/api/introduction';
 
 import { columns, querySchema } from './data';
+import introductionDrawer from './introduction-drawer.vue';
 
 const formOptions: VbenFormProps = {
   schema: querySchema(),
@@ -70,31 +71,7 @@ const [BasicTable, tableApi] = useVbenVxeGrid({
 });
 
 const [IntroductionDrawerComp, drawerApi] = useVbenDrawer({
-  title: '介绍',
-  closable: true,
-  async onConfirm() {
-    const comp = drawerApi.componentRef;
-    if (comp) {
-      const result = await comp.handleSubmit();
-      if (result) {
-        await tableApi.query();
-        drawerApi.close();
-      }
-    }
-  },
-  onOpened: () => {
-    const comp = drawerApi.componentRef;
-    if (comp && drawerApi.data?.id) {
-      comp.setTitle(true);
-      comp.loadData(drawerApi.data?.id);
-    } else if (comp && drawerApi.data?.type) {
-      comp.setTitle(false);
-      comp.loadDataByType(drawerApi.data?.type);
-    } else {
-      comp?.setTitle(false);
-      comp?.handleReset?.();
-    }
-  },
+  connectedComponent: introductionDrawer,
 });
 
 function handleAdd() {
@@ -195,6 +172,6 @@ function quickEdit(type: string) {
         </Space>
       </template>
     </BasicTable>
-    <IntroductionDrawerComp />
+    <IntroductionDrawerComp @reload="tableApi.query()" />
   </Page>
 </template>

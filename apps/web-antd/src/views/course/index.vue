@@ -21,6 +21,7 @@ import {
 } from '#/api/course';
 
 import ChapterManager from './chapter-manager.vue';
+import courseDrawer from './course-drawer.vue';
 
 // 表格列配置
 const columns = [
@@ -226,28 +227,7 @@ onMounted(async () => {
 });
 
 const [CourseDrawerComp, drawerApi] = useVbenDrawer({
-  title: '课程',
-  closable: true,
-  async onConfirm() {
-    const comp = drawerApi.componentRef;
-    if (comp) {
-      const result = await comp.handleSubmit();
-      if (result) {
-        await tableApi.query();
-        drawerApi.close();
-      }
-    }
-  },
-  onOpened: () => {
-    const comp = drawerApi.componentRef;
-    if (comp && drawerApi.data?.id) {
-      comp.setTitle(true);
-      comp.loadData(drawerApi.data?.id);
-    } else {
-      comp?.setTitle(false);
-      comp?.handleReset?.();
-    }
-  },
+  connectedComponent: courseDrawer,
 });
 
 function handleAdd() {
@@ -352,7 +332,7 @@ function handleMultiDelete() {
         </Space>
       </template>
     </BasicTable>
-    <CourseDrawerComp />
+    <CourseDrawerComp @reload="tableApi.query()" />
 
     <!-- 章节管理弹窗 -->
     <a-modal
