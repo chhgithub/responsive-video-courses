@@ -130,33 +130,32 @@ export const errorMessageResponseInterceptor = (
         return Promise.reject(error);
       }
 
-      let errorMessage = '';
+      const errorMessage = '';
       const status = error?.response?.status;
 
       switch (status) {
         case 400: {
-          errorMessage = $t('ui.fallback.http.badRequest');
+          // errorMessage = $t('ui.fallback.http.badRequest');
           break;
         }
         case 401: {
-          errorMessage = $t('ui.fallback.http.unauthorized');
+          // errorMessage = $t('ui.fallback.http.unauthorized');
           break;
         }
         case 403: {
-          errorMessage = $t('ui.fallback.http.forbidden');
+          // errorMessage = $t('ui.fallback.http.forbidden');
           break;
         }
         case 404: {
-          errorMessage = $t('ui.fallback.http.notFound');
+          // errorMessage = $t('ui.fallback.http.notFound');
           break;
         }
         case 408: {
-          errorMessage = $t('ui.fallback.http.requestTimeout');
+          // errorMessage = $t('ui.fallback.http.requestTimeout');
           break;
         }
-        default: {
-          errorMessage = $t('ui.fallback.http.internalServerError');
-        }
+        default:
+        // errorMessage = $t('ui.fallback.http.internalServerError');
       }
       makeErrorMessage?.(errorMessage, error);
       return Promise.reject(error);

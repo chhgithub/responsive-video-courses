@@ -52,9 +52,9 @@ function handleBannerClick(banner: Banner) {
 
 <style scoped>
 .banner-item {
-  cursor: pointer;
   position: relative;
   width: 100%;
+  cursor: pointer;
 }
 
 .banner-content {
@@ -64,10 +64,10 @@ function handleBannerClick(banner: Banner) {
 }
 
 .banner-image {
+  display: block;
   width: 100%;
   height: 200px;
   object-fit: cover;
-  display: block;
 }
 
 @media (min-width: 640px) {
@@ -84,24 +84,24 @@ function handleBannerClick(banner: Banner) {
 
 @media (min-width: 1024px) {
   .banner-image {
-    height: 400px;
+    height: 734px;
   }
 }
 
 .banner-overlay {
   position: absolute;
+  right: 0;
   bottom: 0;
   left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
   padding: 2rem 2rem 1.5rem;
+  background: linear-gradient(to top, rgb(0 0 0 / 70%), transparent);
 }
 
 .banner-title {
-  color: white;
+  margin: 0;
   font-size: 1.5rem;
   font-weight: bold;
-  margin: 0;
+  color: white;
 }
 
 @media (min-width: 768px) {
@@ -113,13 +113,13 @@ function handleBannerClick(banner: Banner) {
 :deep(.custom-dots li button) {
   width: 8px;
   height: 8px;
+  background: rgb(255 255 255 / 50%);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
 }
 
 :deep(.custom-dots li.slick-active button) {
   width: 24px;
-  border-radius: 4px;
   background: white;
+  border-radius: 4px;
 }
 </style>

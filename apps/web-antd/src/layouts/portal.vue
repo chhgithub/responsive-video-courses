@@ -9,6 +9,8 @@ const userStore = useUserStore();
 
 const mobileMenuVisible = ref(false);
 const userDropdownVisible = ref(false);
+const aboutDropdownVisible = ref(false);
+const mobileAboutExpanded = ref(false);
 
 // 搜索关键字
 const searchKeyword = ref('');
@@ -16,7 +18,16 @@ const searchKeyword = ref('');
 // 前台菜单项
 const menuItems = computed(() => [
   { path: '/portal', title: '首页' },
-  { path: '/portal/about', title: '关于我们' },
+  {
+    path: '/portal/about',
+    title: '关于我们',
+    children: [
+      { path: '/portal/about/research', title: '关于研究院' },
+      { path: '/portal/about/digital', title: '关于数字创新中心' },
+      { path: '/portal/about/education', title: '关于教育培训中心' },
+      { path: '/portal/about/contact', title: '联系我们' },
+    ],
+  },
   { path: '/portal/courses', title: '课程中心' },
   { path: '/portal/cert', title: '认证中心' },
   { path: '/portal/teachers', title: '师资队伍' },
@@ -58,6 +69,14 @@ function goToRegister() {
 
 function toggleUserDropdown() {
   userDropdownVisible.value = !userDropdownVisible.value;
+}
+
+function toggleAboutDropdown() {
+  aboutDropdownVisible.value = !aboutDropdownVisible.value;
+}
+
+function toggleMobileAbout() {
+  mobileAboutExpanded.value = !mobileAboutExpanded.value;
 }
 
 // 执行搜索
@@ -107,15 +126,59 @@ function clearSearch() {
 
           <!-- Desktop Menu -->
           <nav class="hidden space-x-1 md:flex">
-            <router-link
-              v-for="item in menuItems"
-              :key="item.path"
-              :to="item.path"
-              class="rounded-lg px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-blue-600"
-              active-class="bg-blue-50 text-blue-600 font-medium"
-            >
-              {{ item.title }}
-            </router-link>
+            <template v-for="item in menuItems" :key="item.path">
+              <!-- 有子菜单的情况 -->
+              <div v-if="item.children" class="relative">
+                <button
+                  class="flex items-center gap-1 rounded-lg px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-blue-600"
+                  @mouseenter="aboutDropdownVisible = true"
+                  @mouseleave="aboutDropdownVisible = false"
+                >
+                  {{ item.title }}
+                  <svg
+                    class="h-4 w-4 transition-transform"
+                    :class="{ 'rotate-180': aboutDropdownVisible }"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                <!-- 下拉菜单 -->
+                <div
+                  v-show="aboutDropdownVisible"
+                  class="absolute left-0 top-full z-50 mt-1 w-48 rounded-lg bg-white py-2 shadow-lg"
+                  @mouseenter="aboutDropdownVisible = true"
+                  @mouseleave="aboutDropdownVisible = false"
+                >
+                  <router-link
+                    v-for="child in item.children"
+                    :key="child.path"
+                    :to="child.path"
+                    class="block px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-blue-600"
+                    active-class="bg-blue-50 text-blue-600 font-medium"
+                    @click="aboutDropdownVisible = false"
+                  >
+                    {{ child.title }}
+                  </router-link>
+                </div>
+              </div>
+              <!-- 没有子菜单的情况 -->
+              <router-link
+                v-else
+                :to="item.path"
+                class="rounded-lg px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-blue-600"
+                active-class="bg-blue-50 text-blue-600 font-medium"
+              >
+                {{ item.title }}
+              </router-link>
+            </template>
           </nav>
 
           <!-- User Actions -->
@@ -402,16 +465,57 @@ function clearSearch() {
 
           <!-- 菜单列表 -->
           <div class="mt-12 space-y-2">
-            <router-link
-              v-for="item in menuItems"
-              :key="item.path"
-              :to="item.path"
-              class="block rounded-lg px-4 py-3 text-gray-700 transition-colors hover:bg-gray-100"
-              active-class="bg-blue-50 text-blue-600 font-medium"
-              @click="handleMenuClick(item.path)"
-            >
-              {{ item.title }}
-            </router-link>
+            <template v-for="item in menuItems" :key="item.path">
+              <!-- 有子菜单的情况 -->
+              <div v-if="item.children">
+                <button
+                  class="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-gray-700 transition-colors hover:bg-gray-100"
+                  @click="toggleMobileAbout"
+                >
+                  <span>{{ item.title }}</span>
+                  <svg
+                    class="h-4 w-4 transition-transform"
+                    :class="{ 'rotate-180': mobileAboutExpanded }"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                <!-- 子菜单 -->
+                <div
+                  v-show="mobileAboutExpanded"
+                  class="ml-4 mt-1 space-y-1 border-l-2 border-blue-200 pl-4"
+                >
+                  <router-link
+                    v-for="child in item.children"
+                    :key="child.path"
+                    :to="child.path"
+                    class="block rounded-lg px-4 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-blue-600"
+                    active-class="bg-blue-50 text-blue-600 font-medium"
+                    @click="handleMenuClick(child.path)"
+                  >
+                    {{ child.title }}
+                  </router-link>
+                </div>
+              </div>
+              <!-- 没有子菜单的情况 -->
+              <router-link
+                v-else
+                :to="item.path"
+                class="block rounded-lg px-4 py-3 text-gray-700 transition-colors hover:bg-gray-100"
+                active-class="bg-blue-50 text-blue-600 font-medium"
+                @click="handleMenuClick(item.path)"
+              >
+                {{ item.title }}
+              </router-link>
+            </template>
           </div>
 
           <div class="my-4 border-t border-gray-200"></div>

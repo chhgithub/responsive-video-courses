@@ -125,9 +125,41 @@ const coreRoutes: RouteRecordRaw[] = [
       {
         name: 'PortalAbout',
         path: 'about',
-        component: () => import('#/views/portal/about.vue'),
+        redirect: '/portal/about/research',
         meta: {
           title: '关于我们',
+        },
+      },
+      {
+        name: 'PortalAboutResearch',
+        path: 'about/research',
+        component: () => import('#/views/portal/about/research.vue'),
+        meta: {
+          title: '关于研究院',
+        },
+      },
+      {
+        name: 'PortalAboutDigital',
+        path: 'about/digital',
+        component: () => import('#/views/portal/about/digital.vue'),
+        meta: {
+          title: '关于数字创新中心',
+        },
+      },
+      {
+        name: 'PortalAboutEducation',
+        path: 'about/education',
+        component: () => import('#/views/portal/about/education.vue'),
+        meta: {
+          title: '关于教育培训中心',
+        },
+      },
+      {
+        name: 'PortalAboutContact',
+        path: 'about/contact',
+        component: () => import('#/views/portal/about/contact.vue'),
+        meta: {
+          title: '联系我们',
         },
       },
       {
