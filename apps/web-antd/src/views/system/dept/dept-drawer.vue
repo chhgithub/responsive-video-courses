@@ -123,7 +123,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     if (!isOpen) {
       return null;
     }
-    drawerApi.drawerLoading(true);
 
     const { id, update } = drawerApi.getData() as DrawerProps;
     isUpdate.value = update;
@@ -140,8 +139,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     /** 部门选择 下拉框 */
     await initDeptSelect(id);
     await markInitialized();
-
-    drawerApi.drawerLoading(false);
   },
 });
 

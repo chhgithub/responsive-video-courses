@@ -39,7 +39,12 @@ onMounted(async () => {
   if (!hasAccessByRoles(['superadmin'])) {
     return;
   }
-  await initTenant();
+  try {
+    await initTenant();
+  } catch (error) {
+    // 忽略租户初始化错误，避免影响页面加载
+    console.warn('租户初始化失败:', error);
+  }
 });
 
 const route = useRoute();

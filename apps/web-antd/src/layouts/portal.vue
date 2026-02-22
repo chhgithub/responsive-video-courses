@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useUserStore } from '@vben/stores';
@@ -16,7 +16,7 @@ const mobileAboutExpanded = ref(false);
 const searchKeyword = ref('');
 
 // 前台菜单项
-const menuItems = computed(() => [
+const menuItems = [
   { path: '/portal', title: '首页' },
   {
     path: '/portal/about',
@@ -29,12 +29,61 @@ const menuItems = computed(() => [
     ],
   },
   { path: '/portal/courses', title: '课程中心' },
+  { path: '/portal/news', title: '资讯公告' },
+  { path: '/portal/activity', title: '活动日历' },
   { path: '/portal/cert', title: '认证中心' },
   { path: '/portal/teachers', title: '师资队伍' },
   { path: '/portal/general', title: '通识教育' },
-]);
+];
 
-const isLoggedIn = computed(() => !!userStore.userInfo);
+// 前台登录状态
+const isLoggedIn = ref(false);
+
+// 当前用户信息
+const currentUser = ref<any>(null);
+
+// 检查登录状态
+function checkLoginState() {
+	const state = localStorage.getItem('portal_login_state');
+	if (!state) {
+		isLoggedIn.value = false;
+		currentUser.value = null;
+		return;
+	}
+	try {
+		const loginState = JSON.parse(state);
+		isLoggedIn.value = !!loginState?.isLoggedIn;
+		currentUser.value = loginState?.user || null;
+	} catch {
+		isLoggedIn.value = false;
+		currentUser.value = null;
+	}
+}
+
+// 监听 storage 事件（多标签页同步）
+function handleStorageChange(event: StorageEvent) {
+	if (event.key === 'portal_login_state') {
+		checkLoginState();
+	}
+}
+
+// 监听自定义事件（同一标签页内同步）
+function handleLoginStateChanged() {
+	checkLoginState();
+}
+
+// 组件挂载时检查登录状态
+onMounted(() => {
+	checkLoginState();
+	window.addEventListener('storage', handleStorageChange);
+	window.addEventListener('portal-login-state-changed', handleLoginStateChanged);
+});
+
+// 组件卸载时移除监听
+onUnmounted(() => {
+	window.removeEventListener('storage', handleStorageChange);
+	window.removeEventListener('portal-login-state-changed', handleLoginStateChanged);
+});
 
 function handleMenuClick(path: string) {
   mobileMenuVisible.value = false;
@@ -43,14 +92,21 @@ function handleMenuClick(path: string) {
 
 function handleLogout() {
   userDropdownVisible.value = false;
-  userStore.logout();
-  router.push('/auth/login');
+  // 清除前台登录状态
+  localStorage.removeItem('portal_login_state');
+  // 也清除记住的用户名
+  localStorage.removeItem('portal_login_remember');
+  // 更新状态
+  isLoggedIn.value = false;
+  currentUser.value = null;
+  // 触发自定义事件，通知其他组件登录状态已更新
+  window.dispatchEvent(new CustomEvent('portal-login-state-changed'));
 }
 
 function goToProfile() {
   if (!isLoggedIn.value) {
     mobileMenuVisible.value = false;
-    router.push('/auth/login');
+    router.push('/portal/login');
     return;
   }
   mobileMenuVisible.value = false;
@@ -59,12 +115,12 @@ function goToProfile() {
 
 function goToLogin() {
   mobileMenuVisible.value = false;
-  router.push('/auth/login');
+  router.push('/portal/login');
 }
 
 function goToRegister() {
   mobileMenuVisible.value = false;
-  router.push('/auth/register');
+  router.push('/portal/register');
 }
 
 function toggleUserDropdown() {
@@ -235,11 +291,11 @@ function clearSearch() {
                   @click="toggleUserDropdown"
                 >
                   <img
-                    :src="userStore.userInfo?.avatar"
+                    :src="currentUser?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'"
                     class="h-8 w-8 rounded-full object-cover"
                     alt="Avatar"
                   />
-                  <span class="text-sm text-gray-700">我的</span>
+                  <span class="text-sm text-gray-700">{{ currentUser?.nickname || currentUser?.username || '我的' }}</span>
                 </button>
                 <!-- Dropdown Menu -->
                 <div

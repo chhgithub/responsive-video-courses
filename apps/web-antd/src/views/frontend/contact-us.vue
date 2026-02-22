@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { message } from 'ant-design-vue';
+
+import { addConsultation } from '#/utils/consultation-storage';
 
 // 假数据 - 联系方式
 const contactInfo = ref({
@@ -76,9 +79,49 @@ const contactInfo = ref({
 
 // 提交表单
 const handleSubmit = () => {
-  console.log('表单提交:', contactInfo.value.form);
-  // 这里可以添加实际的提交逻辑
-  alert('感谢您的留言，我们会尽快回复！');
+  // 表单验证
+  const form = contactInfo.value.form;
+  if (!form.name || !form.phone || !form.email || !form.message) {
+    message.warning('请填写完整信息（姓名、电话、邮箱、留言内容）');
+    return;
+  }
+
+  // 电话格式验证
+  const phoneRegex = /^1[3-9]\d{9}$/;
+  if (!phoneRegex.test(form.phone)) {
+    message.warning('请输入正确的手机号码');
+    return;
+  }
+
+  // 邮箱格式验证
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(form.email)) {
+    message.warning('请输入正确的邮箱地址');
+    return;
+  }
+
+  try {
+    // 保存到 localStorage
+    addConsultation({
+      name: form.name,
+      phone: form.phone,
+      email: form.email,
+      subject: form.subject,
+      message: form.message,
+    });
+
+    message.success('感谢您的留言，我们会尽快回复！');
+
+    // 重置表单
+    form.name = '';
+    form.phone = '';
+    form.email = '';
+    form.subject = '';
+    form.message = '';
+  } catch (error) {
+    message.error('提交失败，请稍后重试');
+    console.error('提交留言失败:', error);
+  }
 };
 </script>
 

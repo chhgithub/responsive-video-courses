@@ -66,7 +66,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     if (!isOpen) {
       return null;
     }
-    drawerApi.drawerLoading(true);
     const { id } = drawerApi.getData() as { id?: number | string };
     isUpdate.value = !!id;
     // 初始化
@@ -77,7 +76,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
       await formApi.setValues(record);
     }
     await markInitialized();
-    drawerApi.drawerLoading(false);
   },
 });
 

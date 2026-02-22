@@ -197,6 +197,11 @@ function createRequestClient(baseURL: string) {
         throw new Error($t('http.apiRequestFailed'));
       }
 
+      // 确保 axiosResponseData 是对象类型
+      if (typeof axiosResponseData !== 'object' || Array.isArray(axiosResponseData)) {
+        throw new Error($t('http.apiRequestFailed'));
+      }
+
       // 后端并没有采用严格的{code, msg, data}模式
       const { code, data, msg, ...other } = axiosResponseData;
 

@@ -73,7 +73,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     if (!isOpen) {
       return null;
     }
-    drawerApi.drawerLoading(true);
 
     const { dictCode, dictType } = drawerApi.getData() as DrawerProps;
     isUpdate.value = !!dictCode;
@@ -85,8 +84,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
       await formApi.setValues(record);
     }
     await markInitialized();
-
-    drawerApi.drawerLoading(false);
   },
 });
 

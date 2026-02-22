@@ -104,7 +104,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     if (!isOpen) {
       return null;
     }
-    drawerApi.drawerLoading(true);
 
     const { id, update } = drawerApi.getData() as ModalProps;
     isUpdate.value = update;
@@ -119,8 +118,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
       }
     }
     await markInitialized();
-
-    drawerApi.drawerLoading(false);
   },
 });
 

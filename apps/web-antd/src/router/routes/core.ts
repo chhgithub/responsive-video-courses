@@ -171,6 +171,62 @@ const coreRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'PortalCourseDetail',
+        path: 'course-detail/:id',
+        component: () => import('#/views/portal/course-detail.vue'),
+        meta: {
+          title: '课程详情',
+        },
+      },
+      {
+        name: 'PortalCourseLearn',
+        path: 'course-learn/:id',
+        component: () => import('#/views/portal/course-learn.vue'),
+        meta: {
+          title: '课程学习',
+        },
+      },
+      {
+        name: 'PortalLearn',
+        path: 'learn/:id',
+        component: () => import('#/views/portal/course-learn.vue'),
+        meta: {
+          title: '课程学习',
+        },
+      },
+      {
+        name: 'PortalCourseEdit',
+        path: 'course-edit/:id',
+        component: () => import('#/views/portal/course-edit.vue'),
+        meta: {
+          title: '编辑课程',
+        },
+      },
+      {
+        name: 'PortalNews',
+        path: 'news',
+        component: () => import('#/views/portal/news/index.vue'),
+        meta: {
+          title: '资讯公告',
+        },
+      },
+      {
+        name: 'PortalNewsDetail',
+        path: 'news/detail/:id',
+        component: () => import('#/views/portal/news/detail.vue'),
+        meta: {
+          title: '资讯详情',
+        },
+      },
+      {
+        name: 'PortalActivity',
+        path: 'activity',
+        component: () => import('#/views/portal/news/activity.vue'),
+        meta: {
+          title: '活动日历',
+        },
+      },
+      {
         name: 'PortalCert',
         path: 'cert',
         component: () => import('#/views/portal/cert.vue'),
@@ -192,6 +248,82 @@ const coreRoutes: RouteRecordRaw[] = [
         component: () => import('#/views/portal/general.vue'),
         meta: {
           title: '通识教育',
+        },
+      },
+      {
+        name: 'PortalRegister',
+        path: 'register',
+        component: () => import('#/views/portal/register.vue'),
+        meta: {
+          title: '用户注册',
+        },
+      },
+      {
+        name: 'PortalLogin',
+        path: 'login',
+        component: () => import('#/views/portal/login.vue'),
+        meta: {
+          title: '用户登录',
+        },
+      },
+      /**
+       * 讲师中心路由
+       * 需要讲师角色才能访问
+       */
+      {
+        name: 'PortalTeacher',
+        path: 'teacher',
+        component: () => import('#/views/portal/teacher/index.vue'),
+        meta: {
+          title: '讲师中心',
+        },
+      },
+      {
+        name: 'TeacherCourses',
+        path: 'teacher/courses',
+        component: () => import('#/views/portal/teacher/courses/index.vue'),
+        meta: {
+          title: '课程管理',
+        },
+      },
+      {
+        name: 'TeacherCourseCreate',
+        path: 'teacher/courses/create',
+        component: () => import('#/views/portal/teacher/courses/edit.vue'),
+        meta: {
+          title: '创建课程',
+        },
+      },
+      {
+        name: 'TeacherCourseEdit',
+        path: 'teacher/courses/edit/:id',
+        component: () => import('#/views/portal/teacher/courses/edit.vue'),
+        meta: {
+          title: '编辑课程',
+        },
+      },
+      {
+        name: 'TeacherCourseChapters',
+        path: 'teacher/courses/chapters/:id',
+        component: () => import('#/views/portal/teacher/courses/chapters.vue'),
+        meta: {
+          title: '章节管理',
+        },
+      },
+      {
+        name: 'TeacherStudents',
+        path: 'teacher/students',
+        component: () => import('#/views/portal/teacher/students/index.vue'),
+        meta: {
+          title: '学员管理',
+        },
+      },
+      {
+        name: 'TeacherStatistics',
+        path: 'teacher/statistics',
+        component: () => import('#/views/portal/teacher/statistics/index.vue'),
+        meta: {
+          title: '数据统计',
         },
       },
     ],

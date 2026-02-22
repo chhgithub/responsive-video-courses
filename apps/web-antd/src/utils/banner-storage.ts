@@ -14,7 +14,7 @@ const defaultBanners: Banner[] = [
 	{
 		id: '1',
 		title: '春季新课首发',
-		imageUrl: 'https://picsum.photos/seed/banner1/1200/400',
+		imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200&h=400&fit=crop',
 		orderNum: 1,
 		status: '1',
 		createTime: '2024-01-01 10:00:00',
@@ -22,10 +22,26 @@ const defaultBanners: Banner[] = [
 	{
 		id: '2',
 		title: '限时优惠活动',
-		imageUrl: 'https://picsum.photos/seed/banner2/1200/400',
+		imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=400&fit=crop',
 		orderNum: 2,
 		status: '1',
 		createTime: '2024-01-02 10:00:00',
+	},
+	{
+		id: '3',
+		title: '名师精品课程',
+		imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=1200&h=400&fit=crop',
+		orderNum: 3,
+		status: '1',
+		createTime: '2024-01-03 10:00:00',
+	},
+	{
+		id: '4',
+		title: '在线学习平台',
+		imageUrl: 'https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=1200&h=400&fit=crop',
+		orderNum: 4,
+		status: '1',
+		createTime: '2024-01-04 10:00:00',
 	},
 ];
 
@@ -117,4 +133,12 @@ export function getActiveBanners(): Banner[] {
 	return banners
 		.filter((b) => b.status === '1')
 		.sort((a, b) => a.orderNum - b.orderNum);
+}
+
+/**
+ * 重置为默认数据（用于初始化或测试）
+ */
+export function resetBanners() {
+	localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultBanners));
+	return defaultBanners;
 }

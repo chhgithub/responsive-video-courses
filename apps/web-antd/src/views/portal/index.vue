@@ -4,6 +4,12 @@ import type { Course } from '#/api/course/model';
 import { computed, onMounted, ref } from 'vue';
 
 import { courseList } from '#/api/course';
+import {
+	getActiveNews,
+	getActiveActivities,
+	getActiveHotTopics,
+} from '#/utils/news-storage';
+import { getActiveBanners } from '#/utils/banner-storage';
 
 import BannerCarousel from './components/BannerCarousel.vue';
 import ConsultationForm from './components/ConsultationForm.vue';
@@ -12,27 +18,15 @@ import CourseStatsChart from './components/CourseStatsChart.vue';
 import HotTopics from './components/HotTopics.vue';
 import NewsSection from './components/NewsSection.vue';
 
-// Banner数据
-const banners = ref([
-  {
-    id: 1,
-    image: 'https://picsum.photos/seed/banner1/1200/400',
-    title: '春季新课首发',
-    link: '/portal/courses',
-  },
-  {
-    id: 2,
-    image: 'https://picsum.photos/seed/banner2/1200/400',
-    title: '限时优惠活动',
-    link: '/portal/courses',
-  },
-  {
-    id: 3,
-    image: 'https://picsum.photos/seed/banner3/1200/400',
-    title: '名师精品课程',
-    link: '/portal/courses',
-  },
-]);
+// Banner数据 - 从localStorage读取启用的Banner
+const banners = ref(
+	getActiveBanners().map((b) => ({
+		id: Number.parseInt(b.id),
+		image: b.imageUrl,
+		title: b.title,
+		link: '/portal/courses',
+	})),
+);
 
 // 精选课程
 const featuredCourses = ref<Course[]>([]);
@@ -63,43 +57,47 @@ function handleCategoryChange(category: string) {
   activeCategory.value = category;
 }
 
-// 资讯公告
-const newsList = ref([
-  {
-    id: 1,
-    title: '平台升级通知',
-    date: '2025-01-20',
-    content: '系统将于1月25日进行升级维护',
-  },
-  {
-    id: 2,
-    title: '新课上线预告',
-    date: '2025-01-18',
-    content: '多门精品课程即将上线',
-  },
-  {
-    id: 3,
-    title: '会员权益说明',
-    date: '2025-01-15',
-    content: 'VIP会员可享全部课程',
-  },
-]);
+// 资讯公告 - 从 localStorage 读取
+const newsList = ref(
+	getActiveNews()
+		.sort((a, b) => b.orderNum - a.orderNum)
+		.slice(0, 3)
+		.map((news) => ({
+			id: news.id,
+			title: news.title,
+			date: news.publishTime,
+			content: news.content,
+			category: news.category,
+		}))
+);
 
-// 活动日历
-const calendarEvents = ref([
-  { id: 1, title: '直播讲座：Vue3实战', date: '2025-02-15', time: '19:00' },
-  { id: 2, title: 'Python数据分析工作坊', date: '2025-02-20', time: '14:00' },
-  { id: 3, title: 'React技术分享会', date: '2025-02-25', time: '15:30' },
-]);
+// 活动日历 - 从 localStorage 读取
+const calendarEvents = ref(
+	getActiveActivities()
+		.sort((a, b) => a.orderNum - b.orderNum)
+		.slice(0, 3)
+		.map((activity) => ({
+			id: activity.id,
+			title: activity.title,
+			date: activity.startDate,
+			time: '待定',
+			location: activity.location,
+		}))
+);
 
-// 热点话题
-const hotTopics = ref([
-  { id: 1, title: 'AI编程助手使用指南', hot: 9999 },
-  { id: 2, title: 'Vue3 Composition API最佳实践', hot: 8526 },
-  { id: 3, title: 'TypeScript进阶技巧', hot: 7234 },
-  { id: 4, title: '前端性能优化策略', hot: 6891 },
-  { id: 5, title: 'React Hooks深度解析', hot: 5678 },
-]);
+// 热点话题 - 从 localStorage 读取
+const hotTopics = ref(
+	getActiveHotTopics()
+		.sort((a, b) => a.orderNum - b.orderNum)
+		.slice(0, 5)
+		.map((hot) => ({
+			id: hot.id,
+			title: hot.title,
+			hot: Math.floor(Math.random() * 5000) + 5000, // 模拟热度
+			link: hot.link,
+			coverImage: hot.coverImage,
+		}))
+);
 
 // 课程统计数据
 const courseStats = ref([

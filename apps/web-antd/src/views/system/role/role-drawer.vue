@@ -90,7 +90,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     if (!isOpen) {
       return null;
     }
-    drawerApi.drawerLoading(true);
 
     const { id } = drawerApi.getData() as { id?: number | string };
     isUpdate.value = !!id;
@@ -102,8 +101,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     // init菜单 注意顺序要放在赋值record之后 内部watch会依赖record
     await setupMenuTree(id);
     await markInitialized();
-
-    drawerApi.drawerLoading(false);
   },
 });
 

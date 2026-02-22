@@ -1,43 +1,80 @@
 <script lang="ts" setup>
-import type { Course } from '#/api/course/model';
-
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { message } from 'ant-design-vue';
 
-import { courseList } from '#/api/course';
+import type { Course } from '#/mock/course-center';
+import { mockCourses } from '#/mock/course-center';
+import { getUserOrders } from '#/utils/order-storage';
+import { getCourseProgress } from '#/utils/learning-storage';
 
 const router = useRouter();
 
 // 我的课程列表
-const myCourses = ref<Course[]>([]);
+const myCourses = ref<any[]>([]);
 const loading = ref(false);
 
-// 模拟添加进度数据到课程
+// 加载我的课程
 async function loadMyCourses() {
-  loading.value = true;
-  try {
-    const data = await courseList({ pageSize: 20 });
-    myCourses.value = data.rows.map((course) => ({
-      ...course,
-      progress: Math.floor(Math.random() * 101), // 随机进度
-    }));
-  } finally {
-    loading.value = false;
-  }
+	loading.value = true;
+
+	try {
+		// 获取当前用户
+		const state = localStorage.getItem('portal_login_state');
+		if (!state) {
+			message.warning('请先登录');
+			router.push('/portal/login');
+			return;
+		}
+		const loginState = JSON.parse(state);
+		const userId = loginState.user.id;
+
+		// 获取用户订单（已购买的课程）
+		const orders = getUserOrders().filter(order => order.userId === userId && order.status === 'paid');
+
+		if (orders.length === 0) {
+			myCourses.value = [];
+			loading.value = false;
+			return;
+		}
+
+		// 关联课程详情数据
+		const courses = orders.map(order => {
+			// 从 mockCourses 中查找课程详情
+			const courseDetail = mockCourses.find(c => c.id === order.courseId);
+
+			// 获取学习进度
+			const progressInfo = getCourseProgress(userId, order.courseId);
+
+			return {
+				...order,
+				...courseDetail,
+				progress: progressInfo.progress,
+				completedLessons: progressInfo.completedLessons,
+				totalLessons: progressInfo.totalLessons,
+				lastStudyAt: progressInfo.lastStudyAt,
+			};
+		});
+
+		myCourses.value = courses;
+	} finally {
+		loading.value = false;
+	}
 }
 
 // 继续学习
-function continueLearning(course: Course) {
-  router.push(`/portal/player/${course.courseId}/1`);
+function continueLearning(course: any) {
+	// 跳转到课程学习页
+	router.push(`/portal/learn/${course.id}`);
 }
 
 // 查看课程详情
-function viewCourseDetail(courseId: number) {
-  router.push(`/portal/course/${courseId}`);
+function viewCourseDetail(courseId: string) {
+	router.push(`/portal/course-detail/${courseId}`);
 }
 
 onMounted(() => {
-  loadMyCourses();
+	loadMyCourses();
 });
 </script>
 
@@ -65,14 +102,14 @@ onMounted(() => {
       >
         <div
           v-for="course in myCourses"
-          :key="course.courseId"
+          :key="course.id"
           class="course-card overflow-hidden rounded-xl bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
         >
           <!-- 课程封面 -->
           <div class="relative overflow-hidden">
             <img
-              :src="course.courseCover"
-              :alt="course.courseName"
+              :src="course.coverImage"
+              :alt="course.title"
               class="aspect-video w-full object-cover"
             />
             <!-- 学习进度遮罩 -->
@@ -101,11 +138,17 @@ onMounted(() => {
           <!-- 课程信息 -->
           <div class="p-4">
             <h3 class="mb-2 line-clamp-2 font-semibold text-gray-800">
-              {{ course.courseName }}
+              {{ course.title }}
             </h3>
             <p class="mb-4 line-clamp-2 text-sm text-gray-500">
-              {{ course.courseIntro }}
+              {{ course.description }}
             </p>
+
+            <!-- 学习统计 -->
+            <div class="mb-3 flex items-center justify-between text-xs text-gray-500">
+              <span>{{ course.completedLessons || 0 }}/{{ course.totalLessons || 0 }} 课时</span>
+              <span v-if="course.lastStudyAt !== '-'">{{ course.lastStudyAt }}</span>
+            </div>
 
             <!-- 操作按钮 -->
             <div class="flex gap-2">
@@ -116,7 +159,7 @@ onMounted(() => {
                 继续学习
               </button>
               <button
-                @click="viewCourseDetail(course.courseId)"
+                @click="viewCourseDetail(course.id)"
                 class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100"
               >
                 详情

@@ -78,7 +78,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     if (!isOpen) {
       return null;
     }
-    drawerApi.drawerLoading(true);
 
     const { id } = drawerApi.getData() as { id?: number | string };
     isUpdate.value = !!id;
@@ -91,15 +90,12 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     // init菜单 注意顺序要放在赋值record之后 内部watch会依赖record
     await setupMenuTree(id);
     await markInitialized();
-
-    drawerApi.drawerLoading(false);
   },
 });
 
 const menuSelectRef = ref<InstanceType<typeof MenuSelectTable>>();
 async function handleConfirm() {
   try {
-    drawerApi.drawerLoading(true);
     const { valid } = await formApi.validate();
     if (!valid) {
       return;
@@ -115,8 +111,6 @@ async function handleConfirm() {
     drawerApi.close();
   } catch (error) {
     console.error(error);
-  } finally {
-    drawerApi.drawerLoading(false);
   }
 }
 

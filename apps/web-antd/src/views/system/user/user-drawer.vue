@@ -157,7 +157,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
       ]);
       return null;
     }
-    drawerApi.drawerLoading(true);
 
     const { id } = drawerApi.getData() as { id?: number | string };
     isUpdate.value = !!id;
@@ -213,8 +212,6 @@ const [BasicDrawer, drawerApi] = useVbenDrawer({
     // 并行处理 重构后会带来10-50ms的优化
     await Promise.all(promises);
     await markInitialized();
-
-    drawerApi.drawerLoading(false);
   },
 });
 
