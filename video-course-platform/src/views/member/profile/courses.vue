@@ -1,42 +1,121 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores';
+import { ElMessage } from 'element-plus';
+import { getUserOrders } from '@/utils/order-storage';
+import { getUserLearningRecords } from '@/utils/learning-storage';
+import { getPortalCourseById } from '@/utils/portal-course-adapter';
 
-import { getLearningCourses, getCompletedCourses, type MyCourse } from '@/utils/member-storage';
+const router = useRouter();
+const authStore = useAuthStore();
 
-// 当前激活的 tab
+const loading = ref(false);
 const activeTab = ref<'learning' | 'completed'>('learning');
 
-// 学习中的课程
-const learningCourses = ref<MyCourse[]>(getLearningCourses());
+// 课程列表（包含学习记录）
+interface CourseWithProgress {
+  orderId: string;
+  courseId: string;
+  courseName: string;
+  courseCover: string;
+  price: number;
+  progress: number;
+  lastWatchTime: string;
+  totalWatchDuration: number;
+  completedLessons: number;
+  totalLessons: number;
+}
 
-// 已完成的课程
-const completedCourses = ref<MyCourse[]>(getCompletedCourses());
+const coursesWithProgress = ref<CourseWithProgress[]>([]);
 
-// 根据 tab 显示的课程
+// 计算显示的课程
 const displayedCourses = computed(() => {
-  return activeTab.value === 'learning' ? learningCourses.value : completedCourses.value;
+  if (activeTab.value === 'learning') {
+    return coursesWithProgress.value.filter((c) => c.progress < 100);
+  } else {
+    return coursesWithProgress.value.filter((c) => c.progress >= 100);
+  }
 });
+
+// 统计数据
+const stats = computed(() => {
+  const learning = coursesWithProgress.value.filter((c) => c.progress < 100).length;
+  const completed = coursesWithProgress.value.filter((c) => c.progress >= 100).length;
+  return { learning, completed };
+});
+
+// 加载我的课程数据
+async function loadMyCourses() {
+  if (!authStore.userInfo) return;
+
+  loading.value = true;
+  try {
+    // 获取用户订单（已购买的课程）
+    const orders = getUserOrders(authStore.userInfo.userId);
+    const paidOrders = orders.filter((o) => o.status === 'paid');
+
+    // 获取学习记录
+    const learningRecords = getUserLearningRecords(authStore.userInfo.userId);
+
+    // 合并数据
+    coursesWithProgress.value = paidOrders.map((order) => {
+      const record = learningRecords.find((r) => r.courseId === order.courseId);
+
+      return {
+        orderId: order.orderId,
+        courseId: order.courseId,
+        courseName: order.courseName,
+        courseCover: order.courseCover,
+        price: order.price,
+        progress: record?.progress || 0,
+        lastWatchTime: record?.lastWatchTime || '-',
+        totalWatchDuration: record?.totalWatchDuration || 0,
+        completedLessons: record?.completedLessons?.length || 0,
+        totalLessons: 0, // TODO: 从课程数据获取总课时数
+      };
+    });
+
+    console.log('加载我的课程:', coursesWithProgress.value.length);
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载课程失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 继续学习
+function handleContinueLearning(courseId: string) {
+  router.push(`/portal/course-learn/${courseId}`);
+}
+
+// 重新学习
+function handleRelearn(courseId: string) {
+  router.push(`/portal/course-learn/${courseId}`);
+}
+
+// 查看课程详情
+function handleViewDetail(courseId: string) {
+  router.push(`/portal/course/${courseId}`);
+}
 
 // 切换 tab
 function handleTabChange(tab: 'learning' | 'completed') {
   activeTab.value = tab;
 }
 
-// 继续学习
-function handleContinueLearning(courseId: string) {
-  console.log('继续学习课程:', courseId);
-  // 跳转到学习页面
-}
-
-// 重新学习
-function handleRelearn(courseId: string) {
-  console.log('重新学习课程:', courseId);
-  // 跳转到学习页面
-}
+onMounted(() => {
+  loadMyCourses();
+});
 </script>
 
 <template>
   <div class="my-courses">
+    <div class="page-header">
+      <h2>我的课程</h2>
+      <p>查看您购买的课程和学习进度</p>
+    </div>
+
     <!-- Tab 切换 -->
     <div class="tabs-wrapper">
       <button
@@ -44,60 +123,66 @@ function handleRelearn(courseId: string) {
         :class="{ active: activeTab === 'learning' }"
         @click="handleTabChange('learning')"
       >
-        学习中
-        <span class="badge">{{ learningCourses.length }}</span>
+        <span>学习中</span>
+        <span class="badge">{{ stats.learning }}</span>
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'completed' }"
         @click="handleTabChange('completed')"
       >
-        已完成
-        <span class="badge">{{ completedCourses.length }}</span>
+        <span>已完成</span>
+        <span class="badge">{{ stats.completed }}</span>
       </button>
     </div>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="3" animated />
+    </div>
+
     <!-- 课程列表 -->
-    <div v-if="displayedCourses.length > 0" class="courses-list">
-      <div v-for="course in displayedCourses" :key="course.id" class="course-card">
+    <div v-else-if="displayedCourses.length > 0" class="courses-list">
+      <div v-for="course in displayedCourses" :key="course.orderId" class="course-card">
         <!-- 课程封面 -->
-        <div class="course-cover">
-          <img :src="course.cover" :alt="course.title" />
-          <div class="course-category">{{ course.category }}</div>
+        <div class="course-cover" @click="handleViewDetail(course.courseId)">
+          <el-image :src="course.courseCover" fit="cover" />
+          <div class="play-overlay">
+            <el-icon class="play-icon"><VideoPlay /></el-icon>
+          </div>
         </div>
 
         <!-- 课程信息 -->
         <div class="course-info">
-          <h3 class="course-title">{{ course.title }}</h3>
-          <p class="course-teacher">讲师：{{ course.teacher }}</p>
-          <p class="course-time">最后学习：{{ course.lastStudyTime }}</p>
+          <h3 class="course-title" @click="handleViewDetail(course.courseId)">
+            {{ course.courseName }}
+          </h3>
 
           <!-- 学习进度 -->
           <div class="progress-section">
             <div class="progress-header">
               <span class="progress-label">学习进度</span>
-              <span class="progress-text"
-                >{{ course.completedLessons }} / {{ course.totalLessons }} 课时</span
+              <span class="progress-percent">{{ course.progress }}%</span>
+            </div>
+            <el-progress :percentage="course.progress" :show-text="false" />
+            <div class="progress-info">
+              <span class="last-watch">最后学习：{{ course.lastWatchTime }}</span>
+              <span class="watch-duration"
+                >已学习 {{ Math.floor(course.totalWatchDuration / 60) }} 分钟</span
               >
             </div>
-            <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: course.progress + '%' }"></div>
-            </div>
-            <div class="progress-percent">{{ course.progress }}%</div>
           </div>
 
           <!-- 操作按钮 -->
           <div class="course-actions">
             <el-button
-              v-if="activeTab === 'learning'"
               type="primary"
-              @click="handleContinueLearning(course.id)"
+              :icon="VideoPlay"
+              @click="handleContinueLearning(course.courseId)"
             >
-              继续学习
+              {{ activeTab === 'learning' ? '继续学习' : '重新学习' }}
             </el-button>
-            <el-button v-else type="success" @click="handleRelearn(course.id)">
-              重新学习
-            </el-button>
+            <el-button @click="handleViewDetail(course.courseId)">查看详情</el-button>
           </div>
         </div>
       </div>
@@ -105,13 +190,11 @@ function handleRelearn(courseId: string) {
 
     <!-- 空状态 -->
     <div v-else class="empty-state">
-      <div class="empty-icon">📚</div>
-      <p class="empty-text">
-        {{ activeTab === 'learning' ? '还没有开始学习的课程' : '还没有已完成的课程' }}
-      </p>
-      <router-link to="/portal/courses" class="empty-link">
-        <el-button type="primary">去选课</el-button>
-      </router-link>
+      <el-empty :description="activeTab === 'learning' ? '暂无学习中的课程' : '暂无已完成的课程'">
+        <el-button type="primary" @click="router.push('/portal/courses')">
+          去选课
+        </el-button>
+      </el-empty>
     </div>
   </div>
 </template>
@@ -120,197 +203,178 @@ function handleRelearn(courseId: string) {
 @import '@/assets/styles/variables.scss';
 
 .my-courses {
-  min-height: calc(100vh - 200px);
-}
-
-// Tab 切换
-.tabs-wrapper {
-  display: flex;
-  gap: $spacing-base;
-  margin-bottom: $spacing-extra-large;
-  border-bottom: 2px solid $border-color-lighter;
-}
-
-.tab-btn {
-  padding: $spacing-base $spacing-large;
-  font-size: $font-size-medium;
-  font-weight: 500;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: $text-color-secondary;
-  border-bottom: 3px solid transparent;
-  transition: $transition-base;
-  display: flex;
-  align-items: center;
-  gap: $spacing-small;
-
-  &:hover {
-    color: $text-color-primary;
-  }
-
-  &.active {
-    color: #409eff;
-    border-bottom-color: #409eff;
-  }
-
-  .badge {
-    background: #f0f2f5;
-    color: $text-color-secondary;
-    font-size: $font-size-small;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-weight: normal;
-  }
-
-  &.active .badge {
-    background: #e6f7ff;
-    color: #409eff;
-  }
-}
-
-// 课程列表
-.courses-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: $spacing-large;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.course-card {
-  background: #fff;
-  border-radius: $border-radius-base;
-  box-shadow: $box-shadow-card;
-  overflow: hidden;
-  transition: $transition-base;
-
-  &:hover {
-    box-shadow: $box-shadow-hover;
-    transform: translateY(-2px);
-  }
-}
-
-.course-cover {
-  position: relative;
-  width: 100%;
-  height: 180px;
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .course-category {
-    position: absolute;
-    top: $spacing-base;
-    left: $spacing-base;
-    padding: $spacing-small $spacing-base;
-    background: rgba(0, 0, 0, 0.6);
-    color: #fff;
-    font-size: $font-size-small;
-    border-radius: $border-radius-small;
-  }
-}
-
-.course-info {
   padding: $spacing-large;
-}
 
-.course-title {
-  font-size: $font-size-medium;
-  font-weight: 600;
-  color: $text-color-primary;
-  margin-bottom: $spacing-small;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  .page-header {
+    margin-bottom: $spacing-extra-large;
 
-.course-teacher,
-.course-time {
-  font-size: $font-size-small;
-  color: $text-color-secondary;
-  margin-bottom: $spacing-small;
-}
+    h2 {
+      font-size: $font-size-extra-large;
+      font-weight: 600;
+      color: $text-color-primary;
+      margin-bottom: $spacing-small;
+    }
 
-// 进度条
-.progress-section {
-  margin: $spacing-base 0;
-  padding: $spacing-base;
-  background: $background-color-base;
-  border-radius: $border-radius-small;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: $spacing-small;
-
-  .progress-label {
-    font-size: $font-size-small;
-    color: $text-color-secondary;
+    p {
+      color: $text-color-secondary;
+    }
   }
 
-  .progress-text {
-    font-size: $font-size-small;
+  .tabs-wrapper {
+    display: flex;
+    gap: $spacing-base;
+    margin-bottom: $spacing-extra-large;
+    border-bottom: 1px solid $border-color-lighter;
+
+    .tab-btn {
+      padding: $spacing-base $spacing-large;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: $font-size-medium;
+      color: $text-color-secondary;
+      transition: $transition-base;
+      display: flex;
+      align-items: center;
+      gap: $spacing-small;
+
+      &:hover {
+        color: $--el-color-primary;
+      }
+
+      &.active {
+        color: $--el-color-primary;
+        border-bottom-color: $--el-color-primary;
+        font-weight: 600;
+      }
+
+      .badge {
+        background: $--el-color-primary;
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: $font-size-extra-small;
+      }
+    }
+  }
+
+  .loading-container {
+    padding: $spacing-extra-large 0;
+  }
+
+  .courses-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: $spacing-large;
+  }
+
+  .course-card {
+    background: #fff;
+    border: 1px solid $border-color-lighter;
+    border-radius: $border-radius-base;
+    overflow: hidden;
+    transition: $transition-base;
+
+    &:hover {
+      box-shadow: $box-shadow-base;
+      transform: translateY(-2px);
+    }
+  }
+
+  .course-cover {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    cursor: pointer;
+    overflow: hidden;
+
+    :deep(.el-image) {
+      width: 100%;
+      height: 100%;
+    }
+
+    .play-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: $transition-base;
+
+      .play-icon {
+        font-size: 48px;
+        color: #fff;
+      }
+    }
+
+    &:hover .play-overlay {
+      opacity: 1;
+    }
+  }
+
+  .course-info {
+    padding: $spacing-large;
+  }
+
+  .course-title {
+    font-size: $font-size-large;
+    font-weight: 600;
     color: $text-color-primary;
-    font-weight: 500;
+    margin-bottom: $spacing-base;
+    cursor: pointer;
+    transition: $transition-base;
+
+    &:hover {
+      color: $--el-color-primary;
+    }
   }
-}
 
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: #e4e7ed;
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: $spacing-small;
-}
+  .progress-section {
+    margin-bottom: $spacing-large;
 
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: $spacing-small;
 
-.progress-percent {
-  text-align: right;
-  font-size: $font-size-small;
-  color: #409eff;
-  font-weight: 600;
-}
+      .progress-label {
+        font-size: $font-size-small;
+        color: $text-color-secondary;
+      }
 
-// 操作按钮
-.course-actions {
-  margin-top: $spacing-base;
-}
+      .progress-percent {
+        font-size: $font-size-small;
+        font-weight: 600;
+        color: $--el-color-primary;
+      }
+    }
 
-// 空状态
-.empty-state {
-  text-align: center;
-  padding: $spacing-extra-extra-large 0;
-}
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: $spacing-small;
 
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: $spacing-large;
-  opacity: 0.5;
-}
+      .last-watch,
+      .watch-duration {
+        font-size: $font-size-extra-small;
+        color: $text-color-placeholder;
+      }
+    }
+  }
 
-.empty-text {
-  font-size: $font-size-medium;
-  color: $text-color-secondary;
-  margin-bottom: $spacing-large;
-}
+  .course-actions {
+    display: flex;
+    gap: $spacing-base;
+  }
 
-.empty-link {
-  text-decoration: none;
+  .empty-state {
+    padding: $spacing-extra-extra-large 0;
+  }
 }
 </style>

@@ -1,74 +1,72 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { publicAboutUsApi } from '@/api/public/introduction';
+import { initAboutUsData } from '@/utils/about-us-init';
+import type { AboutUsInfo } from '@/types/introduction';
 
-const instituteInfo = ref({
-  title: '关于研究院',
-  heroImage: 'https://picsum.photos/seed/research/1200/400',
-  content: `
-    <h2>研究院简介</h2>
-    <p>创新教育研究院成立于2010年，是一家专注于教育创新研究与实践的专业机构。</p>
-    <p>我们汇聚了国内外顶尖的教育专家、学者和实践者，共同探索教育改革的路径与方向。</p>
+const loading = ref(false);
+const researchInfo = ref<AboutUsInfo | null>(null);
 
-    <h2>研究使命</h2>
-    <p>致力于推动教育理论与实践的创新融合，为21世纪人才培养提供科学指导。</p>
-    <p>关注教育技术、课程设计、评价体系等多个研究领域。</p>
-
-    <h2>研究成果</h2>
-    <ul>
-      <li>发表学术论文100余篇</li>
-      <li>承担国家级课题20余项</li>
-      <li>出版专著10余部</li>
-      <li>获得专利30余项</li>
-    </ul>
-
-    <h2>合作伙伴</h2>
-    <p>与国内外知名高校、研究机构建立深度合作关系。</p>
-  `,
+onMounted(async () => {
+  initAboutUsData();
+  await loadData();
 });
+
+async function loadData() {
+  loading.value = true;
+  try {
+    const data = await publicAboutUsApi.getResearch();
+    console.log('获取到的研究院数据:', data);
+    if (data && data.isPublished) {
+      researchInfo.value = data;
+    } else {
+      researchInfo.value = null;
+    }
+  } catch (error) {
+    console.error('加载失败:', error);
+    researchInfo.value = null;
+  } finally {
+    loading.value = false;
+  }
+}
 </script>
 
 <template>
-  <div class="about-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="container">
-        <h1>{{ instituteInfo.title }}</h1>
-        <p>探索教育创新，引领未来教育发展方向</p>
-      </div>
-    </div>
+  <div v-loading="loading" class="about-page">
+    <!-- 未发布提示 -->
+    <el-empty v-if="!researchInfo && !loading" description="暂无内容">
+      <el-button type="primary" @click="$router.push('/portal')">返回首页</el-button>
+    </el-empty>
 
     <!-- 内容区域 -->
-    <el-card class="content-card" shadow="never">
-      <div class="content" v-html="instituteInfo.content"></div>
-    </el-card>
-
-    <!-- 核心理念 -->
-    <el-card class="features-card" shadow="never">
-      <h2>核心理念</h2>
-      <el-row :gutter="24">
-        <el-col :xs="24" :sm="12" :md="6" v-for="item in 4" :key="item">
-          <div class="feature-item">
-            <div class="feature-icon">💡</div>
-            <h3>创新驱动</h3>
-            <p>以创新思维引领教育改革</p>
+    <template v-else-if="researchInfo">
+      <!-- Hero Section -->
+      <section
+        class="hero-section"
+        :style="{ backgroundImage: researchInfo.coverImage ? `url(${researchInfo.coverImage})` : '' }"
+      >
+        <div class="hero-overlay">
+          <div class="container">
+            <div class="hero-content">
+              <h1 class="hero-title">{{ researchInfo.title }}</h1>
+              <p class="hero-subtitle">探索创新科技，引领行业发展</p>
+            </div>
           </div>
-        </el-col>
-      </el-row>
-    </el-card>
+        </div>
+      </section>
 
-    <!-- 研究团队 -->
-    <el-card class="team-card" shadow="never">
-      <h2>研究团队</h2>
-      <el-row :gutter="24">
-        <el-col :xs="24" :sm="12" :md="8" v-for="i in 6" :key="i">
-          <div class="team-member">
-            <el-avatar :size="80" :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=research${i}`" />
-            <h4>研究员{{ i }}</h4>
-            <p>教育技术专家</p>
+      <!-- 内容区域 -->
+      <section class="content-section">
+        <div class="container">
+          <div class="content-wrapper">
+            <!-- 内容卡片 -->
+            <el-card class="content-card" shadow="hover">
+              <article class="content" v-html="researchInfo.content"></article>
+            </el-card>
           </div>
-        </el-col>
-      </el-row>
-    </el-card>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -86,39 +84,102 @@ const instituteInfo = ref({
   padding: 0 $spacing-large;
 }
 
+// Hero Section
 .hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  padding: $spacing-extra-extra-large 0;
-  text-align: center;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-color: #667eea;
   margin-bottom: $spacing-extra-large;
 
-  h1 {
-    font-size: 48px;
-    margin-bottom: $spacing-base;
-  }
+  .hero-overlay {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+    padding: $spacing-extra-extra-large 0;
 
-  p {
-    font-size: $font-size-large;
-    opacity: 0.9;
+    .hero-content {
+      text-align: center;
+      color: #fff;
+      animation: fadeInUp 0.8s ease-out;
+
+      .hero-title {
+        font-size: 48px;
+        font-weight: bold;
+        margin: 0 0 $spacing-base 0;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+        @media (max-width: 768px) {
+          font-size: 32px;
+        }
+      }
+
+      .hero-subtitle {
+        font-size: $font-size-large;
+        opacity: 0.95;
+        margin: 0;
+
+        @media (max-width: 768px) {
+          font-size: $font-size-base;
+        }
+      }
+    }
   }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Content Section
+.content-section {
+  padding-bottom: $spacing-extra-extra-large;
+}
+
+.content-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .content-card {
   margin-bottom: $spacing-extra-large;
+  border-radius: $border-radius-large;
 
   .content {
-    h2 {
-      font-size: 24px;
+    :deep(h2) {
+      font-size: 32px;
       color: $text-color-primary;
-      margin-bottom: $spacing-base;
-      margin-top: $spacing-large;
+      margin-top: $spacing-extra-large;
+      margin-bottom: $spacing-large;
+      padding-bottom: $spacing-base;
+      border-bottom: 3px solid $primary-color;
+
       &:first-child {
         margin-top: 0;
       }
+
+      @media (max-width: 768px) {
+        font-size: 24px;
+      }
     }
 
-    p {
+    :deep(h3) {
+      font-size: 24px;
+      color: $text-color-primary;
+      margin-top: $spacing-large;
+      margin-bottom: $spacing-base;
+
+      @media (max-width: 768px) {
+        font-size: 20px;
+      }
+    }
+
+    :deep(p) {
       font-size: $font-size-base;
       line-height: 1.8;
       color: $text-color-regular;
@@ -129,71 +190,40 @@ const instituteInfo = ref({
       }
     }
 
-    ul {
+    :deep(ul) {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: $spacing-base;
+
       li {
-        padding: $spacing-small 0;
-        font-size: $font-size-base;
-        color: $text-color-regular;
+        position: relative;
+        padding: $spacing-small 0 $spacing-small $spacing-large + $spacing-small;
+        margin-bottom: $spacing-small;
         line-height: 1.8;
+        color: $text-color-regular;
+
+        &::before {
+          content: '•';
+          position: absolute;
+          left: 0;
+          color: $primary-color;
+          font-size: 20px;
+          font-weight: bold;
+        }
       }
     }
-  }
-}
 
-.features-card {
-  margin-bottom: $spacing-extra-large;
-
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .feature-item {
-    text-align: center;
-    padding: $spacing-large;
-
-    .feature-icon {
-      font-size: 48px;
-      margin-bottom: $spacing-base;
-    }
-
-    h3 {
-      font-size: $font-size-large;
-      margin-bottom: $spacing-small;
+    :deep(strong) {
       color: $text-color-primary;
+      font-weight: 600;
     }
 
-    p {
-      font-size: $font-size-base;
-      color: $text-color-secondary;
-    }
-  }
-}
-
-.team-card {
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .team-member {
-    text-align: center;
-    padding: $spacing-large;
-    background: #f9fafc;
-    border-radius: $border-radius-large;
-
-    h4 {
-      font-size: $font-size-medium;
-      margin: $spacing-small 0;
-      color: $text-color-primary;
-    }
-
-    p {
-      font-size: $font-size-small;
-      color: $text-color-secondary;
-      margin: 0;
+    :deep(img) {
+      max-width: 100%;
+      height: auto;
+      border-radius: $border-radius-base;
+      margin: $spacing-large 0;
+      box-shadow: $box-shadow-card;
     }
   }
 }

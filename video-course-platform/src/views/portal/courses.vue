@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import {
+  getPublishedCourses,
+  getPublishedPackages,
+  getCourseCategories,
+  searchCourses,
+  getCoursesByCategory,
+  type PortalCourse,
+} from '@/utils/portal-course-adapter';
 
 // Mock 数据类型
 interface Course {
@@ -83,97 +91,8 @@ const pagination = ref({
 
 // 标签选项
 const ageTags = computed(() => ['全部', '3-6岁', '7-12岁', '13-18岁', '成人']);
-const categoryTags = computed(() => ['全部', '编程', '美术', '音乐', '数学', '人工智能']);
+const categoryTags = computed(() => getCourseCategories());
 const paymentTags = computed(() => ['全部', '免费', '付费']);
-
-// Mock 数据生成
-function generateMockCourses(): Course[] {
-  const mockCourses: Course[] = [];
-  const categories = ['编程', '美术', '音乐', '数学', '人工智能'];
-  const ages = ['3-6岁', '7-12岁', '13-18岁', '成人'];
-  const teachers = ['张老师', '李老师', '王老师', '赵老师'];
-
-  for (let i = 1; i <= 20; i++) {
-    mockCourses.push({
-      id: `course-${i}`,
-      title: `${categories[i % categories.length]}基础课程 ${i}`,
-      coverImage: `https://picsum.photos/seed/course${i}/300/200`,
-      teacher: { name: teachers[i % teachers.length] },
-      category: categories[i % categories.length],
-      tags: [ages[i % ages.length], '热门', '推荐'],
-      rating: 4.5 + (i % 5) * 0.1,
-      studentCount: 1000 + i * 100,
-      price: i % 3 === 0 ? 0 : 19900 + i * 100,
-      isFree: i % 3 === 0,
-      trialLessonId: i % 4 === 0 ? `trial-${i}` : undefined,
-      ageRange: ages[i % ages.length],
-    });
-  }
-
-  return mockCourses;
-}
-
-function generateMockResearchPrograms(): ResearchProgram[] {
-  return [
-    {
-      id: 'research-1',
-      title: '人工智能与机器学习研究',
-      coverImage: 'https://picsum.photos/seed/research1/300/200',
-      description: '深入研究AI和ML的最新技术，培养科研能力',
-      category: '人工智能',
-      tags: ['科研', 'AI', '机器学习'],
-      requirements: '具备Python基础',
-      enrolledCount: 25,
-      capacity: 30,
-      enrollmentDeadline: '2025-06-30',
-    },
-    {
-      id: 'research-2',
-      title: '量子计算前沿探索',
-      coverImage: 'https://picsum.photos/seed/research2/300/200',
-      description: '探索量子计算的原理和应用',
-      category: '物理',
-      tags: ['量子计算', '前沿'],
-      requirements: '物理专业背景',
-      enrolledCount: 15,
-      capacity: 20,
-      enrollmentDeadline: '2025-07-31',
-    },
-  ];
-}
-
-function generateMockTrainingPlans(): TrainingPlan[] {
-  return [
-    {
-      id: 'training-1',
-      title: 'K12编程集训营',
-      coverImage: 'https://picsum.photos/seed/training1/300/200',
-      description: '面向中小学生的编程集训计划',
-      type: 'K12',
-      tags: ['编程', 'K12', '集训'],
-      location: '北京',
-      startDate: '2025-07-01',
-      endDate: '2025-07-15',
-      enrolledCount: 45,
-      capacity: 50,
-      price: 59900,
-    },
-    {
-      id: 'training-2',
-      title: '成人职业提升训练营',
-      coverImage: 'https://picsum.photos/seed/training2/300/200',
-      description: '帮助职场人士提升技能',
-      type: '成人',
-      tags: ['职业', '成人', '集训'],
-      location: '上海',
-      startDate: '2025-08-01',
-      endDate: '2025-08-07',
-      enrolledCount: 28,
-      capacity: 30,
-      price: 39900,
-    },
-  ];
-}
 
 // 加载课程数据
 async function loadCourses() {
@@ -181,26 +100,27 @@ async function loadCourses() {
 
   try {
     // 模拟 API 调用延迟
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // 根据筛选条件过滤课程
-    let filtered = generateMockCourses();
+    let filtered: PortalCourse[] = [];
 
+    // 根据搜索关键字获取课程
     if (searchKeyword.value) {
-      filtered = filtered.filter((c) =>
-        c.title.includes(searchKeyword.value) ||
-        c.teacher.name.includes(searchKeyword.value)
-      );
+      filtered = searchCourses(searchKeyword.value);
+    } else if (selectedCategory.value !== '全部') {
+      // 根据分类筛选
+      filtered = getCoursesByCategory(selectedCategory.value);
+    } else {
+      // 获取所有已上架课程
+      filtered = getPublishedCourses();
     }
 
-    if (selectedCategory.value !== '全部') {
-      filtered = filtered.filter((c) => c.category === selectedCategory.value);
-    }
-
+    // 根据年龄筛选（如果有数据）
     if (selectedAge.value !== '全部') {
-      filtered = filtered.filter((c) => c.ageRange === selectedAge.value);
+      // 暂时不做年龄筛选，因为后台数据没有此字段
     }
 
+    // 根据付费类型筛选
     if (selectedPayment.value === '免费') {
       filtered = filtered.filter((c) => c.isFree);
     } else if (selectedPayment.value === '付费') {
@@ -213,9 +133,7 @@ async function loadCourses() {
     const end = start + pagination.value.pageSize;
     courses.value = filtered.slice(start, end);
 
-    // 加载其他类型数据
-    researchPrograms.value = generateMockResearchPrograms();
-    trainingPlans.value = generateMockTrainingPlans();
+    console.log(`加载课程数据：共 ${filtered.length} 门，当前显示 ${courses.value.length} 门`);
   } catch (error) {
     console.error('加载课程失败:', error);
   } finally {

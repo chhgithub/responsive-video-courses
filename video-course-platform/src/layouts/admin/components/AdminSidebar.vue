@@ -11,17 +11,41 @@ const route = useRoute();
 const router = useRouter();
 
 const menuItems = computed(() => [
+  // {
+  //   path: '/admin/dashboard',
+  //   title: '仪表盘',
+  //   icon: 'Odometer',
+  
+  // },
+  // 主页管理 - 作为一级菜单
   {
-    path: '/admin/dashboard',
-    title: '仪表盘',
-    icon: 'Odometer',
+    path: '/admin/home',
+    title: '主页',
+    icon: 'HomeFilled',
+    children: [
+      { path: '/admin/home/banner', title: 'Banner配置' },
+      { path: '/admin/home/news', title: '资讯公告' },
+      { path: '/admin/home/activity', title: '活动日历' },
+      { path: '/admin/home/hot', title: '热点' },
+      { path: '/admin/home/consultation', title: '在线咨询' },
+    ],
   },
   {
     path: '/admin/course',
-    title: '课程管理',
+    title: '课程中心',
     icon: 'VideoPlay',
     children: [
-      { path: '/admin/course/list', title: '课程列表' },
+      { path: '/admin/course/list', title: '课程管理' },
+      { path: '/admin/course/video', title: '视频库管理' },
+      { path: '/admin/course/package', title: '课程套餐' },
+    ],
+  },
+  {
+    path: '/admin/order',
+    title: '订单管理',
+    icon: 'ShoppingCart',
+    children: [
+      { path: '/admin/order/list', title: '订单列表' },
     ],
   },
   {
@@ -29,7 +53,7 @@ const menuItems = computed(() => [
     title: '介绍信息',
     icon: 'Document',
     children: [
-      { path: '/admin/introduction/course-intro', title: '课程介绍' },
+      // { path: '/admin/introduction/course-intro', title: '课程介绍' },
       { path: '/admin/introduction/cert-center', title: '认证中心介绍' },
       { path: '/admin/introduction/about-us', title: '关于我们介绍' },
       { path: '/admin/introduction/faculty', title: '师资介绍' },
@@ -44,6 +68,7 @@ const menuItems = computed(() => [
       { path: '/admin/system/role', title: '角色管理' },
       { path: '/admin/system/menu', title: '菜单管理' },
       { path: '/admin/system/dict', title: '字典管理' },
+      { path: '/admin/system/payment-config', title: '支付配置' },
     ],
   },
 ]);
@@ -58,6 +83,7 @@ const menuItems = computed(() => [
 
     <el-menu
       :default-active="route.path"
+      :default-openeds="['/admin/home']"
       :collapse="collapsed"
       :collapse-transition="false"
       router

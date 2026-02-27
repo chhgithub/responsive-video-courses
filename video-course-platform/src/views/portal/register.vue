@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { registerUser, getUserByUsername, getUserByPhone } from '@/utils/user-storage';
 
 const router = useRouter();
 
@@ -93,11 +94,13 @@ function validatePhone(): boolean {
 
 // 检查用户名是否存在
 function checkUsernameExists(username: string): boolean {
-  const users = JSON.parse(localStorage.getItem('portal_users') || '[]');
-  return users.some((u: any) => u.username === username);
+  return !!getUserByUsername(username);
 }
 
 // 检查手机号是否存在
+function checkPhoneExists(phone: string): boolean {
+  return !!getUserByPhone(phone);
+}
 function checkPhoneExists(phone: string): boolean {
   const users = JSON.parse(localStorage.getItem('portal_users') || '[]');
   return users.some((u: any) => u.phone === phone);
@@ -212,27 +215,24 @@ function handleRegister() {
     registerForm.value.avatar ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${registerForm.value.username}`;
 
-  // 保存用户数据
-  const newUser = {
-    id: Date.now().toString(),
-    role: registerForm.value.role,
-    username: registerForm.value.username,
-    nickname: registerForm.value.nickname,
-    phone: registerForm.value.phone,
-    avatar: avatar,
-    password: registerForm.value.password,
-    createTime: new Date().toLocaleString('zh-CN'),
-  };
+  // 使用用户存储工具注册
+  try {
+    registerUser({
+      username: registerForm.value.username,
+      nickname: registerForm.value.nickname,
+      phone: registerForm.value.phone,
+      password: registerForm.value.password,
+      avatar,
+    });
 
-  const users = JSON.parse(localStorage.getItem('portal_users') || '[]');
-  users.push(newUser);
-  localStorage.setItem('portal_users', JSON.stringify(users));
-
-  // 成功提示
-  ElMessage.success('注册成功！即将跳转到登录页...');
-  setTimeout(() => {
-    router.push('/login');
-  }, 1500);
+    // 成功提示
+    ElMessage.success('注册成功！即将跳转到登录页...');
+    setTimeout(() => {
+      router.push('/login');
+    }, 1500);
+  } catch (error: any) {
+    ElMessage.error(error.message || '注册失败');
+  }
 }
 
 // 跳转到登录

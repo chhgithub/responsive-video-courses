@@ -10,6 +10,10 @@ $--el-color-danger: #f56c6c;
 $--el-color-error: #f56c6c;
 $--el-color-info: #909399;
 
+// 主题色简写（向后兼容）
+$primary-color: $--el-color-primary;
+$primary-color-light: mix($--el-color-primary, #fff, 10%);
+
 // 文字颜色
 $text-color-primary: #303133;
 $text-color-regular: #606266;
@@ -19,12 +23,14 @@ $text-color-disabled: #c0c4cc;
 
 // 边框颜色
 $border-color-base: #dcdfe6;
+$border-color: $border-color-base;
 $border-color-light: #e4e7ed;
 $border-color-lighter: #ebeef5;
 $border-color-extra-light: #f2f6fc;
 
 // 背景色
 $background-color-base: #f5f7fa;
+$background-color-light: #fafafa;
 $background-color-page: #f2f3f5;
 
 // ==============================================

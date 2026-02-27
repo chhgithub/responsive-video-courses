@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores';
+import { ElMessage } from 'element-plus';
+import { loginUser, initUserData } from '@/utils/user-storage';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -11,19 +13,44 @@ const loginForm = ref({
   password: '',
 });
 
-function handleLogin() {
-  // 模拟登录
-  authStore.setToken('mock-token-123456');
-  authStore.setUserInfo({
-    userId: '1',
-    username: loginForm.value.username,
-    nickname: '测试用户',
-    avatar: '',
-    roles: ['admin'],
-  });
+const loading = ref(false);
 
-  const redirect = router.currentRoute.value.query.redirect as string;
-  router.push(redirect || '/portal');
+async function handleLogin() {
+  if (!loginForm.value.username || !loginForm.value.password) {
+    ElMessage.warning('请输入用户名和密码');
+    return;
+  }
+
+  loading.value = true;
+
+  try {
+    // 初始化用户数据
+    initUserData();
+
+    // 验证登录
+    const user = loginUser(loginForm.value.username, loginForm.value.password);
+
+    // 保存用户信息到 Store
+    authStore.setToken(`token-${user.userId}-${Date.now()}`);
+    authStore.setUserInfo({
+      userId: user.userId,
+      username: user.username,
+      nickname: user.nickname,
+      avatar: user.avatar,
+      phone: user.phone,
+      email: user.email,
+    });
+
+    ElMessage.success('登录成功');
+
+    // 跳转到原页面或首页
+    const redirect = router.currentRoute.value.query.redirect as string;
+    router.push(redirect || '/portal');
+  } catch (error: any) {
+    ElMessage.error(error.message || '登录失败');
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
@@ -47,9 +74,20 @@ function handleLogin() {
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleLogin" style="width: 100%">
+          <el-button type="primary" :loading="loading" @click="handleLogin" style="width: 100%">
             登录
           </el-button>
+        </el-form-item>
+
+        <el-form-item>
+          <el-alert
+            title="测试账号"
+            type="info"
+            :closable="false"
+            show-icon
+          >
+            用户名: <code>test</code> 密码: <code>test</code>
+          </el-alert>
         </el-form-item>
       </el-form>
 

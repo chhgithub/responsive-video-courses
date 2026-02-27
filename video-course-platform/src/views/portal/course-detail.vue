@@ -3,6 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores';
+import { getPortalCourseById, type PortalCourse } from '@/utils/portal-course-adapter';
+import { hasUserPurchasedCourse } from '@/utils/order-storage';
+import { isCourseFavorited, toggleFavorite } from '@/utils/favorite-storage';
+import { getCourseLearningRecord } from '@/utils/learning-storage';
 
 // 类型定义
 interface Chapter {
@@ -70,28 +74,14 @@ function getCurrentUser() {
 function checkPurchaseStatus(id: string): boolean {
   const user = getCurrentUser();
   if (!user) return false;
-
-  const ordersData = localStorage.getItem('orders');
-  if (!ordersData) return false;
-
-  const orders = JSON.parse(ordersData);
-  return orders.some(
-    (o: any) => o.userId === user.userId && o.courseId === id && o.status === 'paid'
-  );
+  return hasUserPurchasedCourse(user.userId, id);
 }
 
 // 检查收藏状态
 function checkFavoriteStatus(id: string): boolean {
   const user = getCurrentUser();
   if (!user) return false;
-
-  const favoritesData = localStorage.getItem('course_favorites');
-  if (!favoritesData) return false;
-
-  const favorites = JSON.parse(favoritesData);
-  return favorites.some(
-    (f: any) => f.userId === user.userId && f.courseId === id
-  );
+  return isCourseFavorited(user.userId, id);
 }
 
 // 获取学习进度
@@ -197,15 +187,66 @@ function generateMockCourse(): Course {
 }
 
 // 获取课程详情
-function loadCourseDetail() {
+async function loadCourseDetail() {
   loading.value = true;
-  // 模拟API调用
-  setTimeout(() => {
-    course.value = generateMockCourse();
+
+  try {
+    // 模拟API调用延迟
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // 从后台获取课程数据
+    const portalCourse = getPortalCourseById(courseId);
+
+    if (!portalCourse) {
+      ElMessage.error('课程不存在或已下架');
+      course.value = null;
+      return;
+    }
+
+    // 映射到页面需要的格式
+    course.value = {
+      id: portalCourse.id,
+      title: portalCourse.title,
+      coverImage: portalCourse.coverImage,
+      description: portalCourse.courseIntro,
+      teacher: { name: portalCourse.teacher.name },
+      category: portalCourse.category,
+      tags: portalCourse.tags,
+      rating: portalCourse.rating,
+      reviewCount: portalCourse.reviewCount,
+      studentCount: portalCourse.studentCount,
+      price: portalCourse.price,
+      originalPrice: portalCourse.originalPrice,
+      isFree: portalCourse.isFree,
+      trialLessonId: portalCourse.trialLessonId,
+      validType: portalCourse.validDays === 0 ? 'permanent' : 'days',
+      validDays: portalCourse.validDays,
+      chapters: portalCourse.chapters.map(chapter => ({
+        id: chapter.chapterId,
+        title: chapter.chapterName,
+        description: undefined,
+        lessons: chapter.lessons.map(lesson => ({
+          id: lesson.lessonId,
+          title: lesson.lessonName,
+          type: lesson.contentType as any,
+          videoDuration: lesson.duration,
+          isTrial: lesson.isTrial,
+          isFree: lesson.isFree,
+        })),
+      })),
+    };
+
+    console.log('加载课程详情成功:', course.value?.title);
+
     // 检查交互状态
     checkStatus();
+  } catch (error) {
+    console.error('加载课程详情失败:', error);
+    ElMessage.error('加载课程详情失败');
+    course.value = null;
+  } finally {
     loading.value = false;
-  }, 300);
+  }
 }
 
 // 检查课程状态
@@ -269,12 +310,14 @@ function onPurchaseClick() {
 
   if (!user) {
     ElMessage.warning('请先登录');
-    router.push('/login');
+    router.push(`/login?redirect=/portal/course/${courseId}`);
     return;
   }
 
-  // 模拟购买流程
-  ElMessage.success('购买功能开发中...');
+  if (!course.value) return;
+
+  // 跳转到支付页面
+  router.push(`/portal/checkout/${course.value.id}`);
 }
 
 // 开始学习
@@ -283,38 +326,45 @@ function onLearnClick() {
 }
 
 // 切换收藏
-function onFavoriteClick() {
+async function onFavoriteClick() {
   const user = getCurrentUser();
   if (!user) {
     ElMessage.warning('请先登录');
     return;
   }
 
-  const favoritesKey = 'course_favorites';
-  const favoritesData = localStorage.getItem(favoritesKey);
-  const favorites = favoritesData ? JSON.parse(favoritesData) : [];
+  if (!course.value) return;
 
-  const index = favorites.findIndex(
-    (f: any) => f.userId === user.userId && f.courseId === courseId
-  );
-
-  if (index >= 0) {
-    // 取消收藏
-    favorites.splice(index, 1);
-    isFavorite.value = false;
-    ElMessage.success('已取消收藏');
-  } else {
-    // 添加收藏
-    favorites.push({
-      userId: user.userId,
-      courseId: courseId,
-      createdAt: new Date().toLocaleString('zh-CN'),
+  try {
+    const added = toggleFavorite(user.userId, {
+      courseId: course.value.id,
+      courseName: course.value.title,
+      courseCover: course.value.coverImage,
+      teacherName: course.value.teacher.name,
+      price: course.value.price,
+      isFree: course.value.isFree,
     });
-    isFavorite.value = true;
-    ElMessage.success('收藏成功');
+
+    isFavorite.value = added;
+    ElMessage.success(added ? '收藏成功' : '已取消收藏');
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败');
+  }
+}
+
+// 购买课程
+function handlePurchase() {
+  const user = getCurrentUser();
+  if (!user) {
+    ElMessage.warning('请先登录');
+    router.push(`/login?redirect=/portal/course/${courseId}`);
+    return;
   }
 
-  localStorage.setItem(favoritesKey, JSON.stringify(favorites));
+  if (!course.value) return;
+
+  // 跳转到支付页面
+  router.push(`/portal/checkout/${course.value.id}`);
 }
 
 // 用户权限

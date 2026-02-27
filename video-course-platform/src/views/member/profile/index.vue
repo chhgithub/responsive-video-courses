@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-
-import { getUserInfo } from '@/utils/member-storage';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { getUserById } from '@/utils/user-storage';
+import { getUserOrders } from '@/utils/order-storage';
+import { getUserLearningRecords, getLearningStats } from '@/utils/learning-storage';
 
 const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
+
+const loading = ref(false);
 
 // 用户信息
-const userInfo = computed(() => getUserInfo());
+const userInfo = ref({
+  username: '',
+  nickname: '',
+  avatar: '',
+  totalCourses: 0,
+  completedCourses: 0,
+  totalHours: 0,
+});
 
 // 菜单项
 const menuItems = [
@@ -17,28 +31,76 @@ const menuItems = [
 ];
 
 const activeTab = computed(() => {
-  const path = router.currentRoute.value.path;
+  const path = route.path;
   if (path.includes('/courses')) return 'courses';
   if (path.includes('/orders')) return 'orders';
   if (path.includes('/settings')) return 'settings';
   return 'courses';
 });
 
+// 加载用户信息
+async function loadUserInfo() {
+  if (!authStore.userInfo?.userId) return;
+
+  loading.value = true;
+  try {
+    const user = getUserById(authStore.userInfo.userId);
+    if (!user) {
+      ElMessage.error('用户不存在');
+      return;
+    }
+
+    // 获取订单统计
+    const orders = getUserOrders(authStore.userInfo.userId);
+    const paidOrders = orders.filter(o => o.status === 'paid').length;
+
+    // 获取学习统计
+    const stats = getLearningStats(authStore.userInfo.userId);
+    const totalHours = Math.floor(stats.totalWatchDuration / 3600);
+
+    userInfo.value = {
+      username: user.username,
+      nickname: user.nickname,
+      avatar: user.avatar,
+      totalCourses: paidOrders,
+      completedCourses: stats.completedCourses,
+      totalHours,
+    };
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载用户信息失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 导航到指定路由
+function handleNavigate(route: string) {
+  router.push(route);
+}
+
 // 退出登录
-function handleLogout() {
-  if (confirm('确定要退出登录吗？')) {
-    localStorage.removeItem('portal_login_state');
-    router.push('/login');
+async function handleLogout() {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+
+    authStore.logout();
+    router.push('/portal/login');
+  } catch (error) {
+    // 用户取消
   }
 }
 
 onMounted(() => {
-  // 页面加载时的操作
+  loadUserInfo();
 });
 </script>
 
 <template>
-  <div class="member-profile">
+  <div class="member-profile" v-loading="loading">
     <div class="container">
       <!-- 用户信息卡片 -->
       <div class="user-card">
@@ -56,18 +118,10 @@ onMounted(() => {
             <div class="user-info">
               <h1>{{ userInfo.nickname }}</h1>
               <p class="username">@{{ userInfo.username }}</p>
-
-              <!-- 会员等级 -->
-              <div class="member-badge">
-                <el-tag type="warning" effect="dark" size="large">
-                  👑 {{ userInfo.memberLevel }}
-                </el-tag>
-                <span class="expire-time">有效期至 {{ userInfo.memberExpireTime }}</span>
-              </div>
             </div>
 
             <!-- 退出登录按钮 -->
-            <el-button @click="handleLogout" class="logout-btn">
+            <el-button @click="handleLogout" class="logout-btn" plain>
               退出登录
             </el-button>
           </div>
@@ -99,40 +153,27 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 快捷入口 -->
+      <!-- 快捷入口导航 -->
       <div class="quick-links">
-        <el-card shadow="hover">
+        <el-card shadow="never">
           <div class="links-grid">
-            <router-link
+            <div
               v-for="item in menuItems"
               :key="item.key"
-              :to="item.route"
               class="quick-link"
               :class="{ active: activeTab === item.key }"
+              @click="handleNavigate(item.route)"
             >
               <div class="link-icon">{{ item.icon }}</div>
               <div class="link-label">{{ item.label }}</div>
-            </router-link>
+            </div>
           </div>
         </el-card>
       </div>
 
-      <!-- 其他快捷入口 -->
-      <div class="other-links">
-        <el-card shadow="hover">
-          <div class="links-row">
-            <router-link to="/member/learning-history" class="other-link">
-              <span class="link-icon">📖</span>
-              <span class="link-label">学习历史</span>
-              <el-icon class="link-arrow"><ArrowRight /></el-icon>
-            </router-link>
-            <router-link to="/member/my-favorites" class="other-link">
-              <span class="link-icon">⭐</span>
-              <span class="link-label">我的收藏</span>
-              <el-icon class="link-arrow"><ArrowRight /></el-icon>
-            </router-link>
-          </div>
-        </el-card>
+      <!-- 子路由内容 -->
+      <div class="content-area">
+        <router-view></router-view>
       </div>
     </div>
   </div>
@@ -142,13 +183,13 @@ onMounted(() => {
 @import '@/assets/styles/variables.scss';
 
 .member-profile {
-  min-height: 100vh;
+  min-height: calc(100vh - 120px);
   background: $background-color-base;
   padding: $spacing-extra-large 0;
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 $spacing-large;
 }
@@ -203,17 +244,6 @@ onMounted(() => {
     color: $text-color-secondary;
     margin-bottom: $spacing-base;
   }
-
-  .member-badge {
-    display: flex;
-    align-items: center;
-    gap: $spacing-base;
-
-    .expire-time {
-      font-size: $font-size-small;
-      color: $text-color-secondary;
-    }
-  }
 }
 
 .logout-btn {
@@ -257,7 +287,7 @@ onMounted(() => {
   }
 }
 
-// 快捷入口
+// 快捷入口导航
 .quick-links {
   margin-bottom: $spacing-large;
 }
@@ -274,6 +304,7 @@ onMounted(() => {
   align-items: center;
   padding: $spacing-large;
   border-radius: $border-radius-base;
+  cursor: pointer;
   text-decoration: none;
   color: $text-color-primary;
   transition: $transition-base;
@@ -298,39 +329,8 @@ onMounted(() => {
   }
 }
 
-// 其他快捷入口
-.other-links {
-  .links-row {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-base;
-  }
-}
-
-.other-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-base $spacing-large;
-  border-radius: $border-radius-base;
-  text-decoration: none;
-  color: $text-color-primary;
-  transition: $transition-base;
-
-  &:hover {
-    background: $background-color-base;
-  }
-
-  .link-icon {
-    font-size: 24px;
-  }
-
-  .link-label {
-    font-size: $font-size-base;
-  }
-
-  .link-arrow {
-    color: $text-color-placeholder;
-  }
+// 内容区域
+.content-area {
+  min-height: 400px;
 }
 </style>

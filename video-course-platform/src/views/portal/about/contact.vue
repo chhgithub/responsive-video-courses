@@ -1,182 +1,134 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { publicAboutUsApi } from '@/api/public/introduction';
+import { initAboutUsData } from '@/utils/about-us-init';
+import type { AboutUsInfo } from '@/types/introduction';
 
-const contactInfo = ref({
-  title: '联系我们',
-  phone: '400-123-4567',
-  fax: '010-12345678',
-  email: 'contact@example.com',
-  website: 'https://www.example.com',
-  address: '北京市海淀区中关村科技园',
-  zipCode: '100080',
-  workingHours: {
-    weekdays: '周一至周五 9:00 - 18:00',
-    weekend: '周六至周日 休息',
-  },
-  qrcodes: [
-    {
-      name: '微信公众号',
-      image: 'https://picsum.photos/seed/wechat/200/200',
-      followers: '10万+',
-    },
-    {
-      name: '官方微博',
-      image: 'https://picsum.photos/seed/weibo/200/200',
-      followers: '50万+',
-    },
-  ],
-  offices: [
-    {
-      city: '北京',
-      address: '北京市海淀区中关村科技园',
-      phone: '010-12345678',
-    },
-    {
-      city: '上海',
-      address: '上海市浦东新区张江高科',
-      phone: '021-87654321',
-    },
-  ],
+const loading = ref(false);
+const contactData = ref<AboutUsInfo | null>(null);
+
+onMounted(async () => {
+  initAboutUsData();
+  await loadData();
 });
 
-const formData = ref({
-  name: '',
-  email: '',
-  phone: '',
-  message: '',
-});
-
-function handleSubmit() {
-  ElMessage.success('感谢您的留言，我们会尽快回复！');
-  formData.value = { name: '', email: '', phone: '', message: '' };
+async function loadData() {
+  loading.value = true;
+  try {
+    const data = await publicAboutUsApi.getContact();
+    console.log('获取到的联系我们数据:', data);
+    if (data && data.isPublished) {
+      contactData.value = data;
+    } else {
+      contactData.value = null;
+    }
+  } catch (error) {
+    console.error('加载失败:', error);
+    contactData.value = null;
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
 <template>
-  <div class="contact-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="container">
-        <h1>{{ contactInfo.title }}</h1>
-        <p>我们随时为您提供帮助</p>
-      </div>
-    </div>
+  <div v-loading="loading" class="about-page">
+    <!-- 未发布提示 -->
+    <el-empty v-if="!contactData && !loading" description="暂无内容">
+      <el-button type="primary" @click="$router.push('/portal')">返回首页</el-button>
+    </el-empty>
 
-    <!-- 联系方式 -->
-    <el-card class="contact-info-card" shadow="never">
-      <el-row :gutter="24">
-        <el-col :xs="12" :sm="6" v-if="contactInfo.phone">
-          <div class="contact-item orange">
-            <div class="contact-icon">📞</div>
-            <p class="contact-label">咨询电话</p>
-            <p class="contact-value">{{ contactInfo.phone }}</p>
+    <!-- 内容区域 -->
+    <template v-else-if="contactData">
+      <!-- Hero Section -->
+      <section
+        class="hero-section"
+        :style="{ backgroundImage: contactData.coverImage ? `url(${contactData.coverImage})` : '' }"
+      >
+        <div class="hero-overlay">
+          <div class="container">
+            <div class="hero-content">
+              <h1 class="hero-title">{{ contactData.title }}</h1>
+              <p class="hero-subtitle">随时为您服务，期待与您合作</p>
+            </div>
           </div>
-        </el-col>
-        <el-col :xs="12" :sm="6" v-if="contactInfo.fax">
-          <div class="contact-item blue">
-            <div class="contact-icon">📠</div>
-            <p class="contact-label">传真号码</p>
-            <p class="contact-value">{{ contactInfo.fax }}</p>
-          </div>
-        </el-col>
-        <el-col :xs="12" :sm="6" v-if="contactInfo.email">
-          <div class="contact-item green">
-            <div class="contact-icon">📧</div>
-            <p class="contact-label">电子邮箱</p>
-            <p class="contact-value">{{ contactInfo.email }}</p>
-          </div>
-        </el-col>
-        <el-col :xs="12" :sm="6" v-if="contactInfo.website">
-          <div class="contact-item purple">
-            <div class="contact-icon">🌐</div>
-            <p class="contact-label">官方网站</p>
-            <p class="contact-value">{{ contactInfo.website }}</p>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
+        </div>
+      </section>
 
-    <!-- 地址信息 -->
-    <el-card v-if="contactInfo.address" class="address-card" shadow="never">
-      <div class="address-info">
-        <p class="address-text">📍 {{ contactInfo.address }}</p>
-        <p v-if="contactInfo.zipCode" class="zip-text">📮 邮政编码：{{ contactInfo.zipCode }}</p>
-      </div>
-    </el-card>
+      <!-- 内容区域 -->
+      <section class="content-section">
+        <div class="container">
+          <div class="content-wrapper">
+            <!-- 联系方式信息卡片 -->
+            <el-card v-if="contactData.contactInfo" class="contact-info-card" shadow="hover">
+              <div class="contact-grid">
+                <div v-if="contactData.contactInfo.phone" class="contact-item">
+                  <div class="contact-icon">
+                    <el-icon><Phone /></el-icon>
+                  </div>
+                  <div class="contact-details">
+                    <p class="contact-label">咨询电话</p>
+                    <p class="contact-value">{{ contactData.contactInfo.phone }}</p>
+                  </div>
+                </div>
 
-    <!-- 工作时间 -->
-    <el-card v-if="contactInfo.workingHours" class="hours-card" shadow="never">
-      <h3>⏰ 工作时间</h3>
-      <div class="hours-info">
-        <p v-if="contactInfo.workingHours.weekdays">{{ contactInfo.workingHours.weekdays }}</p>
-        <p v-if="contactInfo.workingHours.weekend">{{ contactInfo.workingHours.weekend }}</p>
-      </div>
-    </el-card>
+                <div v-if="contactData.contactInfo.email" class="contact-item">
+                  <div class="contact-icon">
+                    <el-icon><Message /></el-icon>
+                  </div>
+                  <div class="contact-details">
+                    <p class="contact-label">电子邮箱</p>
+                    <p class="contact-value">{{ contactData.contactInfo.email }}</p>
+                  </div>
+                </div>
 
-    <!-- 办事处 -->
-    <el-card v-if="contactInfo.offices && contactInfo.offices.length > 0" class="offices-card" shadow="never">
-      <h2>办事处地址</h2>
-      <el-row :gutter="24" class="offices-grid">
-        <el-col :xs="24" :sm="12" :md="8" v-for="office in contactInfo.offices" :key="office.city">
-          <div class="office-item">
-            <h3>{{ office.city }}</h3>
-            <p class="office-address">📍 {{ office.address }}</p>
-            <p class="office-phone">📞 {{ office.phone }}</p>
+                <div v-if="contactData.contactInfo.address" class="contact-item full-width">
+                  <div class="contact-icon">
+                    <el-icon><Location /></el-icon>
+                  </div>
+                  <div class="contact-details">
+                    <p class="contact-label">地址</p>
+                    <p class="contact-value">{{ contactData.contactInfo.address }}</p>
+                  </div>
+                </div>
+
+                <div v-if="contactData.contactInfo.workingHours" class="contact-item full-width">
+                  <div class="contact-icon">
+                    <el-icon><Clock /></el-icon>
+                  </div>
+                  <div class="contact-details">
+                    <p class="contact-label">工作时间</p>
+                    <p class="contact-value">{{ contactData.contactInfo.workingHours }}</p>
+                  </div>
+                </div>
+
+                <div v-if="contactData.contactInfo.wechatAccount" class="contact-item">
+                  <div class="contact-icon">
+                    <el-icon><ChatDotRound /></el-icon>
+                  </div>
+                  <div class="contact-details">
+                    <p class="contact-label">微信公众号</p>
+                    <p class="contact-value">{{ contactData.contactInfo.wechatAccount }}</p>
+                  </div>
+                </div>
+              </div>
+            </el-card>
+
+            <!-- 内容卡片 -->
+            <el-card class="content-card" shadow="hover">
+              <article class="content" v-html="contactData.content"></article>
+            </el-card>
           </div>
-        </el-col>
-      </el-row>
-    </el-card>
-
-    <!-- 二维码 -->
-    <el-card v-if="contactInfo.qrcodes && contactInfo.qrcodes.length > 0" class="qrcode-card" shadow="never">
-      <h2>关注我们</h2>
-      <el-row :gutter="24" class="qrcode-grid">
-        <el-col :xs="24" :sm="12" :md="8" v-for="social in contactInfo.qrcodes" :key="social.name">
-          <div class="social-item">
-            <el-image v-if="social.image" :src="social.image" :alt="social.name" class="qrcode-image" fit="cover" />
-            <div class="social-icon">📱</div>
-            <p class="social-name">{{ social.name }}</p>
-            <p v-if="social.followers" class="social-followers">粉丝数：{{ social.followers }}</p>
-            <p class="social-hint">扫码关注</p>
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
-
-    <!-- 在线留言 -->
-    <el-card class="message-card" shadow="never">
-      <h2>在线留言</h2>
-      <el-form :model="formData" label-width="100px" class="message-form">
-        <el-row :gutter="24">
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="姓名" required>
-              <el-input v-model="formData.name" placeholder="请输入您的姓名" />
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="联系电话" required>
-              <el-input v-model="formData.phone" placeholder="请输入您的联系电话" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="电子邮箱" required>
-          <el-input v-model="formData.email" placeholder="请输入您的邮箱" />
-        </el-form-item>
-        <el-form-item label="留言内容" required>
-          <el-input v-model="formData.message" type="textarea" :rows="4" placeholder="请输入您的留言内容" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" size="large" @click="handleSubmit" style="width: 100%">提交留言</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <style scoped lang="scss">
 @import '@/assets/styles/variables.scss';
 
-.contact-page {
+.about-page {
   min-height: calc(100vh - $navbar-height - $footer-height);
   background: $background-color-base;
 }
@@ -187,218 +139,165 @@ function handleSubmit() {
   padding: 0 $spacing-large;
 }
 
+// Hero Section
 .hero-section {
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-  color: #fff;
-  padding: $spacing-extra-extra-large 0;
-  text-align: center;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-color: #667eea;
   margin-bottom: $spacing-extra-large;
 
-  h1 {
-    font-size: 48px;
-    margin-bottom: $spacing-base;
-  }
+  .hero-overlay {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+    padding: $spacing-extra-extra-large 0;
 
-  p {
-    font-size: $font-size-large;
-    opacity: 0.9;
-  }
-}
+    .hero-content {
+      text-align: center;
+      color: #fff;
+      animation: fadeInUp 0.8s ease-out;
 
-.contact-info-card {
-  margin-bottom: $spacing-extra-large;
+      .hero-title {
+        font-size: 48px;
+        font-weight: bold;
+        margin: 0 0 $spacing-base 0;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 
-  .contact-item {
-    text-align: center;
-    padding: $spacing-extra-large;
-    border-radius: $border-radius-large;
+        @media (max-width: 768px) {
+          font-size: 32px;
+        }
+      }
 
-    &.orange {
-      background: #fff7ed;
-    }
+      .hero-subtitle {
+        font-size: $font-size-large;
+        opacity: 0.95;
+        margin: 0;
 
-    &.blue {
-      background: #eff6ff;
-    }
-
-    &.green {
-      background: #f0fdf4;
-    }
-
-    &.purple {
-      background: #faf5ff;
-    }
-
-    .contact-icon {
-      font-size: 48px;
-      margin-bottom: $spacing-base;
-    }
-
-    .contact-label {
-      font-size: $font-size-small;
-      color: $text-color-secondary;
-      margin-bottom: $spacing-small;
-    }
-
-    .contact-value {
-      font-size: $font-size-large;
-      font-weight: 600;
-      margin: 0;
-
-      @include respond-to($breakpoint-sm) {
-        font-size: $font-size-base;
+        @media (max-width: 768px) {
+          font-size: $font-size-base;
+        }
       }
     }
   }
 }
 
-.address-card {
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Content Section
+.content-section {
+  padding-bottom: $spacing-extra-extra-large;
+}
+
+.content-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+// Contact Info Card
+.contact-info-card {
   margin-bottom: $spacing-extra-large;
 
-  .address-info {
-    text-align: center;
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: $spacing-large;
 
-    .address-text {
-      font-size: $font-size-large;
-      color: $text-color-primary;
-      margin-bottom: $spacing-small;
-    }
+    .contact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: $spacing-base;
+      padding: $spacing-large;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: $border-radius-base;
+      transition: all 0.3s;
 
-    .zip-text {
-      font-size: $font-size-base;
-      color: $text-color-secondary;
-      margin: 0;
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: $box-shadow-card;
+      }
+
+      &.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .contact-icon {
+        flex-shrink: 0;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: $primary-color;
+        border-radius: 50%;
+        color: #fff;
+
+        .el-icon {
+          font-size: 24px;
+        }
+      }
+
+      .contact-details {
+        flex: 1;
+
+        .contact-label {
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+          margin-bottom: $spacing-small / 2;
+        }
+
+        .contact-value {
+          font-size: $font-size-base;
+          font-weight: 600;
+          color: $text-color-primary;
+          margin: 0;
+          line-height: 1.5;
+        }
+      }
     }
   }
 }
 
-.hours-card {
+// Content Card
+.content-card {
   margin-bottom: $spacing-extra-large;
+  border-radius: $border-radius-large;
 
-  h3 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
+  .content {
+    :deep(h2) {
+      font-size: 32px;
+      color: $text-color-primary;
+      margin-top: $spacing-extra-large;
+      margin-bottom: $spacing-large;
+      padding-bottom: $spacing-base;
+      border-bottom: 3px solid $primary-color;
 
-  .hours-info {
-    text-align: center;
+      &:first-child {
+        margin-top: 0;
+      }
 
-    p {
+      @media (max-width: 768px) {
+        font-size: 24px;
+      }
+    }
+
+    :deep(p) {
       font-size: $font-size-base;
+      line-height: 1.8;
       color: $text-color-regular;
-      margin-bottom: $spacing-small;
+      margin-bottom: $spacing-base;
 
       &:last-child {
         margin-bottom: 0;
       }
     }
-  }
-}
-
-.offices-card {
-  margin-bottom: $spacing-extra-large;
-
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .offices-grid {
-    .office-item {
-      padding: $spacing-large;
-      background: #f9fafc;
-      border-radius: $border-radius-large;
-
-      h3 {
-        font-size: $font-size-large;
-        font-weight: 600;
-        color: $text-color-primary;
-        margin-bottom: $spacing-base;
-      }
-
-      .office-address {
-        font-size: $font-size-base;
-        color: $text-color-regular;
-        margin-bottom: $spacing-small;
-      }
-
-      .office-phone {
-        font-size: $font-size-base;
-        color: $text-color-secondary;
-        margin: 0;
-      }
-    }
-  }
-}
-
-.qrcode-card {
-  margin-bottom: $spacing-extra-large;
-
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .qrcode-grid {
-    .social-item {
-      text-align: center;
-      padding: $spacing-large;
-      border: 2px solid $border-color-light;
-      border-radius: $border-radius-large;
-      transition: border-color 0.3s;
-
-      &:hover {
-        border-color: $--el-color-primary;
-      }
-
-      .qrcode-image {
-        width: 120px;
-        height: 120px;
-        margin: 0 auto $spacing-base;
-      }
-
-      .social-icon {
-        font-size: 64px;
-        margin-bottom: $spacing-base;
-      }
-
-      .social-name {
-        font-size: $font-size-medium;
-        font-weight: 600;
-        color: $text-color-primary;
-        margin-bottom: $spacing-small;
-      }
-
-      .social-followers {
-        font-size: $font-size-small;
-        color: $text-color-secondary;
-        margin-bottom: $spacing-small;
-      }
-
-      .social-hint {
-        font-size: $font-size-extra-small;
-        color: $text-color-placeholder;
-        margin: 0;
-      }
-    }
-  }
-}
-
-.message-card {
-  margin-bottom: $spacing-extra-large;
-
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .message-form {
-    max-width: 800px;
-    margin: 0 auto;
   }
 }
 </style>

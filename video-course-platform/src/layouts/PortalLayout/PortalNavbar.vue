@@ -12,6 +12,19 @@ const mobileMenuVisible = ref(false);
 // 菜单项配置
 const menuItems = [
   { path: '/portal', title: '首页' },
+  { path: '/portal/courses', title: '课程中心' },
+  {
+    path: '/portal/cert',
+    title: '认证中心',
+    children: [
+      { path: '/portal/cert/ai-trainer', title: '人工智能训练师' },
+      { path: '/portal/cert/ai-engineer', title: '人工智能工程技术人员' },
+      { path: '/portal/cert/drone', title: 'CAAC无人机执照' },
+      { path: '/portal/cert/tech-broker', title: '技术经纪人' },
+      { path: '/portal/cert/other', title: '其他认证项目' },
+    ],
+  },
+  { path: '/portal/about/faculty', title: '师资队伍' },
   {
     path: '/portal/about',
     title: '关于我们',
@@ -22,9 +35,6 @@ const menuItems = [
       { path: '/portal/about/contact', title: '联系我们' },
     ],
   },
-  { path: '/portal/courses', title: '课程中心' },
-  { path: '/portal/cert', title: '认证中心' },
-  { path: '/portal/teachers', title: '师资队伍' },
 ];
 
 function handleSearch() {

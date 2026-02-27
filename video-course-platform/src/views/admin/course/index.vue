@@ -1,20 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-
-interface Course {
-  courseId: number;
-  courseName: string;
-  categoryName: string;
-  teacherName: string;
-  price: number;
-  originalPrice?: number;
-  isFree: boolean;
-  viewCount: number;
-  enrollCount: number;
-  status: 'draft' | 'published' | 'offline';
-  courseCover?: string;
-  createTime: string;
-}
+import { getAllCourses, initCourseData, deleteCourse, updateCourseStatus, copyCourse, type Course } from '@/utils/course-storage';
+import CourseDrawer from './course-drawer.vue';
+import ChapterManager from './chapter-manager.vue';
+import ReviewList from './review-list.vue';
+import StudentList from './student-list.vue';
 
 const loading = ref(false);
 const courses = ref<Course[]>([]);
@@ -41,7 +31,7 @@ const categoryOptions = ref<any[]>([]);
 const teacherOptions = ref<any[]>([]);
 
 // 课程抽屉
-const showDrawer = ref(false);
+const showCourseDrawer = ref(false);
 const drawerMode = ref<'add' | 'edit'>('add');
 const currentCourseId = ref<number>();
 
@@ -49,42 +39,31 @@ const currentCourseId = ref<number>();
 const showChapterManager = ref(false);
 const currentCourseForChapter = ref<Course>();
 
+// 评价列表弹窗
+const showReviewList = ref(false);
+const currentCourseForReview = ref<Course>();
+
+// 学员列表弹窗
+const showStudentList = ref(false);
+const currentCourseForStudent = ref<Course>();
+
 // 生成 Mock 课程数据
 function generateMockCourses(): Course[] {
-  const categories = ['前端开发', '后端开发', '人工智能', '数据分析', '产品设计'];
-  const teachers = ['张老师', '李老师', '王老师', '赵老师', '刘老师', '陈老师'];
-  const statuses: Array<'draft' | 'published' | 'offline'> = ['draft', 'published', 'offline'];
-
-  return Array.from({ length: 20 }, (_, i) => ({
-    courseId: i + 1,
-    courseName: `课程 ${i + 1} - ${categories[i % categories.length]}实战教程`,
-    categoryName: categories[i % categories.length],
-    teacherName: teachers[i % teachers.length],
-    price: Math.random() > 0.3 ? Math.floor(Math.random() * 500) + 99 : 0,
-    originalPrice: Math.random() > 0.5 ? Math.floor(Math.random() * 800) + 199 : undefined,
-    isFree: Math.random() > 0.7,
-    viewCount: Math.floor(Math.random() * 10000),
-    enrollCount: Math.floor(Math.random() * 5000),
-    status: statuses[i % statuses.length],
-    courseCover: `https://picsum.photos/seed/course${i + 1}/300/200`,
-    createTime: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  }));
+  return getAllCourses();
 }
 
 async function loadCourses() {
   loading.value = true;
   try {
-    // 模拟 API 调用
-    await new Promise(resolve => setTimeout(resolve, 300));
     const allCourses = generateMockCourses();
 
     // 筛选
     let filtered = allCourses;
     if (searchForm.value.courseName) {
-      filtered = filtered.filter(c => c.courseName.includes(searchForm.value.courseName));
+      filtered = filtered.filter((c) => c.courseName.includes(searchForm.value.courseName));
     }
     if (searchForm.value.status) {
-      filtered = filtered.filter(c => c.status === searchForm.value.status);
+      filtered = filtered.filter((c) => c.status === searchForm.value.status);
     }
 
     pagination.value.total = filtered.length;
@@ -117,13 +96,13 @@ function handleReset() {
 function handleAdd() {
   drawerMode.value = 'add';
   currentCourseId.value = undefined;
-  showDrawer.value = true;
+  showCourseDrawer.value = true;
 }
 
 function handleEdit(row: Course) {
   drawerMode.value = 'edit';
   currentCourseId.value = row.courseId;
-  showDrawer.value = true;
+  showCourseDrawer.value = true;
 }
 
 function handleDelete(row: Course) {
@@ -137,6 +116,7 @@ function handleDelete(row: Course) {
     }
   )
     .then(() => {
+      deleteCourse(row.courseId);
       ElMessage.success('删除成功');
       loadCourses();
     })
@@ -144,7 +124,7 @@ function handleDelete(row: Course) {
 }
 
 function handleSelectionChange(selection: Course[]) {
-  selectedIds.value = selection.map(c => c.courseId);
+  selectedIds.value = selection.map((c) => c.courseId);
 }
 
 function handleMultiDelete() {
@@ -162,6 +142,9 @@ function handleMultiDelete() {
     }
   )
     .then(() => {
+      selectedIds.value.forEach((id) => {
+        deleteCourse(id);
+      });
       ElMessage.success('删除成功');
       selectedIds.value = [];
       loadCourses();
@@ -174,8 +157,46 @@ function handleManageChapter(row: Course) {
   showChapterManager.value = true;
 }
 
+function handleViewReview(row: Course) {
+  currentCourseForReview.value = row;
+  showReviewList.value = true;
+}
+
+function handleViewStudent(row: Course) {
+  currentCourseForStudent.value = row;
+  showStudentList.value = true;
+}
+
+function handleMoreCommand(command: string, row: Course) {
+  switch (command) {
+    case 'publish':
+      updateCourseStatus(row.courseId, 'published');
+      ElMessage.success('课程已上架');
+      loadCourses();
+      break;
+    case 'offline':
+      updateCourseStatus(row.courseId, 'offline');
+      ElMessage.success('课程已下架');
+      loadCourses();
+      break;
+    case 'copy':
+      copyCourse(row.courseId);
+      ElMessage.success('课程复制成功');
+      loadCourses();
+      break;
+    case 'delete':
+      handleDelete(row);
+      break;
+  }
+}
+
 function handleDrawerSuccess() {
-  showDrawer.value = false;
+  showCourseDrawer.value = false;
+  loadCourses();
+}
+
+function handleChapterSuccess() {
+  showChapterManager.value = false;
   loadCourses();
 }
 
@@ -191,6 +212,9 @@ function handleSizeChange(size: number) {
 }
 
 onMounted(() => {
+  // 初始化课程数据
+  initCourseData();
+
   // 生成选项数据
   categoryOptions.value = [
     { categoryId: 1, categoryName: '前端开发' },
@@ -262,9 +286,9 @@ onMounted(() => {
             clearable
             style="width: 120px"
           >
+            <el-option label="草稿" value="draft" />
             <el-option label="上架" value="published" />
-            <el-option label="下架" value="draft" />
-            <el-option label="已下架" value="offline" />
+            <el-option label="下架" value="offline" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -322,30 +346,43 @@ onMounted(() => {
             </template>
           </template>
         </el-table-column>
-        <el-table-column prop="viewCount" label="观看次数" width="100" />
         <el-table-column prop="enrollCount" label="报名人数" width="100" />
+        <el-table-column prop="rating" label="评分" width="100">
+          <template #default="{ row }">
+            <span v-if="row.rating > 0">⭐{{ row.rating }}</span>
+            <span v-else class="text-gray-400">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'published' ? 'success' : 'info'">
-              {{ row.status === 'published' ? '上架' : row.status === 'draft' ? '下架' : '已下架' }}
+            <el-tag :type="row.status === 'published' ? 'success' : row.status === 'draft' ? 'info' : 'warning'">
+              {{ row.status === 'published' ? '上架' : row.status === 'draft' ? '草稿' : '下架' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="160" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button link type="primary" size="small" @click="handleManageChapter(row)">章节管理</el-button>
-            <el-popconfirm
-              title="确认删除该课程吗？"
-              confirm-button-text="确定"
-              cancel-button-text="取消"
-              @confirm="handleDelete(row)"
-            >
-              <template #reference>
-                <el-button link type="danger" size="small">删除</el-button>
+            <el-button link type="primary" size="small" @click="handleManageChapter(row)">章节</el-button>
+            <el-button link type="primary" size="small" @click="handleViewReview(row)">评价</el-button>
+            <el-button link type="primary" size="small" @click="handleViewStudent(row)">学员</el-button>
+            <el-dropdown @command="(cmd) => handleMoreCommand(cmd, row)">
+              <el-button link type="primary" size="small">
+                更多<el-icon><ArrowDown /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item v-if="row.status !== 'published'" command="publish">
+                    上架
+                  </el-dropdown-item>
+                  <el-dropdown-item v-if="row.status === 'published'" command="offline">
+                    下架
+                  </el-dropdown-item>
+                  <el-dropdown-item command="copy">复制课程</el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                </el-dropdown-menu>
               </template>
-            </el-popconfirm>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -364,26 +401,37 @@ onMounted(() => {
       </div>
     </el-card>
 
-    <!-- 课程抽屉 -->
-    <course-drawer
-      v-model="showDrawer"
+    <!-- 课程编辑抽屉 -->
+    <CourseDrawer
+      v-model="showCourseDrawer"
       :mode="drawerMode"
       :course-id="currentCourseId"
       @success="handleDrawerSuccess"
     />
 
     <!-- 章节管理弹窗 -->
-    <el-dialog
-      v-model="showChapterManager"
-      title="章节管理"
-      width="800px"
-      :close-on-click-modal="false"
-    >
-      <div v-if="currentCourseForChapter">
-        <p>课程：{{ currentCourseForChapter.courseName }}</p>
-        <el-empty description="章节管理功能待实现" />
-      </div>
-    </el-dialog>
+    <ChapterManager
+      v-if="currentCourseForChapter"
+      v-model:visible="showChapterManager"
+      :course="currentCourseForChapter"
+      @success="handleChapterSuccess"
+    />
+
+    <!-- 课程评价弹窗 -->
+    <ReviewList
+      v-if="currentCourseForReview"
+      v-model:visible="showReviewList"
+      :course-id="currentCourseForReview.courseId"
+      :course-name="currentCourseForReview.courseName"
+    />
+
+    <!-- 学员列表弹窗 -->
+    <StudentList
+      v-if="currentCourseForStudent"
+      v-model:visible="showStudentList"
+      :course-id="currentCourseForStudent.courseId"
+      :course-name="currentCourseForStudent.courseName"
+    />
   </div>
 </template>
 

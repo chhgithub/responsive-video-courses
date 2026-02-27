@@ -7,11 +7,13 @@ import {
   getActiveActivities,
   getActiveHotTopics,
 } from '@/utils/news-storage';
+import { getPublishedCourses } from '@/utils/portal-course-adapter';
+import type { PortalCourse } from '@/utils/portal-course-adapter';
 
 import BannerCarousel from './components/BannerCarousel.vue';
 import ConsultationForm from './components/ConsultationForm.vue';
 import CourseCard from './components/CourseCard.vue';
-// import CourseStatsChart from './components/CourseStatsChart.vue'; // 暂时注释，等待安装 echarts
+import CourseStatsChart from './components/CourseStatsChart.vue';
 import HotTopics from './components/HotTopics.vue';
 import NewsSection from './components/NewsSection.vue';
 
@@ -26,16 +28,12 @@ const banners = ref(
 );
 
 // 精选课程数据
-const featuredCourses = ref<any[]>([]);
+const featuredCourses = ref<PortalCourse[]>([]);
 
-// 课程分类
-const courseCategories = [
+// 课程分类（动态获取）
+const courseCategories = ref<{ label: string; value: string }[]>([
   { label: '全部', value: 'all' },
-  { label: '微课程', value: 'micro' },
-  { label: '付费课程', value: 'paid' },
-  { label: '科研赋能', value: 'research' },
-  { label: 'K12集训', value: 'k12' },
-];
+]);
 
 const activeCategory = ref('all');
 
@@ -45,7 +43,7 @@ const filteredCourses = computed(() => {
     return featuredCourses.value;
   }
   return featuredCourses.value.filter(
-    (course) => course.courseType === activeCategory.value,
+    (course) => course.category === activeCategory.value,
   );
 });
 
@@ -90,19 +88,19 @@ const hotTopics = ref(
     .map((hot) => ({
       id: hot.id,
       title: hot.title,
-      hot: Math.floor(Math.random() * 5000) + 5000,
-      link: hot.link,
-      coverImage: hot.coverImage,
+      content: hot.content,
+      createdAt: hot.createdAt,
+      orderNum: hot.orderNum,
     })),
 );
 
 // 课程统计数据
 const courseStats = ref([
-  { category: '前端开发', count: 128, totalDuration: 25_600 },
-  { category: '后端开发', count: 86, totalDuration: 18_900 },
-  { category: '移动开发', count: 64, totalDuration: 12_300 },
-  { category: '人工智能', count: 45, totalDuration: 9800 },
-  { category: '数据科学', count: 52, totalDuration: 11_500 },
+  { category: '前端开发', count: 128, totalDuration: 25_600, purchaseCount: 3580 },
+  { category: '后端开发', count: 86, totalDuration: 18_900, purchaseCount: 2650 },
+  { category: '移动开发', count: 64, totalDuration: 12_300, purchaseCount: 1890 },
+  { category: '人工智能', count: 45, totalDuration: 9800, purchaseCount: 2340 },
+  { category: '数据科学', count: 52, totalDuration: 11_500, purchaseCount: 1680 },
 ]);
 
 // 当前激活的tab
@@ -117,104 +115,37 @@ const tabs = [
 
 // 加载精选课程
 async function loadFeaturedCourses() {
-  // 这里应该从 API 加载，暂时使用 mock 数据
-  featuredCourses.value = [
-    {
-      courseId: '1',
-      title: 'Vue3 从入门到精通',
-      cover: 'https://picsum.photos/seed/course1/300/200',
-      teacher: '张老师',
-      price: 199,
-      originalPrice: 299,
-      studentCount: 1234,
-      rating: 4.8,
-      courseType: 'paid',
-      description: '深入学习 Vue3 核心技术',
-    },
-    {
-      courseId: '2',
-      title: 'React 实战开发',
-      cover: 'https://picsum.photos/seed/course2/300/200',
-      teacher: '李老师',
-      price: 299,
-      originalPrice: 399,
-      studentCount: 2345,
-      rating: 4.9,
-      courseType: 'paid',
-      description: 'React 18 全家桶实战项目',
-    },
-    {
-      courseId: '3',
-      title: 'TypeScript 进阶',
-      cover: 'https://picsum.photos/seed/course3/300/200',
-      teacher: '王老师',
-      price: 159,
-      originalPrice: 199,
-      studentCount: 876,
-      rating: 4.7,
-      courseType: 'micro',
-      description: '掌握 TypeScript 高级特性',
-    },
-    {
-      courseId: '4',
-      title: 'Node.js 后端开发',
-      cover: 'https://picsum.photos/seed/course4/300/200',
-      teacher: '赵老师',
-      price: 249,
-      originalPrice: 349,
-      studentCount: 1567,
-      rating: 4.8,
-      courseType: 'paid',
-      description: 'Node.js + Express + MongoDB',
-    },
-    {
-      courseId: '5',
-      title: 'Python 数据分析入门',
-      cover: 'https://picsum.photos/seed/course5/300/200',
-      teacher: '刘老师',
-      price: 0,
-      studentCount: 3456,
-      rating: 4.6,
-      courseType: 'micro',
-      description: '零基础学习 Python 数据分析',
-    },
-    {
-      courseId: '6',
-      title: '科研方法与论文写作',
-      cover: 'https://picsum.photos/seed/course6/300/200',
-      teacher: '陈老师',
-      price: 99,
-      originalPrice: 199,
-      studentCount: 678,
-      rating: 4.9,
-      courseType: 'research',
-      description: '提升科研能力，掌握论文写作技巧',
-    },
-    {
-      courseId: '7',
-      title: 'K12 数学竞赛辅导',
-      cover: 'https://picsum.photos/seed/course7/300/200',
-      teacher: '周老师',
-      price: 399,
-      originalPrice: 599,
-      studentCount: 432,
-      rating: 4.8,
-      courseType: 'k12',
-      description: '数学竞赛知识点精讲',
-    },
-    {
-      courseId: '8',
-      title: '机器学习实战',
-      cover: 'https://picsum.photos/seed/course8/300/200',
-      teacher: '吴老师',
-      price: 349,
-      originalPrice: 499,
-      studentCount: 987,
-      rating: 4.9,
-      courseType: 'paid',
-      description: '从理论到实践的机器学习课程',
-    },
-  ];
+  try {
+    // 从后台获取已发布的课程
+    const publishedCourses = getPublishedCourses();
+
+    // 映射为 CourseCard 组件需要的格式
+    featuredCourses.value = publishedCourses.slice(0, 8).map(course => ({
+      courseId: course.id,
+      title: course.title,
+      cover: course.coverImage,
+      teacher: course.teacher.name,
+      price: course.price,
+      originalPrice: course.originalPrice,
+      studentCount: course.studentCount,
+      rating: course.rating,
+      courseType: course.courseType,
+      description: course.courseIntro?.substring(0, 50) + '...' || '',
+    }));
+
+    // 动态生成分类选项
+    const categories = new Set(publishedCourses.map(c => c.category));
+    courseCategories.value = [
+      { label: '全部', value: 'all' },
+      ...Array.from(categories).map(cat => ({ label: cat, value: cat }))
+    ];
+
+    console.log('加载到', featuredCourses.value.length, '门精选课程');
+    console.log('课程列表:', featuredCourses.value);
+  } catch (error) {
+    console.error('加载课程失败:', error);
+    featuredCourses.value = [];
+  }
 }
 
 // 咨询提交
@@ -327,11 +258,7 @@ onMounted(() => {
     <section class="course-stats">
       <div class="container">
         <h2>课程数据统计</h2>
-        <!-- CourseStatsChart 暂时注释，等待安装 echarts -->
-        <div class="chart-placeholder">
-          <p>图表组件加载中...</p>
-          <p class="hint">请先安装 echarts: npm install echarts --save</p>
-        </div>
+        <CourseStatsChart :stats="courseStats" />
       </div>
     </section>
 
@@ -564,9 +491,7 @@ onMounted(() => {
 .course-stats {
   background: #fff;
   padding: $spacing-extra-extra-large 0;
-}
 
-.course-stats {
   h2 {
     text-align: center;
     font-size: $font-size-extra-large;
@@ -577,23 +502,6 @@ onMounted(() => {
     @media (min-width: 768px) {
       font-size: 32px;
     }
-  }
-}
-
-.chart-placeholder {
-  text-align: center;
-  padding: $spacing-extra-extra-large 0;
-  color: $text-color-secondary;
-
-  p {
-    font-size: $font-size-base;
-    margin-bottom: $spacing-small;
-  }
-
-  .hint {
-    font-size: $font-size-small;
-    color: $text-color-placeholder;
-    font-style: italic;
   }
 }
 

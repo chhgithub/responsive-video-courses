@@ -1,83 +1,89 @@
 <script setup lang="ts">
-const centerInfo = ref({
-  title: '数字创新中心',
-  heroImage: 'https://picsum.photos/seed/digital/1200/400',
-  description: '数字创新中心致力于数字技术在教育领域的应用研究，探索教育数字化转型的新路径。',
-  features: ['智慧教育平台', '在线学习系统', '教育大数据', '人工智能辅助'],
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { publicAboutUsApi } from '@/api/public/introduction';
+import { initAboutUsData, diagnoseAboutUsData } from '@/utils/about-us-init';
+import type { AboutUsInfo } from '@/types/introduction';
+
+const router = useRouter();
+const loading = ref(false);
+const digitalInfo = ref<AboutUsInfo | null>(null);
+
+onMounted(async () => {
+  // 确保数据已初始化
+  initAboutUsData();
+
+  // 诊断数据（开发环境）
+  if (import.meta.env.DEV) {
+    const diagnosis = diagnoseAboutUsData();
+    console.log('关于我们数据诊断:', diagnosis);
+  }
+
+  await loadData();
 });
+
+async function loadData() {
+  loading.value = true;
+  try {
+    const data = await publicAboutUsApi.getDigital();
+    console.log('获取到的数字创新中心数据:', data);
+    if (data && data.isPublished) {
+      digitalInfo.value = data;
+    } else {
+      digitalInfo.value = null;
+    }
+  } catch (error) {
+    console.error('加载失败:', error);
+    digitalInfo.value = null;
+  } finally {
+    loading.value = false;
+  }
+}
 </script>
 
 <template>
-  <div class="digital-page">
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="container">
-        <h1>{{ centerInfo.title }}</h1>
-        <p>数字技术赋能教育，创新引领未来</p>
-      </div>
-    </div>
+  <div v-loading="loading" class="about-page">
+    <!-- 未发布提示 -->
+    <el-empty v-if="!digitalInfo && !loading" description="暂无内容">
+      <el-button type="primary" @click="$router.push('/portal')">返回首页</el-button>
+    </el-empty>
 
-    <!-- 介绍 -->
-    <el-card class="intro-card" shadow="never">
-      <p class="description">{{ centerInfo.description }}</p>
-    </el-card>
-
-    <!-- 核心功能 -->
-    <el-card class="features-card" shadow="never">
-      <h2>核心功能</h2>
-      <el-row :gutter="24">
-        <el-col :xs="24" :sm="12" :md="6" v-for="(feature, index) in centerInfo.features" :key="index">
-          <div class="feature-box">
-            <div class="feature-number">{{ index + 1 }}</div>
-            <h3>{{ feature }}</h3>
+    <!-- 内容区域 -->
+    <template v-else-if="digitalInfo">
+      <!-- Hero Section -->
+      <section
+        class="hero-section"
+        :style="{ backgroundImage: digitalInfo.coverImage ? `url(${digitalInfo.coverImage})` : '' }"
+      >
+        <div class="hero-overlay">
+          <div class="container">
+            <div class="hero-content">
+              <h1 class="hero-title">{{ digitalInfo.title }}</h1>
+              <p class="hero-subtitle">驱动数字转型，赋能智慧未来</p>
+            </div>
           </div>
-        </el-col>
-      </el-row>
-    </el-card>
+        </div>
+      </section>
 
-    <!-- 技术架构 -->
-    <el-card class="tech-card" shadow="never">
-      <h2>技术架构</h2>
-      <el-timeline>
-        <el-timeline-item timestamp="2020" color="#409eff">
-          <h3>平台建设</h3>
-          <p>搭建在线教育平台，实现教学资源数字化</p>
-        </el-timeline-item>
-        <el-timeline-item timestamp="2022" color="#67c23a">
-          <h3>数据分析</h3>
-          <p>引入大数据分析技术，优化学习体验</p>
-        </el-timeline-item>
-        <el-timeline-item timestamp="2024" color="#e6a23c">
-          <h3>AI 赋能</h3>
-          <p>应用人工智能技术，实现个性化学习</p>
-        </el-timeline-item>
-      </el-timeline>
-    </el-card>
-
-    <!-- 成果展示 -->
-    <el-card class="achievements-card" shadow="never">
-      <h2>成果展示</h2>
-      <el-row :gutter="24" class="stats-row">
-        <el-col :xs="12" :sm="6" v-for="stat in [
-          { label: '服务用户', value: '50万+' },
-          { label: '合作学校', value: '100+' },
-          { label: '课程资源', value: '1万+' },
-          { label: '专利成果', value: '20+' },
-        ]" :key="stat.label">
-          <div class="stat-item">
-            <div class="stat-value">{{ stat.value }}</div>
-            <div class="stat-label">{{ stat.label }}</div>
+      <!-- 内容区域 -->
+      <section class="content-section">
+        <div class="container">
+          <div class="content-wrapper">
+            <!-- 内容卡片 -->
+            <el-card class="content-card" shadow="hover">
+              <article class="content" v-html="digitalInfo.content"></article>
+            </el-card>
           </div>
-        </el-col>
-      </el-row>
-    </el-card>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
 <style scoped lang="scss">
 @import '@/assets/styles/variables.scss';
 
-.digital-page {
+.about-page {
   min-height: calc(100vh - $navbar-height - $footer-height);
   background: $background-color-base;
 }
@@ -88,99 +94,146 @@ const centerInfo = ref({
   padding: 0 $spacing-large;
 }
 
+// Hero Section
 .hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  padding: $spacing-extra-extra-large 0;
-  text-align: center;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-color: #667eea;
   margin-bottom: $spacing-extra-large;
 
-  h1 {
-    font-size: 48px;
-    margin-bottom: $spacing-base;
-  }
+  .hero-overlay {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+    padding: $spacing-extra-extra-large 0;
 
-  p {
-    font-size: $font-size-large;
-    opacity: 0.9;
-  }
-}
-
-.intro-card {
-  margin-bottom: $spacing-extra-large;
-
-  .description {
-    font-size: $font-size-large;
-    line-height: 1.8;
-    color: $text-color-regular;
-    text-align: center;
-    padding: $spacing-extra-large 0;
-  }
-}
-
-.features-card {
-  margin-bottom: $spacing-extra-large;
-
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .feature-box {
-    text-align: center;
-    padding: $spacing-extra-large;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: $border-radius-large;
-    color: #fff;
-
-    .feature-number {
-      font-size: 36px;
-      font-weight: bold;
-      margin-bottom: $spacing-base;
-      opacity: 0.3;
-    }
-
-    h3 {
-      font-size: $font-size-large;
-      margin: 0;
-    }
-  }
-}
-
-.tech-card {
-  margin-bottom: $spacing-extra-large;
-
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-extra-large;
-    text-align: center;
-  }
-}
-
-.achievements-card {
-  h2 {
-    font-size: 24px;
-    margin-bottom: $spacing-large;
-    text-align: center;
-  }
-
-  .stats-row {
-    .stat-item {
+    .hero-content {
       text-align: center;
-      padding: $spacing-extra-large 0;
+      color: #fff;
+      animation: fadeInUp 0.8s ease-out;
 
-      .stat-value {
-        font-size: 36px;
-        font-weight: 600;
-        color: $--el-color-primary;
+      .hero-title {
+        font-size: 48px;
+        font-weight: bold;
+        margin: 0 0 $spacing-base 0;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+        @media (max-width: 768px) {
+          font-size: 32px;
+        }
+      }
+
+      .hero-subtitle {
+        font-size: $font-size-large;
+        opacity: 0.95;
+        margin: 0;
+
+        @media (max-width: 768px) {
+          font-size: $font-size-base;
+        }
+      }
+    }
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Content Section
+.content-section {
+  padding-bottom: $spacing-extra-extra-large;
+}
+
+.content-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.content-card {
+  margin-bottom: $spacing-extra-large;
+  border-radius: $border-radius-large;
+
+  .content {
+    :deep(h2) {
+      font-size: 32px;
+      color: $text-color-primary;
+      margin-top: $spacing-extra-large;
+      margin-bottom: $spacing-large;
+      padding-bottom: $spacing-base;
+      border-bottom: 3px solid $primary-color;
+
+      &:first-child {
+        margin-top: 0;
+      }
+
+      @media (max-width: 768px) {
+        font-size: 24px;
+      }
+    }
+
+    :deep(h3) {
+      font-size: 24px;
+      color: $text-color-primary;
+      margin-top: $spacing-large;
+      margin-bottom: $spacing-base;
+
+      @media (max-width: 768px) {
+        font-size: 20px;
+      }
+    }
+
+    :deep(p) {
+      font-size: $font-size-base;
+      line-height: 1.8;
+      color: $text-color-regular;
+      margin-bottom: $spacing-base;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    :deep(ul) {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: $spacing-base;
+
+      li {
+        position: relative;
+        padding: $spacing-small 0 $spacing-small $spacing-large + $spacing-small;
         margin-bottom: $spacing-small;
-      }
+        line-height: 1.8;
+        color: $text-color-regular;
 
-      .stat-label {
-        font-size: $font-size-base;
-        color: $text-color-secondary;
+        &::before {
+          content: '•';
+          position: absolute;
+          left: 0;
+          color: $primary-color;
+          font-size: 20px;
+          font-weight: bold;
+        }
       }
+    }
+
+    :deep(strong) {
+      color: $text-color-primary;
+      font-weight: 600;
+    }
+
+    :deep(img) {
+      max-width: 100%;
+      height: auto;
+      border-radius: $border-radius-base;
+      margin: $spacing-large 0;
+      box-shadow: $box-shadow-card;
     }
   }
 }

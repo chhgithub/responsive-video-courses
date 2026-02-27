@@ -22,7 +22,6 @@ const loading = ref(false);
 // 表单数据
 const formData = ref({
   title: '',
-  link: '',
   orderNum: 0,
   status: '1',
 });
@@ -59,7 +58,6 @@ watch(
         if (banner) {
           formData.value = {
             title: banner.title,
-            link: banner.link || '',
             orderNum: banner.orderNum,
             status: banner.status,
           };
@@ -125,7 +123,6 @@ async function handleSubmit() {
 
     const data = {
       title: formData.value.title,
-      link: formData.value.link,
       imageUrl: uploadedImageUrl.value,
       orderNum: formData.value.orderNum,
       status: formData.value.status,
@@ -156,7 +153,6 @@ function handleClose() {
 function resetForm() {
   formData.value = {
     title: '',
-    link: '',
     orderNum: 0,
     status: '1',
   };
@@ -215,17 +211,6 @@ function resetForm() {
             </div>
           </div>
         </el-upload>
-      </el-form-item>
-
-      <!-- 跳转链接 -->
-      <el-form-item label="跳转链接">
-        <el-input
-          v-model="formData.link"
-          placeholder="请输入跳转链接（可选）"
-          clearable
-        >
-          <template #prepend>https://</template>
-        </el-input>
       </el-form-item>
 
       <!-- 排序 -->

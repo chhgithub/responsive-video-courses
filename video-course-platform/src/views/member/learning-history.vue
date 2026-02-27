@@ -1,10 +1,51 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores';
+import { ElMessage } from 'element-plus';
+import { getUserLearningRecords, getLearningStats, getRecentWatchedCourses } from '@/utils/learning-storage';
 
-import { getLearningHistory, type LearningRecord } from '@/utils/member-storage';
+const router = useRouter();
+const authStore = useAuthStore();
 
-// 学习历史记录
-const learningHistory = ref<LearningRecord[]>(getLearningHistory());
+const loading = ref(false);
+
+// 学习记录列表
+const learningRecords = ref([]);
+
+// 学习统计
+const stats = ref({
+  totalCourses: 0,
+  completedCourses: 0,
+  inProgressCourses: 0,
+  totalWatchDuration: 0,
+  averageProgress: 0,
+});
+
+// 加载学习历史
+async function loadLearningHistory() {
+  if (!authStore.userInfo) return;
+
+  loading.value = true;
+  try {
+    // 获取学习记录
+    const records = getUserLearningRecords(authStore.userInfo.userId);
+
+    // 按最后观看时间排序
+    learningRecords.value = records.sort((a, b) =>
+      new Date(b.lastWatchTime).getTime() - new Date(a.lastWatchTime).getTime()
+    );
+
+    // 获取统计信息
+    stats.value = getLearningStats(authStore.userInfo.userId);
+
+    console.log('加载学习历史:', learningRecords.value.length);
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载学习历史失败');
+  } finally {
+    loading.value = false;
+  }
+}
 
 // 格式化时长
 function formatDuration(seconds: number): string {
@@ -19,6 +60,8 @@ function formatDuration(seconds: number): string {
 
 // 格式化日期
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '-';
+
   const date = new Date(dateStr);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
@@ -31,16 +74,16 @@ function formatDate(dateStr: string): string {
   } else if (days < 7) {
     return `${days}天前`;
   } else {
-    return dateStr.split(' ')[0];
+    return date.toLocaleDateString('zh-CN');
   }
 }
 
 // 按日期分组
-function groupByDate(records: LearningRecord[]): Record<string, LearningRecord[]> {
-  const grouped: Record<string, LearningRecord[]> = {};
+const groupedRecords = computed(() => {
+  const grouped: Record<string, typeof learningRecords.value> = {};
 
-  records.forEach((record) => {
-    const dateKey = formatDate(record.studyTime);
+  learningRecords.value.forEach((record) => {
+    const dateKey = formatDate(record.lastWatchTime);
     if (!grouped[dateKey]) {
       grouped[dateKey] = [];
     }
@@ -48,69 +91,144 @@ function groupByDate(records: LearningRecord[]): Record<string, LearningRecord[]
   });
 
   return grouped;
-}
-
-// 分组后的记录
-const groupedRecords = ref<Record<string, LearningRecord[]>>(groupByDate(learningHistory.value));
+});
 
 // 继续学习
-function handleContinueLearning(recordId: string) {
-  console.log('继续学习:', recordId);
+function handleContinueLearning(courseId: string) {
+  router.push(`/portal/course-learn/${courseId}`);
 }
 
-// 查看课程
-function handleViewCourse(courseId: string) {
-  console.log('查看课程:', courseId);
+// 查看课程详情
+function handleViewDetail(courseId: string) {
+  router.push(`/portal/course/${courseId}`);
 }
+
+onMounted(() => {
+  loadLearningHistory();
+});
 </script>
 
 <template>
   <div class="learning-history">
-    <!-- 页面标题 -->
     <div class="page-header">
       <h2>学习历史</h2>
-      <p class="page-subtitle">记录您的学习足迹</p>
+      <p>查看您的学习记录和统计数据</p>
     </div>
 
-    <!-- 学习记录 -->
-    <div v-if="learningHistory.length > 0" class="history-list">
-      <div v-for="(records, date) in groupedRecords" :key="date" class="history-group">
-        <!-- 日期标题 -->
+    <!-- 学习统计 -->
+    <el-card v-if="!loading && stats.totalCourses > 0" class="stats-card" shadow="never">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-icon">
+            <el-icon><Reading /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ stats.totalCourses }}</div>
+            <div class="stat-label">已学课程</div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon success">
+            <el-icon><CircleCheck /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ stats.completedCourses }}</div>
+            <div class="stat-label">已完成</div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon warning">
+            <el-icon><Loading /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ stats.inProgressCourses }}</div>
+            <div class="stat-label">学习中</div>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon info">
+            <el-icon><Clock /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ formatDuration(stats.totalWatchDuration) }}</div>
+            <div class="stat-label">总时长</div>
+          </div>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="3" animated />
+    </div>
+
+    <!-- 学习记录列表 -->
+    <div v-else-if="Object.keys(groupedRecords).length > 0" class="records-container">
+      <div v-for="(records, date) in groupedRecords" :key="date" class="date-group">
         <div class="date-header">
-          <div class="date-label">{{ date }}</div>
-          <div class="record-count">{{ records.length }} 条记录</div>
+          <h3>{{ date }}</h3>
+          <span class="count">共 {{ records.length }} 条记录</span>
         </div>
 
-        <!-- 记录列表 -->
         <div class="records-list">
-          <div v-for="record in records" :key="record.id" class="record-card">
-            <!-- 课程信息 -->
-            <div class="course-info">
-              <div class="course-title">{{ record.courseTitle }}</div>
-              <div class="lesson-title">{{ record.lessonTitle }}</div>
-              <div class="study-time">
-                <el-icon><Clock /></el-icon>
-                <span>{{ record.studyTime }}</span>
+          <div
+            v-for="record in records"
+            :key="record.recordId"
+            class="record-item"
+          >
+            <!-- 课程封面 -->
+            <div class="course-cover" @click="handleViewDetail(record.courseId)">
+              <el-image :src="record.courseCover" fit="cover" />
+              <div class="play-overlay">
+                <el-icon class="play-icon"><VideoPlay /></el-icon>
               </div>
             </div>
 
-            <!-- 观看时长 -->
-            <div class="duration-info">
-              <div class="duration-label">观看时长</div>
-              <div class="duration-value">{{ formatDuration(record.watchDuration) }}</div>
+            <!-- 课程信息 -->
+            <div class="record-info">
+              <h4 class="course-name" @click="handleViewDetail(record.courseId)">
+                {{ record.courseName }}
+              </h4>
+
+              <!-- 学习进度 -->
+              <div class="progress-section">
+                <div class="progress-header">
+                  <span class="progress-label">学习进度</span>
+                  <span class="progress-percent">{{ record.progress }}%</span>
+                </div>
+                <el-progress
+                  :percentage="record.progress"
+                  :status="record.progress >= 100 ? 'success' : undefined"
+                  :show-text="false"
+                />
+                <div class="progress-info">
+                  <span class="lessons"
+                    >已完成 {{ record.completedLessons?.length || 0 }} 课时</span
+                  >
+                </div>
+              </div>
             </div>
 
-            <!-- 操作按钮 -->
-            <div class="record-actions">
+            <!-- 时间和操作 -->
+            <div class="record-meta">
+              <div class="time-info">
+                <div class="time-item">
+                  <el-icon><Clock /></el-icon>
+                  <span>{{ record.lastWatchTime?.split('T')[1]?.substring(0, 5) || '-' }}</span>
+                </div>
+                <div class="time-item">
+                  <el-icon><Timer /></el-icon>
+                  <span>{{ formatDuration(record.totalWatchDuration) }}</span>
+                </div>
+              </div>
+
               <el-button
                 type="primary"
+                :icon="VideoPlay"
                 size="small"
-                @click="handleContinueLearning(record.id)"
+                @click="handleContinueLearning(record.courseId)"
               >
                 继续学习
-              </el-button>
-              <el-button size="small" @click="handleViewCourse(record.courseId)">
-                查看课程
               </el-button>
             </div>
           </div>
@@ -120,42 +238,11 @@ function handleViewCourse(courseId: string) {
 
     <!-- 空状态 -->
     <div v-else class="empty-state">
-      <div class="empty-icon">📖</div>
-      <p class="empty-text">还没有学习记录</p>
-      <router-link to="/portal/courses" class="empty-link">
-        <el-button type="primary">开始学习</el-button>
-      </router-link>
-    </div>
-
-    <!-- 统计信息 -->
-    <div v-if="learningHistory.length > 0" class="stats-section">
-      <el-card shadow="hover">
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-icon">📚</div>
-            <div class="stat-content">
-              <div class="stat-value">{{ learningHistory.length }}</div>
-              <div class="stat-label">学习记录</div>
-            </div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-icon">⏱️</div>
-            <div class="stat-content">
-              <div class="stat-value">
-                {{ formatDuration(learningHistory.reduce((sum, r) => sum + r.watchDuration, 0)) }}
-              </div>
-              <div class="stat-label">总时长</div>
-            </div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-icon">📅</div>
-            <div class="stat-content">
-              <div class="stat-value">{{ Object.keys(groupedRecords).length }}</div>
-              <div class="stat-label">学习天数</div>
-            </div>
-          </div>
-        </div>
-      </el-card>
+      <el-empty description="暂无学习记录">
+        <el-button type="primary" @click="router.push('/portal/courses')">
+          去选课
+        </el-button>
+      </el-empty>
     </div>
   </div>
 </template>
@@ -164,218 +251,242 @@ function handleViewCourse(courseId: string) {
 @import '@/assets/styles/variables.scss';
 
 .learning-history {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: $spacing-extra-large 0;
-}
+  padding: $spacing-large;
 
-.page-header {
-  margin-bottom: $spacing-extra-large;
+  .page-header {
+    margin-bottom: $spacing-extra-large;
 
-  h2 {
-    font-size: $font-size-extra-large;
-    font-weight: bold;
-    color: $text-color-primary;
-    margin-bottom: $spacing-small;
-  }
-
-  .page-subtitle {
-    font-size: $font-size-base;
-    color: $text-color-secondary;
-  }
-}
-
-// 历史记录列表
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-extra-large;
-}
-
-.history-group {
-  .date-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: $spacing-base;
-    padding-bottom: $spacing-small;
-    border-bottom: 2px solid #409eff;
-
-    .date-label {
-      font-size: $font-size-medium;
+    h2 {
+      font-size: $font-size-extra-large;
       font-weight: 600;
-      color: #409eff;
+      color: $text-color-primary;
+      margin-bottom: $spacing-small;
     }
 
-    .record-count {
-      font-size: $font-size-small;
+    p {
       color: $text-color-secondary;
     }
   }
-}
 
-.records-list {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-base;
-}
+  .stats-card {
+    margin-bottom: $spacing-extra-large;
 
-.record-card {
-  background: #fff;
-  border-radius: $border-radius-base;
-  box-shadow: $box-shadow-card;
-  padding: $spacing-large;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: $spacing-large;
-  transition: $transition-base;
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: $spacing-large;
 
-  &:hover {
-    box-shadow: $box-shadow-hover;
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: $spacing-base;
+        padding: $spacing-large;
+        background: #fff;
+        border-radius: $border-radius-base;
+
+        .stat-icon {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          color: #fff;
+
+          &.success {
+            background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+          }
+
+          &.warning {
+            background: linear-gradient(135deg, #e6a23c 0%, #f56c6c 100%);
+          }
+
+          &.info {
+            background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+          }
+        }
+
+        .stat-content {
+          flex: 1;
+
+          .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: $text-color-primary;
+            line-height: 1;
+            margin-bottom: $spacing-small;
+          }
+
+          .stat-label {
+            font-size: $font-size-small;
+            color: $text-color-secondary;
+          }
+        }
+      }
+    }
   }
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.course-info {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-small;
-
-  .course-title {
-    font-size: $font-size-medium;
-    font-weight: 600;
-    color: $text-color-primary;
-    margin-bottom: $spacing-small;
+  .loading-container {
+    padding: $spacing-extra-large 0;
   }
 
-  .lesson-title {
-    font-size: $font-size-base;
-    color: $text-color-secondary;
-    margin-bottom: $spacing-small;
+  .records-container {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-extra-large;
   }
 
-  .study-time {
+  .date-group {
+    .date-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: $spacing-large;
+
+      h3 {
+        font-size: $font-size-large;
+        font-weight: 600;
+        color: $text-color-primary;
+      }
+
+      .count {
+        font-size: $font-size-small;
+        color: $text-color-secondary;
+      }
+    }
+
+    .records-list {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-base;
+    }
+  }
+
+  .record-item {
     display: flex;
     align-items: center;
-    gap: $spacing-small;
-    font-size: $font-size-small;
-    color: $text-color-placeholder;
-
-    .el-icon {
-      font-size: 14px;
-    }
-  }
-}
-
-.duration-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: $spacing-base;
-  background: $background-color-base;
-  border-radius: $border-radius-base;
-  min-width: 100px;
-
-  @media (max-width: 768px) {
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: $spacing-base;
-  }
-
-  .duration-label {
-    font-size: $font-size-small;
-    color: $text-color-secondary;
-    margin-bottom: $spacing-small;
-
-    @media (max-width: 768px) {
-      margin-bottom: 0;
-    }
-  }
-
-  .duration-value {
-    font-size: $font-size-large;
-    font-weight: bold;
-    color: #409eff;
-  }
-}
-
-.record-actions {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: $spacing-small;
-  padding-top: $spacing-base;
-  border-top: 1px solid $border-color-lighter;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-}
-
-// 统计信息
-.stats-section {
-  margin-top: $spacing-extra-large;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-extra-large;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
     gap: $spacing-large;
+    padding: $spacing-large;
+    background: #fff;
+    border: 1px solid $border-color-lighter;
+    border-radius: $border-radius-base;
+    transition: $transition-base;
+
+    &:hover {
+      box-shadow: $box-shadow-base;
+    }
+
+    .course-cover {
+      position: relative;
+      width: 160px;
+      height: 120px;
+      border-radius: $border-radius-base;
+      overflow: hidden;
+      cursor: pointer;
+      flex-shrink: 0;
+
+      :deep(.el-image) {
+        width: 100%;
+        height: 100%;
+      }
+
+      .play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: $transition-base;
+
+        .play-icon {
+          font-size: 36px;
+          color: #fff;
+        }
+      }
+
+      &:hover .play-overlay {
+        opacity: 1;
+      }
+    }
+
+    .record-info {
+      flex: 1;
+      min-width: 0;
+
+      .course-name {
+        font-size: $font-size-large;
+        font-weight: 500;
+        color: $text-color-primary;
+        margin-bottom: $spacing-base;
+        cursor: pointer;
+        transition: $transition-base;
+
+        &:hover {
+          color: $--el-color-primary;
+        }
+      }
+
+      .progress-section {
+        margin-bottom: $spacing-small;
+
+        .progress-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: $spacing-small;
+
+          .progress-label {
+            font-size: $font-size-small;
+            color: $text-color-secondary;
+          }
+
+          .progress-percent {
+            font-size: $font-size-small;
+            font-weight: 600;
+            color: $--el-color-primary;
+          }
+        }
+
+        .progress-info {
+          margin-top: $spacing-small;
+
+          .lessons {
+            font-size: $font-size-extra-small;
+            color: $text-color-placeholder;
+          }
+        }
+      }
+    }
+
+    .record-meta {
+      display: flex;
+      flex-direction: column;
+      gap: $spacing-base;
+      min-width: 150px;
+
+      .time-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        .time-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: $font-size-extra-small;
+          color: $text-color-placeholder;
+        }
+      }
+    }
   }
-}
 
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-base;
-  text-align: center;
-  justify-content: center;
-}
-
-.stat-icon {
-  font-size: 40px;
-}
-
-.stat-content {
-  .stat-value {
-    font-size: $font-size-extra-large;
-    font-weight: bold;
-    color: $text-color-primary;
-    margin-bottom: 4px;
+  .empty-state {
+    padding: $spacing-extra-extra-large 0;
   }
-
-  .stat-label {
-    font-size: $font-size-small;
-    color: $text-color-secondary;
-  }
-}
-
-// 空状态
-.empty-state {
-  text-align: center;
-  padding: $spacing-extra-extra-large 0;
-}
-
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: $spacing-large;
-  opacity: 0.5;
-}
-
-.empty-text {
-  font-size: $font-size-medium;
-  color: $text-color-secondary;
-  margin-bottom: $spacing-large;
-}
-
-.empty-link {
-  text-decoration: none;
 }
 </style>
