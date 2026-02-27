@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useUserStore } from '@vben/stores';
@@ -29,8 +29,8 @@ const menuItems = [
     ],
   },
   { path: '/portal/courses', title: '课程中心' },
-  { path: '/portal/news', title: '资讯公告' },
-  { path: '/portal/activity', title: '活动日历' },
+  // { path: '/portal/news', title: '资讯公告' },
+  // { path: '/portal/activity', title: '活动日历' },
   { path: '/portal/cert', title: '认证中心' },
   { path: '/portal/teachers', title: '师资队伍' },
   { path: '/portal/general', title: '通识教育' },
@@ -44,45 +44,51 @@ const currentUser = ref<any>(null);
 
 // 检查登录状态
 function checkLoginState() {
-	const state = localStorage.getItem('portal_login_state');
-	if (!state) {
-		isLoggedIn.value = false;
-		currentUser.value = null;
-		return;
-	}
-	try {
-		const loginState = JSON.parse(state);
-		isLoggedIn.value = !!loginState?.isLoggedIn;
-		currentUser.value = loginState?.user || null;
-	} catch {
-		isLoggedIn.value = false;
-		currentUser.value = null;
-	}
+  const state = localStorage.getItem('portal_login_state');
+  if (!state) {
+    isLoggedIn.value = false;
+    currentUser.value = null;
+    return;
+  }
+  try {
+    const loginState = JSON.parse(state);
+    isLoggedIn.value = !!loginState?.isLoggedIn;
+    currentUser.value = loginState?.user || null;
+  } catch {
+    isLoggedIn.value = false;
+    currentUser.value = null;
+  }
 }
 
 // 监听 storage 事件（多标签页同步）
 function handleStorageChange(event: StorageEvent) {
-	if (event.key === 'portal_login_state') {
-		checkLoginState();
-	}
+  if (event.key === 'portal_login_state') {
+    checkLoginState();
+  }
 }
 
 // 监听自定义事件（同一标签页内同步）
 function handleLoginStateChanged() {
-	checkLoginState();
+  checkLoginState();
 }
 
 // 组件挂载时检查登录状态
 onMounted(() => {
-	checkLoginState();
-	window.addEventListener('storage', handleStorageChange);
-	window.addEventListener('portal-login-state-changed', handleLoginStateChanged);
+  checkLoginState();
+  window.addEventListener('storage', handleStorageChange);
+  window.addEventListener(
+    'portal-login-state-changed',
+    handleLoginStateChanged,
+  );
 });
 
 // 组件卸载时移除监听
 onUnmounted(() => {
-	window.removeEventListener('storage', handleStorageChange);
-	window.removeEventListener('portal-login-state-changed', handleLoginStateChanged);
+  window.removeEventListener('storage', handleStorageChange);
+  window.removeEventListener(
+    'portal-login-state-changed',
+    handleLoginStateChanged,
+  );
 });
 
 function handleMenuClick(path: string) {
@@ -291,11 +297,16 @@ function clearSearch() {
                   @click="toggleUserDropdown"
                 >
                   <img
-                    :src="currentUser?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'"
+                    :src="
+                      currentUser?.avatar ||
+                      'https://api.dicebear.com/7.x/avataaars/svg?seed=user'
+                    "
                     class="h-8 w-8 rounded-full object-cover"
                     alt="Avatar"
                   />
-                  <span class="text-sm text-gray-700">{{ currentUser?.nickname || currentUser?.username || '我的' }}</span>
+                  <span class="text-sm text-gray-700">{{
+                    currentUser?.nickname || currentUser?.username || '我的'
+                  }}</span>
                 </button>
                 <!-- Dropdown Menu -->
                 <div

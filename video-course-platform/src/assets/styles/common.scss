@@ -1,0 +1,216 @@
+// ==============================================
+// 通用样式
+// ==============================================
+
+// 导入变量和 mixins
+@use "./variables.scss" as *;
+@use "./mixins.scss" as *;
+
+// 容器
+.container {
+  @include container-width;
+}
+
+// 清除浮动
+.clearfix {
+  @include clearfix;
+}
+
+// 文本溢出
+.text-ellipsis {
+  @include text-ellipsis(1);
+}
+
+.text-ellipsis-2 {
+  @include text-ellipsis(2);
+}
+
+.text-ellipsis-3 {
+  @include text-ellipsis(3);
+}
+
+// 文本对齐
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+// 文本颜色
+.text-primary {
+  color: $text-color-primary;
+}
+
+.text-regular {
+  color: $text-color-regular;
+}
+
+.text-secondary {
+  color: $text-color-secondary;
+}
+
+.text-success {
+  color: var(--el-color-success);
+}
+
+.text-warning {
+  color: var(--el-color-warning);
+}
+
+.text-danger {
+  color: var(--el-color-danger);
+}
+
+.text-info {
+  color: var(--el-color-info);
+}
+
+// 字体大小
+.text-extra-large {
+  font-size: $font-size-extra-large;
+}
+
+.text-large {
+  font-size: $font-size-large;
+}
+
+.text-medium {
+  font-size: $font-size-medium;
+}
+
+.text-base {
+  font-size: $font-size-base;
+}
+
+.text-small {
+  font-size: $font-size-small;
+}
+
+.text-extra-small {
+  font-size: $font-size-extra-small;
+}
+
+// 字体粗细
+.font-normal {
+  font-weight: 400;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+// 间距工具类
+.m-0 { margin: 0; }
+.m-1 { margin: $spacing-small; }
+.m-2 { margin: $spacing-base; }
+.m-3 { margin: $spacing-medium; }
+.m-4 { margin: $spacing-large; }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: $spacing-small; }
+.mt-2 { margin-top: $spacing-base; }
+.mt-3 { margin-top: $spacing-medium; }
+.mt-4 { margin-top: $spacing-large; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: $spacing-small; }
+.mb-2 { margin-bottom: $spacing-base; }
+.mb-3 { margin-bottom: $spacing-medium; }
+.mb-4 { margin-bottom: $spacing-large; }
+
+.ml-0 { margin-left: 0; }
+.ml-1 { margin-left: $spacing-small; }
+.ml-2 { margin-left: $spacing-base; }
+.ml-3 { margin-left: $spacing-medium; }
+.ml-4 { margin-left: $spacing-large; }
+
+.mr-0 { margin-right: 0; }
+.mr-1 { margin-right: $spacing-small; }
+.mr-2 { margin-right: $spacing-base; }
+.mr-3 { margin-right: $spacing-medium; }
+.mr-4 { margin-right: $spacing-large; }
+
+.p-0 { padding: 0; }
+.p-1 { padding: $spacing-small; }
+.p-2 { padding: $spacing-base; }
+.p-3 { padding: $spacing-medium; }
+.p-4 { padding: $spacing-large; }
+
+.pt-0 { padding-top: 0; }
+.pt-1 { padding-top: $spacing-small; }
+.pt-2 { padding-top: $spacing-base; }
+.pt-3 { padding-top: $spacing-medium; }
+.pt-4 { padding-top: $spacing-large; }
+
+.pb-0 { padding-bottom: 0; }
+.pb-1 { padding-bottom: $spacing-small; }
+.pb-2 { padding-bottom: $spacing-base; }
+.pb-3 { padding-bottom: $spacing-medium; }
+.pb-4 { padding-bottom: $spacing-large; }
+
+.pl-0 { padding-left: 0; }
+.pl-1 { padding-left: $spacing-small; }
+.pl-2 { padding-left: $spacing-base; }
+.pl-3 { padding-left: $spacing-medium; }
+.pl-4 { padding-left: $spacing-large; }
+
+.pr-0 { padding-right: 0; }
+.pr-1 { padding-right: $spacing-small; }
+.pr-2 { padding-right: $spacing-base; }
+.pr-3 { padding-right: $spacing-medium; }
+.pr-4 { padding-right: $spacing-large; }
+
+// Flex 工具类
+.flex { display: flex; }
+.flex-center { @include flex-center; }
+.flex-between { @include flex-between; }
+.flex-start { @include flex-start; }
+.flex-end { @include flex-end; }
+.flex-column { @include flex-column; }
+.flex-column-center { @include flex-column-center; }
+
+.flex-1 { flex: 1; }
+.flex-grow-0 { flex-grow: 0; }
+.flex-shrink-0 { flex-shrink: 0; }
+
+// 显示/隐藏
+.d-none { display: none; }
+.d-block { display: block; }
+.d-inline { display: inline; }
+.d-inline-block { display: inline-block; }
+
+// 位置
+.position-relative { position: relative; }
+.position-absolute { position: absolute; }
+.position-fixed { position: fixed; }
+
+// 圆角
+.rounded { border-radius: $border-radius-base; }
+.rounded-sm { border-radius: $border-radius-small; }
+.rounded-lg { border-radius: $border-radius-large; }
+.rounded-full { border-radius: $border-radius-circle; }
+
+// 阴影
+.shadow { box-shadow: $box-shadow-base; }
+.shadow-light { box-shadow: $box-shadow-light; }
+.shadow-card { box-shadow: $box-shadow-card; }
+
+// 卡片
+.card {
+  @include card-style;
+}
+
+// 滚动条
+.custom-scrollbar {
+  @include scrollbar;
+}

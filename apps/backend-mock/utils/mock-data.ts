@@ -171,17 +171,90 @@ const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
   ];
 };
 
+// 课程管理和介绍信息菜单
+const courseAndIntroductionMenus = [
+  {
+    meta: {
+      icon: 'lucide:graduation-cap',
+      order: 2,
+      title: '课程管理',
+    },
+    name: 'Course',
+    path: '/course',
+    redirect: '/course/list',
+    children: [
+      {
+        name: 'CourseList',
+        path: '/course/list',
+        component: '/course/index',
+        meta: {
+          icon: 'lucide:list',
+          title: '课程列表',
+        },
+      },
+    ],
+  },
+  {
+    meta: {
+      icon: 'lucide:file-text',
+      order: 3,
+      title: '介绍信息',
+    },
+    name: 'Introduction',
+    path: '/introduction',
+    redirect: '/introduction/course-intro',
+    children: [
+      {
+        name: 'CourseIntro',
+        path: '/introduction/course-intro',
+        component: '/introduction/course-intro/index',
+        meta: {
+          icon: 'lucide:book-open',
+          title: '课程介绍',
+        },
+      },
+      {
+        name: 'CertCenter',
+        path: '/introduction/cert-center',
+        component: '/introduction/cert-center/index',
+        meta: {
+          icon: 'lucide:award',
+          title: '认证中心介绍',
+        },
+      },
+      {
+        name: 'AboutUs',
+        path: '/introduction/about-us',
+        component: '/introduction/about-us/index',
+        meta: {
+          icon: 'lucide:info',
+          title: '关于我们介绍',
+        },
+      },
+      {
+        name: 'Faculty',
+        path: '/introduction/faculty',
+        component: '/introduction/faculty/index',
+        meta: {
+          icon: 'lucide:users',
+          title: '师资介绍',
+        },
+      },
+    ],
+  },
+];
+
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus('super')],
+    menus: [...dashboardMenus, ...courseAndIntroductionMenus, ...createDemosMenus('super')],
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('admin')],
+    menus: [...dashboardMenus, ...courseAndIntroductionMenus, ...createDemosMenus('admin')],
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('user')],
+    menus: [...dashboardMenus, ...courseAndIntroductionMenus, ...createDemosMenus('user')],
     username: 'jack',
   },
 ];

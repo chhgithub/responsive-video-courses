@@ -1,0 +1,199 @@
+// ==============================================
+// SCSS Mixins
+// ==============================================
+
+// 导入变量（mixins 需要使用这些变量）
+@use "./variables.scss" as *;
+
+// ==============================================
+// 响应式断点 Mixins
+// ==============================================
+
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: $breakpoint-xs) { @content; }
+  }
+  @else if $breakpoint == sm {
+    @media (max-width: $breakpoint-sm) { @content; }
+  }
+  @else if $breakpoint == md {
+    @media (max-width: $breakpoint-md) { @content; }
+  }
+  @else if $breakpoint == lg {
+    @media (max-width: $breakpoint-lg) { @content; }
+  }
+  @else if $breakpoint == xl {
+    @media (max-width: $breakpoint-xl) { @content; }
+  }
+  @else if $breakpoint == xxl {
+    @media (max-width: $breakpoint-xxl) { @content; }
+  }
+}
+
+@mixin respond-to-min($breakpoint) {
+  @if $breakpoint == xs {
+    @media (min-width: $breakpoint-xs) { @content; }
+  }
+  @else if $breakpoint == sm {
+    @media (min-width: $breakpoint-sm) { @content; }
+  }
+  @else if $breakpoint == md {
+    @media (min-width: $breakpoint-md) { @content; }
+  }
+  @else if $breakpoint == lg {
+    @media (min-width: $breakpoint-lg) { @content; }
+  }
+  @else if $breakpoint == xl {
+    @media (min-width: $breakpoint-xl) { @content; }
+  }
+  @else if $breakpoint == xxl {
+    @media (min-width: $breakpoint-xxl) { @content; }
+  }
+}
+
+// ==============================================
+// 文本溢出 Mixins
+// ==============================================
+
+@mixin text-ellipsis($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ==============================================
+// Flex 布局 Mixins
+// ==============================================
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@mixin flex-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-column-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+// ==============================================
+// 清除浮动 Mixin
+// ==============================================
+
+@mixin clearfix {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+// ==============================================
+// 滚动条样式 Mixin
+// ==============================================
+
+@mixin scrollbar($width: 6px, $thumb-color: #dcdfe6, $track-color: #f5f7fa) {
+  &::-webkit-scrollbar {
+    width: $width;
+    height: $width;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $thumb-color;
+    border-radius: $width;
+
+    &:hover {
+      background-color: darken($thumb-color, 10%);
+    }
+  }
+
+  &::-webkit-scrollbar-track {
+    background-color: $track-color;
+  }
+}
+
+// ==============================================
+// 卡片样式 Mixin
+// ==============================================
+
+@mixin card-style {
+  background: #fff;
+  border-radius: $border-radius-base;
+  box-shadow: $box-shadow-card;
+  padding: $spacing-large;
+}
+
+// ==============================================
+// 按钮重置 Mixin
+// ==============================================
+
+@mixin button-reset {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  outline: none;
+}
+
+// ==============================================
+// 绝对定位居中 Mixin
+// ==============================================
+
+@mixin absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+// ==============================================
+// 适配不同屏幕的容器最大宽度
+// ==============================================
+
+@mixin container-width {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 $spacing-large;
+
+  @include respond-to(md) {
+    padding: 0 $spacing-medium;
+  }
+
+  @include respond-to(sm) {
+    padding: 0 $spacing-base;
+  }
+}

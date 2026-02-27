@@ -29,17 +29,45 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:file-text',
       order: 3,
-      title: $t('介绍信息'),
+      title: '介绍信息',
     },
     name: 'Introduction',
     path: '/introduction',
     children: [
       {
-        name: 'IntroductionList',
-        path: '/introduction/list',
-        component: () => import('#/views/introduction/index.vue'),
+        name: 'CourseIntro',
+        path: '/introduction/course-intro',
+        component: () => import('#/views/introduction/course-intro/index.vue'),
         meta: {
-          title: $t('介绍信息管理'),
+          title: '课程介绍',
+          icon: 'lucide:book-open',
+        },
+      },
+      {
+        name: 'CertCenter',
+        path: '/introduction/cert-center',
+        component: () => import('#/views/introduction/cert-center/index.vue'),
+        meta: {
+          title: '认证中心介绍',
+          icon: 'lucide:award',
+        },
+      },
+      {
+        name: 'AboutUs',
+        path: '/introduction/about-us',
+        component: () => import('#/views/introduction/about-us/index.vue'),
+        meta: {
+          title: '关于我们介绍',
+          icon: 'lucide:info',
+        },
+      },
+      {
+        name: 'Faculty',
+        path: '/introduction/faculty',
+        component: () => import('#/views/introduction/faculty/index.vue'),
+        meta: {
+          title: '师资介绍',
+          icon: 'lucide:users',
         },
       },
     ],

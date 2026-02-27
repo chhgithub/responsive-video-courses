@@ -74,7 +74,7 @@ export async function getAllMenusApi() {
           path: '/introduction',
           name: 'Introduction',
           component: 'BasicLayout',
-          redirect: '/introduction/list',
+          redirect: '/introduction/course-intro',
           meta: {
             title: '介绍信息',
             icon: 'lucide:file-text',
@@ -82,12 +82,39 @@ export async function getAllMenusApi() {
           },
           children: [
             {
-              path: '/introduction/list',
-              name: 'IntroductionList',
-              component: 'introduction/index',
+              path: '/introduction/course-intro',
+              name: 'CourseIntro',
+              component: 'introduction/course-intro/index',
               meta: {
-                title: '介绍信息管理',
-                icon: 'lucide:list',
+                title: '课程介绍',
+                icon: 'lucide:book-open',
+              },
+            },
+            {
+              path: '/introduction/cert-center',
+              name: 'CertCenter',
+              component: 'introduction/cert-center/index',
+              meta: {
+                title: '认证中心介绍',
+                icon: 'lucide:award',
+              },
+            },
+            {
+              path: '/introduction/about-us',
+              name: 'AboutUs',
+              component: 'introduction/about-us/index',
+              meta: {
+                title: '关于我们介绍',
+                icon: 'lucide:info',
+              },
+            },
+            {
+              path: '/introduction/faculty',
+              name: 'Faculty',
+              component: 'introduction/faculty/index',
+              meta: {
+                title: '师资介绍',
+                icon: 'lucide:users',
               },
             },
           ],
