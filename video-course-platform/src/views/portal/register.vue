@@ -101,10 +101,6 @@ function checkUsernameExists(username: string): boolean {
 function checkPhoneExists(phone: string): boolean {
   return !!getUserByPhone(phone);
 }
-function checkPhoneExists(phone: string): boolean {
-  const users = JSON.parse(localStorage.getItem('portal_users') || '[]');
-  return users.some((u: any) => u.phone === phone);
-}
 
 // 密码验证
 function validatePassword(): boolean {

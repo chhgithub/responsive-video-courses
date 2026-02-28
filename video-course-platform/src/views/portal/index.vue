@@ -242,7 +242,7 @@ onMounted(() => {
                       <span>{{ event.time }}</span>
                     </p>
                   </div>
-                  <el-button type="primary" size="small">报名</el-button>
+                  <!-- <el-button type="primary" size="small">报名</el-button> -->
                 </div>
               </div>
             </div>
