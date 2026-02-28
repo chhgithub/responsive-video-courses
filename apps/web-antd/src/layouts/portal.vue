@@ -449,7 +449,7 @@ function clearSearch() {
           </div>
         </div>
         <div class="mt-8 border-t border-gray-700 pt-8 text-center text-sm">
-          <p>&copy; 2025 视频课程平台. All rights reserved.</p>
+          <p>&copy; 2026 视频课程平台. All rights reserved.</p>
         </div>
       </div>
     </footer>

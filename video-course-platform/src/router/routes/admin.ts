@@ -119,6 +119,32 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'general',
+        name: 'AdminGeneral',
+        redirect: '/admin/general/index',
+        meta: { title: '通识教育', icon: 'reading' },
+        children: [
+          {
+            path: 'index',
+            name: 'AdminGeneralIndex',
+            component: () => import('@/views/admin/general/index.vue'),
+            meta: { title: '介绍' },
+          },
+          {
+            path: 'organization',
+            name: 'AdminGeneralOrganization',
+            component: () => import('@/views/admin/general/organization/index.vue'),
+            meta: { title: '单位管理' },
+          },
+          {
+            path: 'redemption',
+            name: 'AdminGeneralRedemption',
+            component: () => import('@/views/admin/general/redemption/index.vue'),
+            meta: { title: '兑换码管理' },
+          },
+        ],
+      },
+      {
         path: 'system',
         name: 'AdminSystem',
         redirect: '/admin/system/user',

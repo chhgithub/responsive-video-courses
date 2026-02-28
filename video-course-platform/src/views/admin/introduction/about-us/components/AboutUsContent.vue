@@ -103,13 +103,6 @@ function handleTogglePublish() {
         </div>
       </el-form-item>
     </el-form>
-
-    <!-- 内容预览 -->
-    <el-divider content-position="left">内容预览</el-divider>
-    <div class="content-preview">
-      <h1 class="preview-title">{{ formData.title }}</h1>
-      <div class="preview-content" v-html="formData.content"></div>
-    </div>
   </div>
 </template>
 
@@ -208,55 +201,6 @@ function handleTogglePublish() {
 
     .field-tip {
       margin-left: $spacing-small;
-    }
-  }
-
-  .content-preview {
-    padding: $spacing-large;
-    background-color: $background-color-light;
-    border-radius: $border-radius-base;
-    min-height: 200px;
-
-    .preview-cover {
-      width: 100%;
-      height: 300px;
-      border-radius: $border-radius-base;
-      overflow: hidden;
-      margin-bottom: $spacing-large;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-    }
-
-    .preview-title {
-      font-size: 32px;
-      margin-bottom: $spacing-large;
-      color: $text-color-primary;
-    }
-
-    .preview-content {
-      font-size: $font-size-base;
-      line-height: 1.8;
-      color: $text-color-primary;
-
-      :deep(p) {
-        margin-bottom: $spacing-base;
-      }
-
-      :deep(h1),
-      :deep(h2),
-      :deep(h3) {
-        margin-top: $spacing-large;
-        margin-bottom: $spacing-base;
-      }
-
-      :deep(img) {
-        max-width: 100%;
-        height: auto;
-      }
     }
   }
 }

@@ -60,6 +60,16 @@ const menuItems = computed(() => [
     ],
   },
   {
+    path: '/admin/general',
+    title: '通识教育',
+    icon: 'Reading',
+    children: [
+      { path: '/admin/general/index', title: '介绍' },
+      { path: '/admin/general/organization', title: '单位管理' },
+      { path: '/admin/general/redemption', title: '兑换码管理' },
+    ],
+  },
+  {
     path: '/admin/system',
     title: '系统管理',
     icon: 'Setting',

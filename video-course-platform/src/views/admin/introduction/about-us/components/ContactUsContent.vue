@@ -84,12 +84,17 @@ function handleTogglePublish() {
         <el-input v-model="formData.title" placeholder="请输入标题" />
       </el-form-item>
 
-      <el-form-item label="详细介绍" prop="content">
+      <el-form-item label="页面欢迎语" prop="content">
         <WangEditor
           v-model="formData.content"
-          placeholder="请输入详细介绍"
+          placeholder="请输入页面顶部的欢迎语或简介文字"
           :height="300"
         />
+        <div class="field-tip">
+          <el-text type="info" size="small">
+            此内容将显示在联系我们页面顶部，可用于介绍公司、服务理念等
+          </el-text>
+        </div>
       </el-form-item>
     </el-form>
 
@@ -158,44 +163,6 @@ function handleTogglePublish() {
         </div>
       </el-form-item>
     </el-form>
-
-    <!-- 预览 -->
-    <el-divider content-position="left">预览效果</el-divider>
-    <div class="preview-section">
-      <el-descriptions title="联系信息预览" :column="2" border>
-        <el-descriptions-item v-if="contactInfo.phone" label="联系电话">
-          <el-icon class="preview-icon"><Phone /></el-icon>
-          {{ contactInfo.phone }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="contactInfo.email" label="邮箱">
-          <el-icon class="preview-icon"><Message /></el-icon>
-          {{ contactInfo.email }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="contactInfo.address" label="地址" :span="2">
-          <el-icon class="preview-icon"><Location /></el-icon>
-          {{ contactInfo.address }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="contactInfo.workingHours" label="工作时间">
-          <el-icon class="preview-icon"><Clock /></el-icon>
-          {{ contactInfo.workingHours }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="contactInfo.wechatAccount" label="微信公众号">
-          <el-icon class="preview-icon"><ChatDotRound /></el-icon>
-          {{ contactInfo.wechatAccount }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="contactInfo.coordinates" label="地图坐标" :span="2">
-          {{ contactInfo.coordinates }}
-        </el-descriptions-item>
-        <el-descriptions-item v-if="contactInfo.qrCode" label="二维码" :span="2">
-          <img :src="contactInfo.qrCode" alt="二维码" class="preview-qr" />
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <div v-if="formData.content" class="content-preview">
-        <h4>详细介绍预览：</h4>
-        <div v-html="formData.content" class="preview-html"></div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -298,45 +265,6 @@ function handleTogglePublish() {
         margin-top: $spacing-small;
         font-size: $font-size-small;
         color: $text-color-secondary;
-      }
-    }
-  }
-
-  .preview-section {
-    margin-top: $spacing-large;
-
-    .preview-icon {
-      margin-right: $spacing-small;
-      color: $primary-color;
-    }
-
-    .preview-qr {
-      width: 120px;
-      height: 120px;
-      object-fit: contain;
-      border: 1px solid $border-color;
-      border-radius: $border-radius-base;
-    }
-
-    .content-preview {
-      margin-top: $spacing-large;
-      padding: $spacing-large;
-      background-color: $background-color-light;
-      border-radius: $border-radius-base;
-
-      h4 {
-        margin-top: 0;
-        margin-bottom: $spacing-base;
-        font-size: 16px;
-        color: $text-color-primary;
-      }
-
-      .preview-html {
-        line-height: 1.8;
-
-        :deep(p) {
-          margin-bottom: $spacing-small;
-        }
       }
     }
   }

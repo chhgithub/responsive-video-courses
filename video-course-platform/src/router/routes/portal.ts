@@ -44,8 +44,32 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'general',
         name: 'PortalGeneral',
-        component: () => import('@/views/portal/general.vue'),
+        redirect: '/portal/general/index',
         meta: { title: '通识教育' },
+      },
+      {
+        path: 'general/index',
+        name: 'PortalGeneralIndex',
+        component: () => import('@/views/portal/general/index.vue'),
+        meta: { title: '通识教育' },
+      },
+      {
+        path: 'general/intro',
+        name: 'PortalGeneralIntro',
+        component: () => import('@/views/portal/general/intro.vue'),
+        meta: { title: '通识教育介绍' },
+      },
+      {
+        path: 'general/redeem',
+        name: 'PortalGeneralRedeem',
+        component: () => import('@/views/portal/general/redeem.vue'),
+        meta: { title: '课程兑换' },
+      },
+      {
+        path: 'general/my-courses',
+        name: 'PortalGeneralMyCourses',
+        component: () => import('@/views/portal/general/my-courses.vue'),
+        meta: { title: '我的兑换', requiresAuth: true },
       },
       // 认证中心路由
       {
