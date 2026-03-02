@@ -80,12 +80,12 @@ onMounted(() => {
   <div class="codes-page">
     <div class="page-header">
       <h2>激活码管理</h2>
-      <div class="header-actions">
+      <!-- <div class="header-actions">
         <el-button @click="exportCodes">
           <el-icon><Download /></el-icon>
           导出数据
         </el-button>
-      </div>
+      </div> -->
     </div>
 
     <!-- 筛选栏 -->

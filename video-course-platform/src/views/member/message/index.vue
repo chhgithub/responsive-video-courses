@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessageBox } from 'element-plus';
 import { useAuthStore } from '@/stores';
 import {
@@ -56,9 +56,12 @@ async function loadMessages() {
 }
 
 // 处理消息点击
-function handleMessageClick(message: UserMessage) {
+async function handleMessageClick(message: UserMessage) {
   // 标记为已读
   markMessageAsRead(message.messageId);
+
+  // 使用 nextTick 确保 localStorage 写入完成后再重新加载
+  await nextTick();
 
   // 重新加载消息列表以确保状态同步
   loadMessages();

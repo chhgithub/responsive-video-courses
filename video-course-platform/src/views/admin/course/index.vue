@@ -315,7 +315,6 @@ onMounted(() => {
         stripe
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="courseId" label="ID" width="80" />
         <el-table-column label="封面" width="100">
           <template #default="{ row }">
             <el-image

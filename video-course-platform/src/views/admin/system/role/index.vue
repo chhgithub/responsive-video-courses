@@ -92,7 +92,6 @@ onMounted(() => { loadList(); });
     </el-card>
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="roleList" stripe>
-        <el-table-column prop="roleId" label="ID" width="80" />
         <el-table-column prop="roleName" label="角色名称" width="150" />
         <el-table-column prop="roleCode" label="角色编码" width="150" />
         <el-table-column prop="description" label="描述" min-width="200" />

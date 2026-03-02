@@ -85,7 +85,6 @@ onMounted(() => { loadList(); });
     </el-card>
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="dictList" stripe>
-        <el-table-column prop="dictId" label="ID" width="80" />
         <el-table-column prop="dictCode" label="字典编码" width="150" />
         <el-table-column prop="dictName" label="字典名称" width="150" />
         <el-table-column prop="description" label="描述" min-width="200" />

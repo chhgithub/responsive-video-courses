@@ -224,7 +224,6 @@ onMounted(() => {
     </el-card>
     <el-card class="table-card" shadow="never">
       <el-table v-loading="loading" :data="userList" stripe>
-        <el-table-column prop="userId" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" width="120" />
         <el-table-column prop="nickname" label="昵称" width="120" />
         <el-table-column label="角色" width="120">

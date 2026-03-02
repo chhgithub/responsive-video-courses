@@ -105,12 +105,12 @@ onMounted(() => {
   <div class="progress-page">
     <div class="page-header">
       <h2>学习进度</h2>
-      <div class="header-actions">
+      <!-- <div class="header-actions">
         <el-button @click="exportProgress">
           <el-icon><Download /></el-icon>
           导出数据
         </el-button>
-      </div>
+      </div> -->
     </div>
 
     <!-- 筛选栏 -->

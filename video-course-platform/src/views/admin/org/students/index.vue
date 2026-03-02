@@ -100,12 +100,12 @@ onMounted(() => {
   <div class="students-page">
     <div class="page-header">
       <h2>学员管理</h2>
-      <div class="header-actions">
+      <!-- <div class="header-actions">
         <el-button @click="exportStudents">
           <el-icon><Download /></el-icon>
           导出数据
         </el-button>
-      </div>
+      </div> -->
     </div>
 
     <!-- 筛选栏 -->
