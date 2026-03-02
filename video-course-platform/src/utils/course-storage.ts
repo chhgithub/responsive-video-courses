@@ -2,6 +2,10 @@
  * 课程管理数据存储（扩展版）
  */
 
+const COURSE_STORAGE_KEY = 'course_data';
+const REVIEW_STORAGE_KEY = 'course_reviews';
+const LEARNING_RECORD_KEY = 'learning_records';
+
 // 课时内容类型
 export type ContentType = 'video' | 'audio' | 'ppt' | 'document' | 'rich-text';
 export type VideoType = 'upload' | 'third-party';
@@ -100,7 +104,7 @@ export interface CourseReview {
   auditor?: string;            // 审核人
 }
 
-// StudentLearningRecord 接口和相关功能已移至 learning-storage.ts，统一使用那里的学习记录管理
+// 默认学习记录（统一使用通识教育的学习记录管理）
 const defaultLearningRecords: any[] = [];
 
 // 默认课程数据
@@ -276,40 +280,6 @@ const defaultReviews: CourseReview[] = [
     status: 'pending',
   },
 ];
-
-// 默认学习记录数据
-const defaultLearningRecords: StudentLearningRecord[] = [
-  {
-    recordId: 'lr1',
-    courseId: 1,
-    userId: 'u1',
-    userName: '张三',
-    userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=u1',
-    enrollTime: '2024-01-10',
-    progress: 80,
-    completedLessons: ['l1', 'l2'],
-    lastWatchTime: '2024-01-15 14:30',
-    lastWatchLesson: 'l3',
-    totalWatchDuration: 14400,
-    status: 'learning',
-  },
-  {
-    recordId: 'lr2',
-    courseId: 1,
-    userId: 'u2',
-    userName: '李四',
-    userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=u2',
-    enrollTime: '2024-01-05',
-    progress: 100,
-    completedLessons: ['l1', 'l2', 'l3'],
-    lastWatchTime: '2024-01-12 10:00',
-    lastWatchLesson: 'l3',
-    totalWatchDuration: 18000,
-    status: 'completed',
-  },
-];
-
-// ============ 课程管理 ============
 
 export function initCourseData() {
   const existing = localStorage.getItem(COURSE_STORAGE_KEY);

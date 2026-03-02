@@ -371,20 +371,23 @@ export function getEstimatedRecipientCount(
   targetType: BroadcastTargetType,
   targetIds: string[]
 ): number {
+  // Safety check: ensure targetIds is an array
+  const ids = Array.isArray(targetIds) ? targetIds : [];
+
   switch (targetType) {
     case 'all':
       return getAllUserIds().length;
     case 'tag':
       // 获取所有标签下的用户总数
       let tagCount = 0;
-      targetIds.forEach(tagId => {
+      ids.forEach(tagId => {
         tagCount += getUsersByTag(tagId).length;
       });
       return tagCount;
     case 'course':
       // 获取课程学员总数
       let courseCount = 0;
-      targetIds.forEach(courseId => {
+      ids.forEach(courseId => {
         courseCount += getLearningRecordsByCourseId(parseInt(courseId)).length;
       });
       return courseCount;
@@ -392,7 +395,7 @@ export function getEstimatedRecipientCount(
       // 获取单位成员总数
       const userOrgs = getUserOrganizations();
       let orgCount = 0;
-      targetIds.forEach(orgId => {
+      ids.forEach(orgId => {
         orgCount += userOrgs.filter(uo => uo.organizationId === orgId).length;
       });
       return orgCount;

@@ -31,12 +31,12 @@ export function filterByOrg<T extends { organizationId?: string }>(
   }
 
   // 总管理员返回所有数据
-  if (userInfo.role === 'admin') {
+  if (userInfo.roles?.includes('admin')) {
     return items;
   }
 
   // 单位管理员只返回本单位数据
-  if (userInfo.role === 'org_admin' && userInfo.organizationId) {
+  if (userInfo.roles?.includes('org_admin') && userInfo.organizationId) {
     return items.filter(item => item.organizationId === userInfo.organizationId);
   }
 
@@ -82,7 +82,7 @@ export function isOrgAdmin(): boolean {
   try {
     const { useAuthStore } = require('@/stores');
     const authStore = useAuthStore();
-    return authStore.userInfo?.role === 'org_admin';
+    return authStore.userInfo?.roles?.includes('org_admin');
   } catch (error) {
     console.warn('无法获取用户信息:', error);
     return false;
@@ -97,7 +97,7 @@ export function isAdmin(): boolean {
   try {
     const { useAuthStore } = require('@/stores');
     const authStore = useAuthStore();
-    return authStore.userInfo?.role === 'admin';
+    return authStore.userInfo?.roles?.includes('admin');
   } catch (error) {
     console.warn('无法获取用户信息:', error);
     return false;
@@ -114,10 +114,10 @@ export function hasPermission(requiredRole: UserRole): boolean {
   if (!userInfo) return false;
 
   // 总管理员拥有所有权限
-  if (userInfo.role === 'admin') return true;
+  if (userInfo.roles?.includes('admin')) return true;
 
   // 角色匹配
-  return userInfo.role === requiredRole;
+  return userInfo.roles?.includes(requiredRole);
 }
 
 /**

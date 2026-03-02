@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus';
 import { getOrgRedemptionCodes, getOrgCodeDetail, getOrgStatistics, filterOrgCodes } from '@/api/organization';
 import { getAllUsers } from '@/utils/user-storage';
 import { formatDate, formatExpireTime } from '@/utils/date-format';
+import { initializeDefaultOrganizations } from '@/utils/general-education-storage';
 
 const loading = ref(false);
 const codes = ref<any[]>([]);
@@ -68,6 +69,9 @@ function exportCodes() {
 }
 
 onMounted(() => {
+  // 初始化默认单位数据（如果不存在）
+  initializeDefaultOrganizations();
+  // 加载激活码列表
   loadCodes();
 });
 </script>

@@ -9,6 +9,8 @@ export interface UserInfo {
   email?: string;
   phone?: string;
   roles?: string[];
+  organizationId?: string;      // 单位管理员：绑定的单位ID
+  organizationName?: string;    // 单位管理员：单位名称
 }
 
 export const useAuthStore = defineStore('auth', () => {

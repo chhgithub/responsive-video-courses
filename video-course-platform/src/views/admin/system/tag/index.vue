@@ -271,7 +271,7 @@ onMounted(() => {
     transition: all 0.3s;
 
     &:hover {
-      border-color: $color-primary;
+      border-color: $--el-color-primary;
       box-shadow: $box-shadow-base;
     }
 
@@ -303,7 +303,7 @@ onMounted(() => {
 
         .user-count {
           font-size: $font-size-small;
-          color: $color-primary;
+          color: $--el-color-primary;
           padding: 2px 8px;
           background: #f0f7ff;
           border-radius: $border-radius-small;
@@ -343,7 +343,7 @@ onMounted(() => {
 
     &.active {
       background: #f0f7ff;
-      border: 1px solid $color-primary;
+      border: 1px solid $--el-color-primary;
 
       .color-dot {
         transform: scale(1.2);

@@ -78,7 +78,20 @@ function exportStudents() {
   ElMessage.info('导出功能开发中...');
 }
 
+// 格式化性别
+function formatGender(gender?: string): string {
+  const genderMap: Record<string, string> = {
+    'male': '男',
+    'female': '女',
+    'other': '其他',
+  };
+  return genderMap[gender || ''] || '-';
+}
+
 onMounted(() => {
+  // 初始化默认单位数据（如果不存在）
+  initializeDefaultOrganizations();
+  // 加载学员列表
   loadStudents();
 });
 </script>

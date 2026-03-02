@@ -4,18 +4,35 @@
 
 export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'alipay' | 'wechat';
+export type OrderType = 'course' | 'package';  // 订单类型：单课程/课程套餐
 
-import { addLearningRecord } from './course-storage';
+// 从 learning-storage.ts 导入学习记录管理函数，统一使用那里的学习记录系统
+import { upsertLearningRecord, getCourseLearningRecord } from './learning-storage';
 
 export interface Order {
   orderId: string;
+  type: OrderType;          // 订单类型
   userId: string;
   userName?: string;      // 用户名（便于后台显示）
   userAvatar?: string;    // 用户头像
   userEmail?: string;     // 用户邮箱
-  courseId: string;
-  courseName: string;
-  courseCover: string;
+
+  // 单课程字段
+  courseId?: string;         // 课程ID（单课程订单）
+  courseName?: string;       // 课程名称（单课程订单）
+  courseCover?: string;      // 课程封面（单课程订单）
+
+  // 套餐字段
+  packageId?: string;       // 套餐ID（套餐订单）
+  packageName?: string;     // 套餐名称（套餐订单）
+  packageCover?: string;    // 套餐封面（套餐订单）
+  packageCourses?: Array<{   // 套餐包含的课程列表
+    courseId: number;
+    courseName: string;
+    courseCover: string;
+    originalPrice: number;
+  }>;
+
   price: number;
   originalPrice?: number; // 原价
   status: OrderStatus;
@@ -75,13 +92,24 @@ export function hasUserPurchasedCourse(userId: string, courseId: string): boolea
 export function createOrder(orderData: Omit<Order, 'orderId' | 'createTime' | 'status' | 'payTime' | 'refundTime' | 'refundReason'>): Order {
   const orders = getAllOrders();
 
-  // 检查是否已有未支付的订单
-  const existingPendingOrder = orders.find(
-    (o) => o.userId === orderData.userId && o.courseId === orderData.courseId && o.status === 'pending'
-  );
+  // 套餐订单：检查是否已有未支付的套餐订单
+  if (orderData.type === 'package') {
+    const existingPendingPackageOrder = orders.find(
+      (o) => o.userId === orderData.userId && o.packageId === orderData.packageId && o.status === 'pending'
+    );
+    if (existingPendingPackageOrder) {
+      return existingPendingPackageOrder;
+    }
+  }
 
-  if (existingPendingOrder) {
-    return existingPendingOrder;
+  // 单课程订单：检查是否已有未支付的课程订单
+  if (orderData.type === 'course' && orderData.courseId) {
+    const existingPendingCourseOrder = orders.find(
+      (o) => o.userId === orderData.userId && o.courseId === orderData.courseId && o.status === 'pending'
+    );
+    if (existingPendingCourseOrder) {
+      return existingPendingCourseOrder;
+    }
   }
 
   // 创建新订单
@@ -125,19 +153,43 @@ export function payOrder(orderId: string, paymentMethod: PaymentMethod): Order {
 
   // 订单支付成功后，自动创建学习记录
   try {
-    addLearningRecord({
-      courseId: parseInt(order.courseId),
-      userId: order.userId,
-      userName: order.userName || '',
-      userAvatar: order.userAvatar || '',
-      enrollTime: order.payTime,
-      progress: 0,
-      completedLessons: [],
-      lastWatchTime: '',
-      lastWatchLesson: '',
-      totalWatchDuration: 0,
-      status: 'learning',
-    });
+    if (order.type === 'course' && order.courseId) {
+      // 单课程订单：为该课程创建学习记录
+      upsertLearningRecord({
+        courseId: parseInt(order.courseId),
+        userId: order.userId,
+        userName: order.userName || '',
+        userAvatar: order.userAvatar || '',
+        enrollTime: order.payTime,
+        progress: 0,
+        completedLessons: [],
+        lastWatchTime: '',
+        lastWatchLesson: '',
+        totalWatchDuration: 0,
+        status: 'learning',
+      });
+    } else if (order.type === 'package' && order.packageCourses) {
+      // 套餐订单：为套餐中的所有课程创建学习记录
+      order.packageCourses.forEach(course => {
+        try {
+          upsertLearningRecord({
+            courseId: course.courseId,
+            userId: order.userId,
+            userName: order.userName || '',
+            userAvatar: order.userAvatar || '',
+            enrollTime: order.payTime,
+            progress: 0,
+            completedLessons: [],
+            lastWatchTime: '',
+            lastWatchLesson: '',
+            totalWatchDuration: 0,
+            status: 'learning',
+          });
+        } catch (error) {
+          console.error('创建学习记录失败（课程ID:', course.courseId, '):', error);
+        }
+      });
+    }
   } catch (error) {
     console.error('创建学习记录失败:', error);
   }

@@ -119,6 +119,13 @@ function handleLogout() {
 
           <!-- Auth Buttons -->
           <template v-if="authStore.isLoggedIn">
+            <!-- 消息中心按钮 -->
+            <el-badge :value="0" :hidden="false" class="message-badge">
+              <el-button circle @click="router.push('/member/message')">
+                <el-icon><Bell /></el-icon>
+              </el-button>
+            </el-badge>
+
             <el-dropdown trigger="hover">
               <div class="user-info">
                 <el-avatar :size="32" :src="authStore.userInfo?.avatar">
@@ -131,6 +138,10 @@ function handleLogout() {
                   <el-dropdown-item @click="router.push('/member/profile')">
                     <el-icon><User /></el-icon>
                     个人中心
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="router.push('/member/message')">
+                    <el-icon><Bell /></el-icon>
+                    消息中心
                   </el-dropdown-item>
                   <el-dropdown-item divided @click="handleLogout">
                     <el-icon><SwitchButton /></el-icon>
@@ -189,6 +200,9 @@ function handleLogout() {
           <template v-if="authStore.isLoggedIn">
             <el-button @click="router.push('/member/profile')">
               个人中心
+            </el-button>
+            <el-button @click="router.push('/member/message')">
+              消息中心
             </el-button>
             <el-button type="danger" @click="handleLogout">
               退出登录
@@ -294,6 +308,12 @@ function handleLogout() {
   align-items: center;
   gap: $spacing-medium;
   flex-shrink: 0;
+
+  .message-badge {
+    :deep(.el-badge__content) {
+      transform: translateY(-8px) translateX(8px);
+    }
+  }
 
   .search-input {
     width: 240px;

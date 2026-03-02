@@ -585,7 +585,7 @@ function handleDelete() {
         background: #f0f7ff;
         border-radius: $border-radius-base;
         margin-bottom: $spacing-base;
-        border-left: 3px solid $color-primary;
+        border-left: 3px solid $--el-color-primary;
 
         &:last-child {
           margin-bottom: 0;

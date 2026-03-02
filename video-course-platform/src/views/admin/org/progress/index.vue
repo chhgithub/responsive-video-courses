@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { getOrgStudentProgress, getOrgStudents, getOrgStatistics } from '@/api/organization';
 import { getUserById } from '@/utils/user-storage';
+import { initializeDefaultOrganizations } from '@/utils/general-education-storage';
 
 const route = useRoute();
 const loading = ref(false);
@@ -93,6 +94,9 @@ function exportProgress() {
 }
 
 onMounted(() => {
+  // 初始化默认单位数据（如果不存在）
+  initializeDefaultOrganizations();
+  // 加载进度数据
   loadData();
 });
 </script>

@@ -17,6 +17,7 @@ import type {
   AccessSource,
   GeneralEducationStorage,
 } from '@/types/general-education';
+import { getPublishedCourses } from '@/utils/portal-course-adapter';
 
 const STORAGE_KEY = 'general_education_data';
 const STORAGE_VERSION = '1.0';
@@ -894,7 +895,6 @@ export function initializeDefaultOrganizations(): void {
 
     // 生成一些测试兑换码
     const testCodes: RedemptionCode[] = [];
-    const { getPublishedCourses } = require('@/utils/portal-course-adapter');
     const courses = getPublishedCourses();
 
     for (let i = 0; i < 5; i++) {
@@ -918,6 +918,53 @@ export function initializeDefaultOrganizations(): void {
     }
 
     storage.redemptionCodes.push(...testCodes);
+
+    // 生成一些测试兑换记录（模拟用户已兑换课程）
+    const testRecords: RedemptionRecord[] = [];
+    for (let i = 0; i < 3; i++) {
+      const userId = `100${i + 1}`; // 使用测试学员ID
+      const codeIndex = i;
+      const testRecord: RedemptionRecord = {
+        id: generateId(),
+        codeId: testCodes[codeIndex].id,
+        userId: userId,
+        organizationId: defaultOrganization.id,
+        organizationName: defaultOrganization.name,
+        courseId: testCodes[codeIndex].targetIds[0],
+        courseName: testCodes[codeIndex].targetName,
+        redemptionTime: getCurrentTime(),
+      };
+      testRecords.push(testRecord);
+
+      // 更新兑换码状态为已使用
+      testCodes[codeIndex].status = 'used';
+      testCodes[codeIndex].usedBy = userId;
+      testCodes[codeIndex].usedTime = getCurrentTime();
+    }
+
+    storage.redemptionRecords.push(...testRecords);
+
+    // 生成一些测试课程访问记录（用于学习进度展示）
+    const testAccess: UserCourseAccess[] = [];
+    for (let i = 0; i < 3; i++) {
+      const userId = `100${i + 1}`;
+      const now = new Date();
+      const expireTime = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+      testAccess.push({
+        id: generateId(),
+        userId: userId,
+        courseId: testCodes[i].targetIds[0],
+        organizationId: defaultOrganization.id,
+        organizationName: defaultOrganization.name,
+        accessSource: 'redeem',
+        packageName: null,
+        acquireTime: getCurrentTime(),
+        expireTime: expireTime.toISOString(),
+      });
+    }
+
+    storage.userCourseAccess.push(...testAccess);
 
     setStorage(storage);
     console.log('默认单位数据初始化完成！');

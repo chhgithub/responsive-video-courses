@@ -82,6 +82,8 @@ const menuItems = computed(() => {
       icon: 'Setting',
       children: [
         { path: '/admin/system/user', title: '用户管理' },
+        // { path: '/admin/system/tag', title: '用户标签' },
+        { path: '/admin/system/broadcast', title: '群发消息' },
         { path: '/admin/system/role', title: '角色管理' },
         { path: '/admin/system/menu', title: '菜单管理' },
         { path: '/admin/system/dict', title: '字典管理' },

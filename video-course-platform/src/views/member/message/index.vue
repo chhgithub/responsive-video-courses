@@ -60,11 +60,8 @@ function handleMessageClick(message: UserMessage) {
   // 标记为已读
   markMessageAsRead(message.messageId);
 
-  // 更新消息状态
-  const index = messages.value.findIndex(m => m.messageId === message.messageId);
-  if (index !== -1) {
-    messages.value[index].status = 'read';
-  }
+  // 重新加载消息列表以确保状态同步
+  loadMessages();
 
   // 如果有操作链接，可以跳转
   if (message.actionUrl) {
@@ -309,13 +306,13 @@ onMounted(() => {
     position: relative;
 
     &:hover {
-      border-color: $color-primary;
+      border-color: $--el-color-primary;
       background: #f0f7ff;
     }
 
     &.unread {
       background: #f8fbff;
-      border-left: 3px solid $color-primary;
+      border-left: 3px solid $--el-color-primary;
     }
 
     &.high {

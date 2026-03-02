@@ -15,7 +15,21 @@ import {
 } from '@/utils/broadcast-storage';
 import { getAllTags } from '@/utils/user-tag-storage';
 import { getAllCourses } from '@/utils/course-storage';
-import { getOrganizations } from '@/utils/general-education-storage';
+import { getAllOrganizations } from '@/utils/general-education-storage';
+import type { UserTag } from '@/utils/user-tag-storage';
+import type { Course } from '@/utils/course-storage';
+
+// Define Organization type locally to avoid import issues
+interface Organization {
+  id: string;
+  name: string;
+  code: string;
+  type: 'family' | 'school';
+  contactPerson?: string;
+  contactPhone?: string;
+  description?: string;
+  createTime: string;
+}
 
 const authStore = useAuthStore();
 
@@ -61,21 +75,24 @@ const priorityOptions = [
 ];
 
 // 标签列表
-const tags = ref(getAllTags());
+const tags = ref<UserTag[]>([]);
 
 // 课程列表
-const courses = ref(getAllCourses());
+const courses = ref<Course[]>([]);
 
 // 单位列表
-const organizations = ref(getOrganizations());
+const organizations = ref<Organization[]>([]);
 
 // 预计接收人数
 const estimatedCount = computed(() => {
-  if (broadcastForm.value.targetType === 'all') {
+  const targetType = broadcastForm.value.targetType;
+  const targetIds = broadcastForm.value.targetIds || [];
+
+  if (targetType === 'all') {
     return getEstimatedRecipientCount('all', []);
   }
-  if (broadcastForm.value.targetIds.length > 0) {
-    return getEstimatedRecipientCount(broadcastForm.value.targetType, broadcastForm.value.targetIds);
+  if (Array.isArray(targetIds) && targetIds.length > 0) {
+    return getEstimatedRecipientCount(targetType, targetIds);
   }
   return 0;
 });
@@ -258,6 +275,13 @@ function formatTime(time: string): string {
 }
 
 onMounted(() => {
+  // 初始化标签列表
+  tags.value = getAllTags();
+  // 初始化课程列表
+  courses.value = getAllCourses();
+  // 初始化单位列表
+  organizations.value = getAllOrganizations();
+  // 加载群发记录
   loadBroadcastRecords();
 });
 </script>
@@ -502,7 +526,7 @@ onMounted(() => {
   .estimate-count {
     font-size: $font-size-large;
     font-weight: 500;
-    color: $color-primary;
+    color: $--el-color-primary;
   }
 
   .dialog-footer {

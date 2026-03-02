@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useAuthStore } from '@/stores';
+import { useRouter } from 'vue-router';
+
 interface Props {
   collapsed: boolean;
 }
@@ -7,9 +10,6 @@ defineProps<Props>();
 const emit = defineEmits<{
   toggle: [];
 }>();
-
-import { useAuthStore } from '@/stores';
-import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const router = useRouter();
