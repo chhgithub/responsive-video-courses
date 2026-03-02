@@ -177,12 +177,12 @@ onMounted(() => {
 					</div>
 
 					<!-- 导出按钮 -->
-					<button
+					<!-- <button
 						class="rounded-lg border border-green-600 px-4 py-2 text-green-600 transition-colors hover:bg-green-50"
 						@click="handleExport"
 					>
 						导出数据
-					</button>
+					</button> -->
 				</div>
 			</div>
 
