@@ -203,7 +203,7 @@ onMounted(() => {
 
                   <div class="course-footer">
                     <span class="redeem-time">
-                      兑换时间：{{ formatTime(item.redeemTime) }}
+                      兑换时间：{{ formatTime(item.acquireTime) }}
                     </span>
                     <el-button
                       v-if="!item.isExpired"

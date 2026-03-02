@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { ArrowLeft } from '@element-plus/icons-vue';
 import { getUserById } from '@/utils/user-storage';
 import { getUserOrders } from '@/utils/order-storage';
 import { getUserLearningRecords, getLearningStats } from '@/utils/learning-storage';
@@ -10,6 +11,11 @@ import { getUserLearningRecords, getLearningStats } from '@/utils/learning-stora
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+// 返回上一页
+function handleBack() {
+  router.back();
+}
 
 const loading = ref(false);
 
@@ -102,6 +108,11 @@ onMounted(() => {
 <template>
   <div class="member-profile" v-loading="loading">
     <div class="container">
+      <!-- 返回按钮 -->
+      <div class="back-section">
+        <el-button @click="handleBack" :icon="ArrowLeft" circle />
+      </div>
+
       <!-- 用户信息卡片 -->
       <div class="user-card">
         <!-- 渐变背景条 -->
@@ -186,6 +197,10 @@ onMounted(() => {
   min-height: calc(100vh - 120px);
   background: $background-color-base;
   padding: $spacing-extra-large 0;
+}
+
+.back-section {
+  margin-bottom: $spacing-base;
 }
 
 .container {

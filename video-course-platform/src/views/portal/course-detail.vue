@@ -8,6 +8,7 @@ import { hasUserPurchasedCourse } from '@/utils/order-storage';
 import { isCourseFavorited, toggleFavorite } from '@/utils/favorite-storage';
 import { getCourseLearningRecord } from '@/utils/learning-storage';
 import { getReviewsByCourseId, type CourseReview } from '@/utils/course-storage';
+import { getPackagesByCourse, type CoursePackage, calculatePackageSavings, formatPackagePrice } from '@/utils/course-package-storage';
 
 // 类型定义
 interface Chapter {
@@ -69,6 +70,9 @@ const activeTab = ref('intro');
 const reviews = ref<CourseReview[]>([]);
 const reviewsLoading = ref(false);
 
+// 相关套餐
+const relatedPackages = ref<CoursePackage[]>([]);
+
 // 获取当前登录用户
 function getCurrentUser() {
   if (!authStore.isLoggedIn) return null;
@@ -125,6 +129,19 @@ async function loadReviews() {
     console.error('加载评价失败:', error);
   } finally {
     reviewsLoading.value = false;
+  }
+}
+
+// 加载相关套餐
+function loadRelatedPackages() {
+  if (!course.value) return;
+
+  try {
+    const packages = getPackagesByCourse(parseInt(course.value.id));
+    // 只显示前3个相关套餐
+    relatedPackages.value = packages.slice(0, 3);
+  } catch (error) {
+    console.error('加载相关套餐失败:', error);
   }
 }
 
@@ -265,6 +282,9 @@ async function loadCourseDetail() {
 
     // 加载评价数据
     loadReviews();
+
+    // 加载相关套餐
+    loadRelatedPackages();
   } catch (error) {
     console.error('加载课程详情失败:', error);
     ElMessage.error('加载课程详情失败');
@@ -584,6 +604,39 @@ onMounted(() => {
         </div>
       </el-card>
 
+      <!-- 相关套餐 -->
+      <el-card v-if="relatedPackages.length > 0" class="related-packages-card" shadow="never">
+        <template #header>
+          <h2>🎁 优惠套餐</h2>
+          <el-button link type="primary" @click="router.push('/portal/packages')">
+            查看全部套餐
+          </el-button>
+        </template>
+        <div class="related-packages-list">
+          <div
+            v-for="pkg in relatedPackages"
+            :key="pkg.packageId"
+            class="package-item"
+          >
+            <div class="package-cover">
+              <el-image :src="pkg.packageCover" fit="cover" />
+            </div>
+            <div class="package-info">
+              <h3>{{ pkg.packageName }}</h3>
+              <p class="course-count">包含 {{ pkg.courses.length }} 门课程</p>
+              <div class="price-info">
+                <span class="current-price">{{ formatPackagePrice(pkg.price) }}</span>
+                <span class="original-price">{{ formatPackagePrice(pkg.originalPrice) }}</span>
+                <span class="savings">省¥{{ (calculatePackageSavings(pkg) / 100).toFixed(0) }}</span>
+              </div>
+            </div>
+            <el-button type="primary" @click="router.push(`/portal/package/${pkg.packageId}`)">
+              查看详情
+            </el-button>
+          </div>
+        </div>
+      </el-card>
+
       <!-- Tab切换 -->
       <el-card class="tabs-card" shadow="never">
         <el-tabs v-model="activeTab">
@@ -794,6 +847,96 @@ onMounted(() => {
 
 .course-info-card {
   margin-bottom: $spacing-large;
+}
+
+.related-packages-card {
+  margin-bottom: $spacing-large;
+  h2 {
+    margin: 0;
+    font-size: $font-size-extra-large;
+    font-weight: 500;
+  }
+}
+
+.related-packages-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: $spacing-large;
+}
+
+.package-item {
+  display: flex;
+  gap: $spacing-base;
+  padding: $spacing-base;
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-base;
+  transition: all 0.3s;
+
+  &:hover {
+    border-color: $--el-color-primary;
+    background: #f0f7ff;
+  }
+
+  .package-cover {
+    width: 120px;
+    height: 80px;
+    flex-shrink: 0;
+    border-radius: $border-radius-base;
+    overflow: hidden;
+
+    :deep(.el-image) {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  .package-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-small;
+
+    h3 {
+      font-size: $font-size-medium;
+      font-weight: 600;
+      color: $text-color-primary;
+      margin: 0;
+    }
+
+    .course-count {
+      font-size: $font-size-small;
+      color: $text-color-secondary;
+      margin: 0;
+    }
+
+    .price-info {
+      display: flex;
+      align-items: baseline;
+      gap: $spacing-base;
+
+      .current-price {
+        font-size: $font-size-large;
+        font-weight: bold;
+        color: #f56c6c;
+      }
+
+      .original-price {
+        font-size: $font-size-small;
+        color: $text-color-placeholder;
+        text-decoration: line-through;
+      }
+
+      .savings {
+        font-size: $font-size-base;
+        color: #e6a23c;
+        font-weight: 500;
+      }
+    }
+  }
+
+  :deep(.el-button) {
+    align-self: center;
+  }
 }
 
 .course-info {

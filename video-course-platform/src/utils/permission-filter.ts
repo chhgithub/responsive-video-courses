@@ -4,6 +4,7 @@
  */
 
 import type { UserRole } from '@/api/types/model';
+import { useAuthStore } from '@/stores';
 
 /**
  * 根据用户角色过滤数据
@@ -16,15 +17,8 @@ export function filterByOrg<T extends { organizationId?: string }>(
   userId?: string
 ): T[] {
   // 从 stores 获取用户信息
-  let userInfo: any;
-  try {
-    const { useAuthStore } = require('@/stores');
-    const authStore = useAuthStore();
-    userInfo = authStore.userInfo;
-  } catch (error) {
-    console.warn('无法获取用户信息:', error);
-    return [];
-  }
+  const authStore = useAuthStore();
+  const userInfo = authStore.userInfo;
 
   if (!userInfo) {
     return [];
@@ -49,14 +43,8 @@ export function filterByOrg<T extends { organizationId?: string }>(
  * @returns 单位ID，如果不是单位管理员则返回 undefined
  */
 export function getCurrentOrgId(): string | undefined {
-  try {
-    const { useAuthStore } = require('@/stores');
-    const authStore = useAuthStore();
-    return authStore.userInfo?.organizationId;
-  } catch (error) {
-    console.warn('无法获取用户信息:', error);
-    return undefined;
-  }
+  const authStore = useAuthStore();
+  return authStore.userInfo?.organizationId;
 }
 
 /**
@@ -64,14 +52,8 @@ export function getCurrentOrgId(): string | undefined {
  * @returns 单位名称，如果不是单位管理员则返回 undefined
  */
 export function getCurrentOrgName(): string | undefined {
-  try {
-    const { useAuthStore } = require('@/stores');
-    const authStore = useAuthStore();
-    return authStore.userInfo?.organizationName;
-  } catch (error) {
-    console.warn('无法获取用户信息:', error);
-    return undefined;
-  }
+  const authStore = useAuthStore();
+  return authStore.userInfo?.organizationName;
 }
 
 /**
@@ -79,14 +61,8 @@ export function getCurrentOrgName(): string | undefined {
  * @returns 是否是单位管理员
  */
 export function isOrgAdmin(): boolean {
-  try {
-    const { useAuthStore } = require('@/stores');
-    const authStore = useAuthStore();
-    return authStore.userInfo?.roles?.includes('org_admin');
-  } catch (error) {
-    console.warn('无法获取用户信息:', error);
-    return false;
-  }
+  const authStore = useAuthStore();
+  return authStore.userInfo?.roles?.includes('org_admin');
 }
 
 /**
@@ -94,14 +70,8 @@ export function isOrgAdmin(): boolean {
  * @returns 是否是总管理员
  */
 export function isAdmin(): boolean {
-  try {
-    const { useAuthStore } = require('@/stores');
-    const authStore = useAuthStore();
-    return authStore.userInfo?.roles?.includes('admin');
-  } catch (error) {
-    console.warn('无法获取用户信息:', error);
-    return false;
-  }
+  const authStore = useAuthStore();
+  return authStore.userInfo?.roles?.includes('admin');
 }
 
 /**
@@ -125,12 +95,6 @@ export function hasPermission(requiredRole: UserRole): boolean {
  * @returns 用户信息
  */
 export function getCurrentUserInfo(): any {
-  try {
-    const { useAuthStore } = require('@/stores');
-    const authStore = useAuthStore();
-    return authStore.userInfo;
-  } catch (error) {
-    console.warn('无法获取用户信息:', error);
-    return undefined;
-  }
+  const authStore = useAuthStore();
+  return authStore.userInfo;
 }

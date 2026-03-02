@@ -28,7 +28,7 @@ export interface Organization {
 /**
  * 兑换码状态
  */
-export type RedemptionCodeStatus = 'unused' | 'used' | 'expired';
+export type RedemptionCodeStatus = 'unused' | 'used' | 'expired' | 'offline';
 
 /**
  * 兑换码目标类型

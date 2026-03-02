@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getAllRedemptionCodes,
   generateRedemptionCodes,
   deleteRedemptionCode,
+  batchUpdateCodesStatus,
   getAllOrganizations,
 } from '@/utils/general-education-storage';
 import { getPublishedCourses } from '@/utils/portal-course-adapter';
@@ -15,6 +16,10 @@ const loading = ref(false);
 const codes = ref<RedemptionCode[]>([]);
 const selectedStatus = ref('');
 const searchKeyword = ref('');
+
+// 批量选择
+const selectedCodeIds = ref<string[]>([]);
+const selectAll = ref(false);
 
 // 生成对话框
 const generateDialogVisible = ref(false);
@@ -40,7 +45,17 @@ const statusMap: Record<string, { text: string; type: any }> = {
   unused: { text: '未使用', type: 'success' },
   used: { text: '已使用', type: 'info' },
   expired: { text: '已失效', type: 'danger' },
+  offline: { text: '已下架', type: 'warning' },
 };
+
+// 状态选项
+const statusOptions = [
+  { label: '全部', value: '' },
+  { label: '未使用', value: 'unused' },
+  { label: '已使用', value: 'used' },
+  { label: '已失效', value: 'expired' },
+  { label: '已下架', value: 'offline' },
+];
 
 // 加载兑换码列表
 async function loadCodes() {
@@ -110,7 +125,79 @@ watch(() => [generateForm.value.targetType, generateForm.value.targetIds], () =>
     generateForm.value.targetName = '';
     return;
   }
+});
 
+// 监听批量选择变化，更新全选状态
+watch(selectedCodeIds, (newIds) => {
+  selectAll.value = newIds.length === filteredCodes.value.filter(c => c.status === 'unused').length;
+});
+
+// 全选/取消全选
+function handleSelectAll(checked: boolean) {
+  if (checked) {
+    const unusedCodes = filteredCodes.value.filter(c => c.status === 'unused');
+    selectedCodeIds.value = unusedCodes.map(c => c.id);
+  } else {
+    selectedCodeIds.value = [];
+  }
+}
+
+// 处理单个选择
+function handleSelectionChange(selection: RedemptionCode[]) {
+  selectedCodeIds.value = selection.map(c => c.id);
+}
+
+// 批量下架
+async function handleBatchOffline() {
+  if (selectedCodeIds.value.length === 0) {
+    ElMessage.warning('请选择要下架的兑换码');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要将选中的 ${selectedCodeIds.value.length} 个兑换码下架吗？`,
+      '批量下架',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    );
+
+    batchUpdateCodesStatus(selectedCodeIds.value, 'offline');
+    ElMessage.success('批量下架成功');
+    selectedCodeIds.value = [];
+    selectAll.value = false;
+    await loadCodes();
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('下架失败');
+    }
+  }
+}
+
+// 重新上架（单个）
+async function handleRelist(code: RedemptionCode) {
+  try {
+    await ElMessageBox.confirm(
+      '确定要重新上架此兑换码吗？',
+      '确认上架',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info',
+      }
+    );
+
+    batchUpdateCodesStatus([code.id], 'unused');
+    ElMessage.success('上架成功');
+    await loadCodes();
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('上架失败');
+    }
+  }
   if (generateForm.value.targetType === 'course') {
     if (generateForm.value.targetIds.length === 1) {
       const course = courseList.value.find((c: any) => c.id === generateForm.value.targetIds[0]);
@@ -126,7 +213,7 @@ watch(() => [generateForm.value.targetType, generateForm.value.targetIds], () =>
       generateForm.value.targetName = `${generateForm.value.targetIds.length}个套餐`;
     }
   }
-});
+}
 
 // 打开生成对话框
 function openGenerateDialog() {
@@ -193,25 +280,31 @@ async function handleGenerate() {
   }
 }
 
-// 删除兑换码
+// 下架兑换码
 async function handleDelete(code: RedemptionCode) {
   if (code.status === 'used') {
-    ElMessage.warning('已使用的兑换码不能删除');
+    ElMessage.warning('已使用的兑换码不能删除或下架');
     return;
   }
 
   try {
-    await ElMessageBox.confirm('确认删除此兑换码？', '确认删除', {
-      type: 'warning',
-    });
+    await ElMessageBox.confirm(
+      `确定要下架此兑换码吗？`,
+      '确认下架',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    );
 
-    const success = deleteRedemptionCode(code.id);
-    if (success) {
-      ElMessage.success('删除成功');
-      await loadCodes();
-    }
+    batchUpdateCodesStatus([code.id], 'offline');
+    ElMessage.success('下架成功');
+    await loadCodes();
   } catch (error) {
-    // 用户取消
+    if (error !== 'cancel') {
+      ElMessage.error('下架失败');
+    }
   }
 }
 
@@ -263,10 +356,12 @@ onMounted(() => {
       <el-form :inline="true">
         <el-form-item label="状态">
           <el-select v-model="selectedStatus" placeholder="全部" clearable style="width: 120px">
-            <el-option label="全部" value="" />
-            <el-option label="未使用" value="unused" />
-            <el-option label="已使用" value="used" />
-            <el-option label="已失效" value="expired" />
+            <el-option
+              v-for="option in statusOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
           </el-select>
         </el-form-item>
 
@@ -288,6 +383,21 @@ onMounted(() => {
       </el-form>
     </el-card>
 
+    <!-- 批量操作栏（只对未使用的兑换码显示） -->
+    <div v-if="filteredCodes.some(c => c.status === 'unused')" class="batch-actions-bar">
+      <el-checkbox v-model="selectAll" @change="handleSelectAll">
+        全选
+      </el-checkbox>
+      <el-button
+        :disabled="selectedCodeIds.length === 0"
+        type="warning"
+        @click="handleBatchOffline"
+      >
+        <el-icon><CircleClose /></el-icon>
+        批量下架（{{ selectedCodeIds.length }}）
+      </el-button>
+    </div>
+
     <!-- 兑换码列表 -->
     <el-card class="table-card" shadow="never">
       <el-table
@@ -295,7 +405,9 @@ onMounted(() => {
         :data="filteredCodes"
         stripe
         style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="55" />
         <el-table-column label="兑换码" width="180">
           <template #default="{ row }">
             <el-tag style="font-family: monospace;">{{ row.code }}</el-tag>
@@ -344,7 +456,7 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.status === 'unused'"
@@ -358,11 +470,28 @@ onMounted(() => {
             <el-button
               v-if="row.status === 'unused'"
               link
-              type="danger"
+              type="warning"
               size="small"
               @click="handleDelete(row)"
             >
-              删除
+              下架
+            </el-button>
+            <el-button
+              v-if="row.status === 'offline'"
+              link
+              type="success"
+              size="small"
+              @click="handleRelist(row)"
+            >
+              重新上架
+            </el-button>
+            <el-button
+              v-else
+              link
+              size="small"
+              disabled
+            >
+              --
             </el-button>
           </template>
         </el-table-column>
@@ -486,6 +615,16 @@ onMounted(() => {
 
   .filter-card {
     margin-bottom: $spacing-large;
+  }
+
+  .batch-actions-bar {
+    margin-bottom: $spacing-base;
+    padding: $spacing-base;
+    background: #fff7e6;
+    border-radius: $border-radius-base;
+    display: flex;
+    align-items: center;
+    gap: $spacing-base;
   }
 
   .field-tip {

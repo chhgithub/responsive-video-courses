@@ -639,11 +639,43 @@ export function isPackageExpired(enrollTime: string, validDays: number): boolean
 
 // 获取剩余天数
 export function getRemainingDays(enrollTime: string, validDays: number): number {
-  if (validDays === 0) return -1;
   const enroll = new Date(enrollTime);
   const expiry = new Date(enroll.getTime() + validDays * 24 * 60 * 60 * 1000);
-  const remaining = Math.ceil((expiry.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-  return Math.max(0, remaining);
+  const now = new Date();
+  const remaining = Math.ceil((expiry.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+  return remaining > 0 ? remaining : 0;
+}
+
+/**
+ * 获取包含指定课程的所有套餐
+ * @param courseId 课程ID
+ * @returns 包含该课程的套餐列表
+ */
+export function getPackagesByCourse(courseId: number): CoursePackage[] {
+  const packages = getAllPackages();
+  return packages.filter(pkg =>
+    pkg.status === 'published' &&
+    pkg.courses.some(c => c.courseId === courseId)
+  );
+}
+
+/**
+ * 计算套餐节省金额
+ * @param pkg 套餐
+ * @returns 节省金额（分为单位）
+ */
+export function calculatePackageSavings(pkg: CoursePackage): number {
+  const coursesOriginalPrice = pkg.courses.reduce((sum, c) => sum + c.originalPrice, 0);
+  return coursesOriginalPrice - pkg.price;
+}
+
+/**
+ * 格式化套餐价格
+ * @param price 价格（分为单位）
+ * @returns 格式化后的价格字符串
+ */
+export function formatPackagePrice(price: number): string {
+  return `¥${(price / 100).toFixed(2)}`;
 }
 
 // 自动初始化

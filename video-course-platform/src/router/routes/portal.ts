@@ -30,6 +30,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '课程学习', requiresAuth: true },
       },
       {
+        path: 'packages',
+        name: 'Packages',
+        component: () => import('@/views/portal/packages.vue'),
+        meta: { title: '课程套餐' },
+      },
+      {
+        path: 'package/:id',
+        name: 'PackageDetail',
+        component: () => import('@/views/portal/package-detail.vue'),
+        meta: { title: '套餐详情' },
+      },
+      {
         path: 'checkout/:courseId',
         name: 'Checkout',
         component: () => import('@/views/portal/checkout.vue'),

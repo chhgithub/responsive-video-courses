@@ -17,7 +17,11 @@ import type {
   AccessSource,
   GeneralEducationStorage,
 } from '@/types/general-education';
-import { getPublishedCourses } from '@/utils/portal-course-adapter';
+import {
+  getPublishedCourses,
+  getPortalCourseById,
+} from '@/utils/portal-course-adapter';
+import { getPackageById } from '@/utils/course-package-storage';
 
 const STORAGE_KEY = 'general_education_data';
 const STORAGE_VERSION = '1.0';
@@ -318,6 +322,47 @@ export function deleteRedemptionCode(id: string): boolean {
   return true;
 }
 
+/**
+ * 批量更新兑换码状态
+ * @param codeIds 兑换码ID列表
+ * @param status 新状态
+ * @returns 是否成功
+ */
+export function batchUpdateCodesStatus(
+  codeIds: string[],
+  status: RedemptionCodeStatus
+): boolean {
+  const storage = getStorage();
+
+  // 创建新的兑换码数组（避免直接修改引用）
+  const updatedCodes = storage.redemptionCodes.map(code => {
+    if (codeIds.includes(code.id)) {
+      // 检查当前状态
+      const currentStatus = code.status;
+
+      // 状态流转规则
+      if (status === 'offline' && currentStatus === 'unused') {
+        // 下架操作：unused -> offline
+        return { ...code, status: 'offline' };
+      } else if (status === 'unused' && currentStatus === 'offline') {
+        // 重新上架操作：offline -> unused
+        return { ...code, status: 'unused' };
+      } else if (status === 'used') {
+        // 已使用的兑换码不能修改状态
+        throw new Error('已使用的兑换码不能修改状态');
+      } else if (currentStatus === 'expired') {
+        // 已失效的兑换码不能修改状态（只能删除）
+        throw new Error('已失效的兑换码不能修改状态');
+      }
+    }
+    return code;
+  });
+
+  storage.redemptionCodes = updatedCodes;
+  setStorage(storage);
+  return true;
+}
+
 // ==================== 介绍内容管理 ====================
 
 export function getAllIntros(): GeneralEducationIntro[] {
@@ -540,6 +585,10 @@ export function validateRedemptionCode(code: string): {
     return { valid: false, error: '兑换码已被使用' };
   }
 
+  if (targetCode.status === 'offline') {
+    return { valid: false, error: '该兑换码已被下架' };
+  }
+
   if (targetCode.status === 'expired') {
     return { valid: false, error: '兑换码已失效' };
   }
@@ -587,7 +636,6 @@ export function redeemCourse(userId: string, userName: string, code: string, sel
   if (!targetName) {
     if (redemptionCode.targetType === 'course') {
       if (redemptionCode.targetIds.length === 1) {
-        const { getPortalCourseById } = require('@/utils/portal-course-adapter');
         const course = getPortalCourseById(redemptionCode.targetIds[0]);
         targetName = course?.title || '未知课程';
       } else {
@@ -595,7 +643,6 @@ export function redeemCourse(userId: string, userName: string, code: string, sel
       }
     } else {
       if (redemptionCode.targetIds.length === 1) {
-        const { getPackageById } = require('@/utils/course-package-storage');
         const pkg = getPackageById(parseInt(redemptionCode.targetIds[0]));
         targetName = pkg?.packageName || '未知套餐';
       } else {
@@ -605,7 +652,6 @@ export function redeemCourse(userId: string, userName: string, code: string, sel
   }
 
   if (redemptionCode.targetType === 'course') {
-    const { getPortalCourseById } = require('@/utils/portal-course-adapter');
     for (const targetId of redemptionCode.targetIds) {
       const course = getPortalCourseById(targetId);
       if (course) {
@@ -614,7 +660,6 @@ export function redeemCourse(userId: string, userName: string, code: string, sel
       }
     }
   } else {
-    const { getPackageById } = require('@/utils/course-package-storage');
     for (const targetId of redemptionCode.targetIds) {
       const pkg = getPackageById(parseInt(targetId));
       if (pkg) {
@@ -630,12 +675,6 @@ export function redeemCourse(userId: string, userName: string, code: string, sel
 
   if (items.length === 0) {
     return { success: false, error: '课程/套餐不存在' };
-  }
-
-  // 4. 检查用户是否已有重复的课程
-  const existingCourses = allCourseIds.filter(courseId => checkUserCourseAccess(userId, courseId));
-  if (existingCourses.length > 0) {
-    return { success: false, error: '您已拥有部分课程，无法重复兑换' };
   }
 
   // 5. 执行兑换

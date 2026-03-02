@@ -8,6 +8,7 @@ import {
 } from './message-storage';
 import { getUsersByTag } from './user-tag-storage';
 import { getLearningRecordsByCourseId } from './course-storage';
+import { getPackageLearningRecords } from './course-package-storage';
 import {
   getUserOrganizations,
   type UserOrganization,
@@ -19,6 +20,7 @@ export type BroadcastTargetType =
   | 'all'         // 全部用户
   | 'tag'         // 特定标签的用户
   | 'course'      // 学习某课程的用户
+  | 'package'     // 学习某套餐的用户
   | 'organization'; // 某单位的成员
 
 // 群发记录接口
@@ -253,6 +255,63 @@ export async function broadcastByCourseStudents(
   }
 }
 
+// 按套餐学员群发
+export async function broadcastByPackageStudents(
+  packageId: number,
+  packageName: string,
+  messageType: MessageType,
+  title: string,
+  content: string,
+  senderId: string,
+  senderName: string,
+  actionUrl?: string,
+  priority?: 'low' | 'normal' | 'high'
+): Promise<BroadcastRecord> {
+  // 获取套餐的所有学习记录
+  const records = getPackageLearningRecords(packageId);
+  const userIds = records.map(r => r.userId);
+
+  // 创建群发记录
+  const record = addBroadcastRecord({
+    target: 'package',
+    targetName: `套餐学员：${packageName}`,
+    targetIds: [packageId.toString()],
+    type: messageType,
+    title,
+    content,
+    actionUrl,
+    priority,
+    senderId,
+    senderName,
+    totalCount: userIds.length,
+  });
+
+  try {
+    // 更新状态为发送中
+    updateBroadcastStatus(record.broadcastId, 'sending');
+
+    // 模拟异步发送
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 调用广播消息函数
+    broadcastMessage(userIds, {
+      type: messageType,
+      title,
+      content,
+      actionUrl,
+      priority,
+    });
+
+    // 更新状态为已完成
+    updateBroadcastStatus(record.broadcastId, 'completed', userIds.length, 0);
+
+    return record;
+  } catch (error) {
+    updateBroadcastStatus(record.broadcastId, 'failed', 0, userIds.length, error instanceof Error ? error.message : '发送失败');
+    throw error;
+  }
+}
+
 // 按单位成员群发
 export async function broadcastByOrganizationMembers(
   organizationId: string,
@@ -391,6 +450,13 @@ export function getEstimatedRecipientCount(
         courseCount += getLearningRecordsByCourseId(parseInt(courseId)).length;
       });
       return courseCount;
+    case 'package':
+      // 获取套餐学员总数
+      let packageCount = 0;
+      ids.forEach(packageId => {
+        packageCount += getPackageLearningRecords(parseInt(packageId)).length;
+      });
+      return packageCount;
     case 'organization':
       // 获取单位成员总数
       const userOrgs = getUserOrganizations();

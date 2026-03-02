@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores';
 import { redeemCourse, validateRedemptionCode, getAllOrganizations } from '@/utils/general-education-storage';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
+import { getPackageById } from '@/utils/course-package-storage';
 
+const router = useRouter();
 const authStore = useAuthStore();
 
 const loading = ref(false);
@@ -54,7 +57,6 @@ async function handleValidateCode() {
         if (course) items.value.push(course);
       }
     } else {
-      const { getPackageById } = require('@/utils/course-package-storage');
       for (const targetId of result.code.targetIds) {
         const pkg = getPackageById(parseInt(targetId));
         if (pkg) items.value.push(pkg);
@@ -117,10 +119,13 @@ function handleGoToCourse() {
     // 如果是课程，直接跳转；如果是套餐，跳转到第一个课程
     const firstItem = items.value[0];
     if (targetType.value === 'course') {
-      window.location.href = `/portal/course-learn/${firstItem.id}`;
+      // 确保课程ID是字符串类型
+      const courseId = firstItem.id.toString();
+      router.push(`/portal/course-learn/${courseId}`);
     } else {
-      // 套餐：跳转到第一个课程
-      window.location.href = `/portal/course-learn/${firstItem.courses[0].courseId}`;
+      // 套餐：跳转到第一个课程，确保课程ID是字符串类型
+      const courseId = firstItem.courses[0].courseId.toString();
+      router.push(`/portal/course-learn/${courseId}`);
     }
   }
 }

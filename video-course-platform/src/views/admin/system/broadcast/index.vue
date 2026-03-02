@@ -6,6 +6,7 @@ import {
   getAllBroadcastRecords,
   broadcastByTag,
   broadcastByCourseStudents,
+  broadcastByPackageStudents,
   broadcastByOrganizationMembers,
   broadcastToAll,
   getEstimatedRecipientCount,
@@ -15,6 +16,7 @@ import {
 } from '@/utils/broadcast-storage';
 import { getAllTags } from '@/utils/user-tag-storage';
 import { getAllCourses } from '@/utils/course-storage';
+import { getAllPackages, type CoursePackage } from '@/utils/course-package-storage';
 import { getAllOrganizations } from '@/utils/general-education-storage';
 import type { UserTag } from '@/utils/user-tag-storage';
 import type { Course } from '@/utils/course-storage';
@@ -79,6 +81,9 @@ const tags = ref<UserTag[]>([]);
 
 // 课程列表
 const courses = ref<Course[]>([]);
+
+// 套餐列表
+const packages = ref<CoursePackage[]>([]);
 
 // 单位列表
 const organizations = ref<Organization[]>([]);
@@ -190,6 +195,21 @@ async function handleSend() {
           broadcastForm.value.priority
         );
         break;
+      case 'package':
+        const packageId = parseInt(broadcastForm.value.targetIds[0]);
+        const pkg = packages.value.find(p => p.packageId === packageId);
+        await broadcastByPackageStudents(
+          packageId,
+          pkg?.packageName || '未知套餐',
+          broadcastForm.value.messageType,
+          broadcastForm.value.title,
+          broadcastForm.value.content,
+          senderId,
+          senderName,
+          broadcastForm.value.actionUrl || undefined,
+          broadcastForm.value.priority
+        );
+        break;
       case 'organization':
         const orgId = broadcastForm.value.targetIds[0];
         const org = organizations.value.find(o => o.id === orgId);
@@ -279,6 +299,8 @@ onMounted(() => {
   tags.value = getAllTags();
   // 初始化课程列表
   courses.value = getAllCourses();
+  // 初始化套餐列表
+  packages.value = getAllPackages();
   // 初始化单位列表
   organizations.value = getAllOrganizations();
   // 加载群发记录
@@ -365,6 +387,7 @@ onMounted(() => {
             <el-option label="全部用户" value="all" />
             <el-option label="按标签" value="tag" />
             <el-option label="按课程学员" value="course" />
+            <el-option label="按套餐学员" value="package" />
             <el-option label="按单位成员" value="organization" />
           </el-select>
         </el-form-item>
@@ -395,6 +418,21 @@ onMounted(() => {
               :key="course.courseId"
               :label="`${course.courseName} (${course.enrollCount}人)`"
               :value="course.courseId.toString()"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item v-if="broadcastForm.targetType === 'package'" label="选择套餐">
+          <el-select
+            v-model="broadcastForm.targetIds"
+            style="width: 100%"
+            placeholder="请选择套餐"
+          >
+            <el-option
+              v-for="pkg in packages"
+              :key="pkg.packageId"
+              :label="`${pkg.packageName} (${pkg.enrollCount}人)`"
+              :value="pkg.packageId.toString()"
             />
           </el-select>
         </el-form-item>

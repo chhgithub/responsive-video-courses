@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
 import { hasUserPurchasedCourse } from '@/utils/order-storage';
 import { getCourseLearningRecord, updateLearningProgress } from '@/utils/learning-storage';
+import { checkUserCourseAccess } from '@/utils/general-education-storage';
 
 const router = useRouter();
 const route = useRoute();
@@ -50,15 +51,20 @@ function checkAccess() {
   // 免费课程直接可以学习
   if (course.value.isFree) return true;
 
-  // 付费课程需要购买
+  // 付费课程需要购买或兑换
   if (!authStore.userInfo) {
     ElMessage.warning('请先登录');
     router.push(`/portal/login?redirect=/portal/course-learn/${courseId}`);
     return false;
   }
 
+  // 检查是否已购买
   const purchased = hasUserPurchasedCourse(authStore.userInfo.userId, courseId);
-  if (!purchased) {
+
+  // 检查是否已兑换（通识教育）
+  const redeemed = checkUserCourseAccess(authStore.userInfo.userId, courseId);
+
+  if (!purchased && !redeemed) {
     ElMessageBox.confirm('该课程需要购买后才能学习', '提示', {
       confirmButtonText: '去购买',
       cancelButtonText: '返回',

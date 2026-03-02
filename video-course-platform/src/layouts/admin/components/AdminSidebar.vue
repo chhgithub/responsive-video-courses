@@ -67,6 +67,16 @@ const menuItems = computed(() => {
       ],
     },
     {
+      path: '/admin/general',
+      title: '通识教育',
+      icon: 'Reading',
+      children: [
+        { path: '/admin/general/index', title: '介绍内容' },
+        { path: '/admin/general/organization', title: '单位管理' },
+        { path: '/admin/general/redemption', title: '兑换码管理' },
+      ],
+    },
+    {
       path: '/admin/introduction',
       title: '介绍信息',
       icon: 'Document',
@@ -103,7 +113,7 @@ const menuItems = computed(() => {
 
     <el-menu
       :default-active="route.path"
-      :default-openeds="['/admin/home', '/admin/org']"
+      :default-openeds="['/admin/home', '/admin/general', '/admin/org']"
       :collapse="collapsed"
       :collapse-transition="false"
       router

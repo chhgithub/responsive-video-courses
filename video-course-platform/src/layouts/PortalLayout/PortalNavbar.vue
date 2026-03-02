@@ -12,7 +12,14 @@ const mobileMenuVisible = ref(false);
 // 菜单项配置
 const menuItems = [
   { path: '/portal', title: '首页' },
-  { path: '/portal/courses', title: '课程中心' },
+  {
+    path: '/portal/courses',
+    title: '课程中心',
+    children: [
+      { path: '/portal/courses', title: '课程' },
+      { path: '/portal/packages', title: '课程套餐' },
+    ],
+  },
   {
     path: '/portal/cert',
     title: '认证中心',

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
+import { ArrowLeft } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores';
 import {
   getUserMessages,
@@ -13,7 +15,13 @@ import {
   type MessageType,
 } from '@/utils/message-storage';
 
+const router = useRouter();
 const authStore = useAuthStore();
+
+// 返回上一页
+function handleBack() {
+  router.back();
+}
 
 const loading = ref(false);
 const activeTab = ref<'all' | 'unread' | 'consultation' | 'system'>('all');
@@ -177,6 +185,11 @@ onMounted(() => {
 
 <template>
   <div class="message-center">
+    <!-- 返回按钮 -->
+    <div class="back-section">
+      <el-button @click="handleBack" :icon="ArrowLeft">返回</el-button>
+    </div>
+
     <el-card>
       <template #header>
         <div class="header">
@@ -275,6 +288,10 @@ onMounted(() => {
 
 .message-center {
   padding: $spacing-large;
+
+  .back-section {
+    margin-bottom: $spacing-base;
+  }
 
   .header {
     display: flex;
