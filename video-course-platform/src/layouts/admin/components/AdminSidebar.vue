@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores';
 
 interface Props {
   collapsed: boolean;
@@ -9,79 +10,86 @@ interface Props {
 const props = defineProps<Props>();
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
-const menuItems = computed(() => [
-  // {
-  //   path: '/admin/dashboard',
-  //   title: '仪表盘',
-  //   icon: 'Odometer',
-  
-  // },
-  // 主页管理 - 作为一级菜单
-  {
-    path: '/admin/home',
-    title: '主页',
-    icon: 'HomeFilled',
-    children: [
-      { path: '/admin/home/banner', title: 'Banner配置' },
-      { path: '/admin/home/news', title: '资讯公告' },
-      { path: '/admin/home/activity', title: '活动日历' },
-      { path: '/admin/home/hot', title: '热点' },
-      { path: '/admin/home/consultation', title: '在线咨询' },
-    ],
-  },
-  {
-    path: '/admin/course',
-    title: '课程中心',
-    icon: 'VideoPlay',
-    children: [
-      { path: '/admin/course/list', title: '课程管理' },
-      { path: '/admin/course/video', title: '视频库管理' },
-      { path: '/admin/course/package', title: '课程套餐' },
-    ],
-  },
-  {
-    path: '/admin/order',
-    title: '订单管理',
-    icon: 'ShoppingCart',
-    children: [
-      { path: '/admin/order/list', title: '订单列表' },
-    ],
-  },
-  {
-    path: '/admin/introduction',
-    title: '介绍信息',
-    icon: 'Document',
-    children: [
-      // { path: '/admin/introduction/course-intro', title: '课程介绍' },
-      { path: '/admin/introduction/cert-center', title: '认证中心介绍' },
-      { path: '/admin/introduction/about-us', title: '关于我们介绍' },
-      { path: '/admin/introduction/faculty', title: '师资介绍' },
-    ],
-  },
-  {
-    path: '/admin/general',
-    title: '通识教育',
-    icon: 'Reading',
-    children: [
-      { path: '/admin/general/index', title: '介绍' },
-      { path: '/admin/general/organization', title: '单位管理' },
-      { path: '/admin/general/redemption', title: '兑换码管理' },
-    ],
-  },
-  {
-    path: '/admin/system',
-    title: '系统管理',
-    icon: 'Setting',
-    children: [
-      { path: '/admin/system/user', title: '用户管理' },
-      { path: '/admin/system/role', title: '角色管理' },
-      { path: '/admin/system/menu', title: '菜单管理' },
-      { path: '/admin/system/dict', title: '字典管理' },
-      { path: '/admin/system/payment-config', title: '支付配置' },
-    ],
-  },
-]);
+// 根据用户角色显示不同菜单
+const menuItems = computed(() => {
+  const roles = authStore.userInfo?.roles || [];
+  const isOrgAdmin = roles.includes('org_admin');
+
+  // 单位管理员菜单
+  if (isOrgAdmin) {
+    return [
+      {
+        path: '/admin/org',
+        title: '单位信息',
+        icon: 'OfficeBuilding',
+        children: [
+          { path: '/admin/org/students', title: '学员管理' },
+          { path: '/admin/org/codes', title: '激活码管理' },
+          { path: '/admin/org/progress', title: '学习进度' },
+        ],
+      },
+    ];
+  }
+
+  // 总管理员和其他角色菜单
+  return [
+    // 主页管理 - 作为一级菜单
+    {
+      path: '/admin/home',
+      title: '主页',
+      icon: 'HomeFilled',
+      children: [
+        { path: '/admin/home/banner', title: 'Banner配置' },
+        { path: '/admin/home/news', title: '资讯公告' },
+        { path: '/admin/home/activity', title: '活动日历' },
+        { path: '/admin/home/hot', title: '热点' },
+        { path: '/admin/home/consultation', title: '在线咨询' },
+      ],
+    },
+    {
+      path: '/admin/course',
+      title: '课程中心',
+      icon: 'VideoPlay',
+      children: [
+        { path: '/admin/course/list', title: '课程管理' },
+        { path: '/admin/course/video', title: '视频库管理' },
+        { path: '/admin/course/package', title: '课程套餐' },
+      ],
+    },
+    {
+      path: '/admin/order',
+      title: '订单管理',
+      icon: 'ShoppingCart',
+      children: [
+        { path: '/admin/order/list', title: '订单列表' },
+      ],
+    },
+    {
+      path: '/admin/introduction',
+      title: '介绍信息',
+      icon: 'Document',
+      children: [
+        { path: '/admin/introduction/cert-center', title: '认证中心介绍' },
+        { path: '/admin/introduction/about-us', title: '关于我们介绍' },
+        { path: '/admin/introduction/faculty', title: '师资介绍' },
+      ],
+    },
+    {
+      path: '/admin/system',
+      title: '系统管理',
+      icon: 'Setting',
+      children: [
+        { path: '/admin/system/user', title: '用户管理' },
+        { path: '/admin/system/role', title: '角色管理' },
+        { path: '/admin/system/menu', title: '菜单管理' },
+        { path: '/admin/system/dict', title: '字典管理' },
+        { path: '/admin/system/payment-config', title: '支付配置' },
+      ],
+    },
+  ];
+});
 </script>
 
 <template>
@@ -93,7 +101,7 @@ const menuItems = computed(() => [
 
     <el-menu
       :default-active="route.path"
-      :default-openeds="['/admin/home']"
+      :default-openeds="['/admin/home', '/admin/org']"
       :collapse="collapsed"
       :collapse-transition="false"
       router

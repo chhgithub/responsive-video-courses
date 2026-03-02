@@ -7,6 +7,7 @@ import {
   addIntro,
   updateIntro,
   initializeSampleIntros,
+  initializeDefaultOrganizations,
 } from '@/utils/general-education-storage';
 import { GeneralCategory, GeneralContentType } from '@/types/general-education.d';
 
@@ -145,6 +146,8 @@ async function handleSave() {
 onMounted(() => {
   // 初始化示例数据（如果不存在）
   initializeSampleIntros();
+  // 初始化默认单位数据（如果不存在）
+  initializeDefaultOrganizations();
   // 加载数据
   loadTabData(GeneralCategory.FAMILY);
   loadTabData(GeneralCategory.SCHOOL);

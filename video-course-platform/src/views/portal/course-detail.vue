@@ -7,6 +7,7 @@ import { getPortalCourseById, type PortalCourse } from '@/utils/portal-course-ad
 import { hasUserPurchasedCourse } from '@/utils/order-storage';
 import { isCourseFavorited, toggleFavorite } from '@/utils/favorite-storage';
 import { getCourseLearningRecord } from '@/utils/learning-storage';
+import { getReviewsByCourseId, type CourseReview } from '@/utils/course-storage';
 
 // 类型定义
 interface Chapter {
@@ -64,6 +65,10 @@ const learningProgress = ref(0);
 // Tab
 const activeTab = ref('intro');
 
+// 评价数据
+const reviews = ref<CourseReview[]>([]);
+const reviewsLoading = ref(false);
+
 // 获取当前登录用户
 function getCurrentUser() {
   if (!authStore.isLoggedIn) return null;
@@ -104,6 +109,23 @@ function getProgressInfo(id: string): { progress: number; lastStudyAt: string } 
   const lastStudyAt = courseRecords.sort((a: any, b: any) => b.lastStudyAt.localeCompare(a.lastStudyAt))[0]?.lastStudyAt || '-';
 
   return { progress, lastStudyAt };
+}
+
+// 加载评价数据（只显示已通过审核的评价）
+async function loadReviews() {
+  if (!course.value) return;
+
+  reviewsLoading.value = true;
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const allReviews = getReviewsByCourseId(parseInt(course.value.id));
+    // 只显示已通过审核的评价
+    reviews.value = allReviews.filter((r) => r.status === 'approved');
+  } catch (error) {
+    console.error('加载评价失败:', error);
+  } finally {
+    reviewsLoading.value = false;
+  }
 }
 
 // 生成Mock课程数据
@@ -240,6 +262,9 @@ async function loadCourseDetail() {
 
     // 检查交互状态
     checkStatus();
+
+    // 加载评价数据
+    loadReviews();
   } catch (error) {
     console.error('加载课程详情失败:', error);
     ElMessage.error('加载课程详情失败');
@@ -663,7 +688,7 @@ onMounted(() => {
 
           <el-tab-pane name="reviews">
             <template #label>
-              💬 学员评价 ({{ course?.reviewCount || 0 }})
+              💬 学员评价 ({{ reviews.length }})
             </template>
             <div class="tab-content">
               <h2>学员评价</h2>
@@ -677,7 +702,7 @@ onMounted(() => {
                     show-score
                     text-color="#ff9900"
                   />
-                  <div class="review-count">{{ course.reviewCount }}条评价</div>
+                  <div class="review-count">{{ reviews.length }}条评价</div>
                 </div>
 
                 <div class="rating-distribution">
@@ -703,44 +728,43 @@ onMounted(() => {
 
               <el-divider />
 
-              <div class="reviews-list">
-                <div
-                  v-for="(review, index) in 3"
-                  :key="index"
-                  class="review-item"
-                >
-                  <div class="review-header">
-                    <el-avatar :size="40" :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=user${index}`" />
-                    <div class="reviewer-info">
-                      <p class="reviewer-name">
-                        {{ ['张**', '李**', '王**'][index] }}
-                      </p>
-                      <p class="review-date">
-                        {{ ['2025-02-20', '2025-02-18', '2025-02-15'][index] }}
-                      </p>
+              <div v-loading="reviewsLoading" class="reviews-content">
+                <div v-if="reviews.length === 0" class="empty-reviews">
+                  <el-empty description="暂无评价" />
+                </div>
+
+                <div v-else class="reviews-list">
+                  <div
+                    v-for="(review, index) in reviews"
+                    :key="review.reviewId"
+                    class="review-item"
+                  >
+                    <div class="review-header">
+                      <el-avatar :size="40" :src="review.userAvatar" />
+                      <div class="reviewer-info">
+                        <p class="reviewer-name">{{ review.userName }}</p>
+                        <p class="review-date">{{ review.reviewTime }}</p>
+                      </div>
+                      <el-rate
+                        :model="review.rating"
+                        disabled
+                        show-score
+                        text-color="#ff9900"
+                      />
                     </div>
-                    <el-rate
-                      :model="index === 1 ? 4 : 5"
-                      disabled
-                      show-score
-                      text-color="#ff9900"
-                    />
+                    <p class="review-content">{{ review.content }}</p>
+
+                    <!-- 讲师回复 -->
+                    <div v-if="review.replyContent" class="review-reply">
+                      <div class="reply-header">
+                        <span class="reply-label">讲师回复</span>
+                        <span class="reply-time">{{ review.replyTime }}</span>
+                      </div>
+                      <p class="reply-content-text">{{ review.replyContent }}</p>
+                    </div>
                   </div>
-                  <p class="review-content">
-                    {{
-                      [
-                        '课程讲得很好，零基础也能听懂！老师讲解很细致，内容很实用。',
-                        '内容很实用，就是有些地方讲得快了点，需要反复看几遍才能理解。',
-                        '非常棒的入门课程！老师讲得通俗易懂，配套练习也很有帮助，强烈推荐给初学者。',
-                      ][index]
-                    }}
-                  </p>
                 </div>
               </div>
-
-              <el-button class="load-more" plain>
-                查看更多评价
-              </el-button>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -1101,7 +1125,44 @@ onMounted(() => {
       color: $text-color-regular;
       line-height: 1.6;
     }
+
+    .review-reply {
+      margin-top: $spacing-base;
+      padding: $spacing-base;
+      background: #f5f7fa;
+      border-radius: $border-radius-small;
+
+      .reply-header {
+        display: flex;
+        gap: $spacing-base;
+        margin-bottom: $spacing-small;
+        font-size: $font-size-small;
+
+        .reply-label {
+          font-weight: 500;
+          color: $text-color-primary;
+        }
+
+        .reply-time {
+          color: $text-color-secondary;
+        }
+      }
+
+      .reply-content-text {
+        margin: 0;
+        color: $text-color-regular;
+        line-height: 1.6;
+      }
+    }
   }
+}
+
+.reviews-content {
+  min-height: 200px;
+}
+
+.empty-reviews {
+  padding: $spacing-extra-extra-large 0;
 }
 
 .load-more {

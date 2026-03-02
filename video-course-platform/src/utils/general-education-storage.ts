@@ -7,11 +7,13 @@ import type {
   OrganizationType,
   RedemptionCode,
   RedemptionCodeStatus,
+  RedemptionCodeTargetType,
   GeneralEducationIntro,
   GeneralCategory,
   GeneralContentType,
   RedemptionRecord,
   UserCourseAccess,
+  UserOrganization,
   AccessSource,
   GeneralEducationStorage,
 } from '@/types/general-education';
@@ -40,15 +42,79 @@ function getStorage(): GeneralEducationStorage {
 
   const data = JSON.parse(existing) as GeneralEducationStorage;
 
-  // 版本检查
+  // 版本检查和数据迁移
   if (data.version !== STORAGE_VERSION) {
-    console.log('通识教育数据版本更新，重新初始化...');
-    const initData = getDefaultData();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initData));
-    return initData;
+    console.log('通识教育数据版本更新，执行数据迁移...');
+    data = migrateData(data);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  // 兼容性检查：确保 userOrganizations 字段存在
+  if (!data.userOrganizations) {
+    data.userOrganizations = [];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
   return data;
+}
+
+// 数据迁移函数
+function migrateData(data: any): GeneralEducationStorage {
+  const migrated = { ...getDefaultData() };
+
+  // 迁移单位数据
+  if (data.organizations) {
+    migrated.organizations = data.organizations;
+  }
+
+  // 迁移兑换码数据（旧格式 -> 新格式）
+  if (data.redemptionCodes) {
+    migrated.redemptionCodes = data.redemptionCodes.map((code: any) => {
+      // 检查是否是新格式
+      if (code.targetType && code.targetIds) {
+        return code as RedemptionCode;
+      }
+
+      // 旧格式转换
+      return {
+        id: code.id,
+        code: code.code,
+        organizationId: code.organizationId,
+        organizationName: code.organizationName,
+        targetType: 'course' as RedemptionCodeTargetType,
+        targetIds: [code.courseId],
+        targetName: code.courseName, // 保留旧数据
+        codeExpireTime: code.expireTime,
+        accessValidDays: 30,
+        status: code.status,
+        usedBy: code.usedBy,
+        usedTime: code.usedTime,
+        note: code.note,
+        createTime: code.createTime,
+      };
+    });
+  }
+
+  // 迁移兑换记录
+  if (data.redemptionRecords) {
+    migrated.redemptionRecords = data.redemptionRecords;
+  }
+
+  // 迁移介绍内容
+  if (data.intros) {
+    migrated.intros = data.intros;
+  }
+
+  // 迁移用户课程访问权限
+  if (data.userCourseAccess) {
+    migrated.userCourseAccess = data.userCourseAccess;
+  }
+
+  // 初始化用户单位绑定关系
+  migrated.userOrganizations = [];
+
+  console.log('数据迁移完成');
+  return migrated;
 }
 
 function setStorage(data: GeneralEducationStorage): void {
@@ -63,6 +129,7 @@ function getDefaultData(): GeneralEducationStorage {
     redemptionRecords: [],
     intros: [],
     userCourseAccess: [],
+    userOrganizations: [],
   };
 }
 
@@ -161,16 +228,23 @@ export function getRedemptionCodesByOrganization(organizationId: string): Redemp
 export function generateRedemptionCodes(params: {
   organizationId: string;
   organizationName: string;
-  courseId: string;
-  courseName: string;
+  targetType: RedemptionCodeTargetType; // 目标类型：课程/套餐
+  targetIds: string[];                 // 目标ID列表（支持多个）
+  targetName?: string;                 // 目标名称（可选，兼容旧数据）
+  codeExpireDays?: number;            // 兑换码有效期天数（空=永不过期）
+  accessValidDays?: number;            // 兑换后有效期天数（空=永不过期）
   count: number;
-  expireDays: number;
   note?: string;
 }): RedemptionCode[] {
   const storage = getStorage();
   const codes: RedemptionCode[] = [];
   const now = new Date();
-  const expireTime = new Date(now.getTime() + expireDays * 24 * 60 * 60 * 1000).toISOString();
+
+  // 计算兑换码过期时间
+  let codeExpireTime: string | undefined;
+  if (params.codeExpireDays) {
+    codeExpireTime = new Date(now.getTime() + params.codeExpireDays * 24 * 60 * 60 * 1000).toISOString();
+  }
 
   for (let i = 0; i < params.count; i++) {
     const code: RedemptionCode = {
@@ -178,10 +252,11 @@ export function generateRedemptionCodes(params: {
       code: generateCode(),
       organizationId: params.organizationId,
       organizationName: params.organizationName,
-      courseId: params.courseId,
-      courseName: params.courseName,
+      targetType: params.targetType,
+      targetIds: params.targetIds,
+      codeExpireTime,
+      accessValidDays: params.accessValidDays,
       status: 'unused',
-      expireTime,
       note: params.note,
       createTime: getCurrentTime(),
     };
@@ -400,6 +475,49 @@ export function createRedemptionRecord(data: Omit<RedemptionRecord, 'id' | 'rede
   return record;
 }
 
+// ==================== 用户-单位绑定关系 ====================
+
+/**
+ * 获取用户绑定的所有单位
+ */
+export function getUserOrganizations(userId: string): UserOrganization[] {
+  const storage = getStorage();
+  return storage.userOrganizations.filter(uo => uo.userId === userId);
+}
+
+/**
+ * 确保用户与单位绑定（如果未绑定则创建）
+ */
+export function ensureUserOrganizationBinding(
+  userId: string,
+  organizationId: string,
+  organizationName: string
+): UserOrganization {
+  const storage = getStorage();
+  let binding = storage.userOrganizations.find(
+    uo => uo.userId === userId && uo.organizationId === organizationId
+  );
+
+  if (!binding) {
+    binding = {
+      id: generateId(),
+      userId,
+      organizationId,
+      organizationName,
+      bindTime: getCurrentTime(),
+      redeemCount: 1,
+    };
+    storage.userOrganizations.push(binding);
+    setStorage(storage);
+  } else {
+    // 更新兑换次数
+    binding.redeemCount++;
+    setStorage(storage);
+  }
+
+  return binding;
+}
+
 // ==================== 兑换功能（前台使用） ====================
 
 /**
@@ -425,22 +543,26 @@ export function validateRedemptionCode(code: string): {
     return { valid: false, error: '兑换码已失效' };
   }
 
-  const now = new Date();
-  const expire = new Date(targetCode.expireTime);
-  if (now > expire) {
-    return { valid: false, error: '兑换码已过期' };
+  // 检查兑换码是否过期（如果设置了过期时间）
+  if (targetCode.codeExpireTime) {
+    const now = new Date();
+    const expire = new Date(targetCode.codeExpireTime);
+    if (now > expire) {
+      return { valid: false, error: '兑换码已过期' };
+    }
   }
 
   return { valid: true, code: targetCode };
 }
 
 /**
- * 兑换课程
+ * 兑换课程/套餐（支持双重校验）
  */
-export function redeemCourse(userId: string, userName: string, code: string): {
+export function redeemCourse(userId: string, userName: string, code: string, selectedOrganizationId?: string): {
   success: boolean;
   error?: string;
-  course?: any;
+  items?: any[];
+  targetType?: RedemptionCodeTargetType;
 } {
   // 1. 验证兑换码
   const validation = validateRedemptionCode(code);
@@ -450,50 +572,112 @@ export function redeemCourse(userId: string, userName: string, code: string): {
 
   const redemptionCode = validation.code!;
 
-  // 2. 获取课程信息（从课程存储）
-  const { getPortalCourseById } = require('@/utils/portal-course-adapter');
-  const course = getPortalCourseById(redemptionCode.courseId);
-  if (!course) {
-    return { success: false, error: '课程不存在' };
+  // 2. 双重校验：如果选择了单位，检查是否匹配
+  if (selectedOrganizationId && redemptionCode.organizationId !== selectedOrganizationId) {
+    return { success: false, error: '兑换码与选择的单位不匹配' };
   }
 
-  // 3. 检查用户是否已有该课程
-  const hasAccess = checkUserCourseAccess(userId, course.id);
-  if (hasAccess) {
-    return { success: false, error: '您已拥有此课程' };
+  // 3. 根据类型获取内容
+  let items: any[] = [];
+  let allCourseIds: string[] = [];
+
+  // 动态获取目标名称
+  let targetName = redemptionCode.targetName;
+  if (!targetName) {
+    if (redemptionCode.targetType === 'course') {
+      if (redemptionCode.targetIds.length === 1) {
+        const { getPortalCourseById } = require('@/utils/portal-course-adapter');
+        const course = getPortalCourseById(redemptionCode.targetIds[0]);
+        targetName = course?.title || '未知课程';
+      } else {
+        targetName = `${redemptionCode.targetIds.length}个课程`;
+      }
+    } else {
+      if (redemptionCode.targetIds.length === 1) {
+        const { getPackageById } = require('@/utils/course-package-storage');
+        const pkg = getPackageById(parseInt(redemptionCode.targetIds[0]));
+        targetName = pkg?.packageName || '未知套餐';
+      } else {
+        targetName = `${redemptionCode.targetIds.length}个套餐`;
+      }
+    }
   }
 
-  // 4. 执行兑换
+  if (redemptionCode.targetType === 'course') {
+    const { getPortalCourseById } = require('@/utils/portal-course-adapter');
+    for (const targetId of redemptionCode.targetIds) {
+      const course = getPortalCourseById(targetId);
+      if (course) {
+        items.push(course);
+        allCourseIds.push(course.id);
+      }
+    }
+  } else {
+    const { getPackageById } = require('@/utils/course-package-storage');
+    for (const targetId of redemptionCode.targetIds) {
+      const pkg = getPackageById(parseInt(targetId));
+      if (pkg) {
+        items.push(pkg);
+        pkg.courses.forEach((c: any) => {
+          if (!allCourseIds.includes(c.courseId.toString())) {
+            allCourseIds.push(c.courseId.toString());
+          }
+        });
+      }
+    }
+  }
+
+  if (items.length === 0) {
+    return { success: false, error: '课程/套餐不存在' };
+  }
+
+  // 4. 检查用户是否已有重复的课程
+  const existingCourses = allCourseIds.filter(courseId => checkUserCourseAccess(userId, courseId));
+  if (existingCourses.length > 0) {
+    return { success: false, error: '您已拥有部分课程，无法重复兑换' };
+  }
+
+  // 5. 执行兑换
   updateRedemptionCodeStatus(redemptionCode.id, 'used', userId);
 
-  // 5. 添加课程访问权限（假设有效期30天）
-  const now = new Date();
-  const expireTime = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  // 6. 计算过期时间
+  let expireTime: string | undefined;
+  if (redemptionCode.accessValidDays) {
+    const now = new Date();
+    expireTime = new Date(now.getTime() + redemptionCode.accessValidDays * 24 * 60 * 60 * 1000).toISOString();
+  }
 
-  addUserCourseAccess({
-    userId,
-    courseId: course.id,
-    accessSource: 'redeem',
-    redemptionCode: code,
-    organizationId: redemptionCode.organizationId,
-    organizationName: redemptionCode.organizationName,
-    acquireTime: getCurrentTime(),
-    expireTime,
-  });
+  // 7. 添加课程访问权限
+  for (const courseId of allCourseIds) {
+    addUserCourseAccess({
+      userId,
+      courseId,
+      packageName: redemptionCode.targetType === 'package' ? targetName : undefined,
+      accessSource: 'redeem',
+      redemptionCode: code,
+      organizationId: redemptionCode.organizationId,
+      organizationName: redemptionCode.organizationName,
+      acquireTime: getCurrentTime(),
+      expireTime,
+    });
+  }
 
-  // 6. 记录兑换历史
+  // 8. 记录兑换历史
   createRedemptionRecord({
     codeId: redemptionCode.id,
     code,
     organizationId: redemptionCode.organizationId,
     organizationName: redemptionCode.organizationName,
-    courseId: course.id,
-    courseName: redemptionCode.courseName,
+    courseId: redemptionCode.targetIds.join(','),
+    courseName: targetName,
     userId,
     userName,
   });
 
-  return { success: true, course };
+  // 9. 更新用户-单位绑定关系
+  ensureUserOrganizationBinding(userId, redemptionCode.organizationId, redemptionCode.organizationName);
+
+  return { success: true, items, targetType: redemptionCode.targetType };
 }
 
 // ==================== 统计信息 ====================
@@ -683,4 +867,61 @@ export function initializeSampleIntros(): void {
     console.log('通识教育介绍示例数据初始化完成！');
   }
 }
+
+/**
+ * 初始化默认单位数据
+ * 如果不存在单位数据，则创建默认单位
+ */
+export function initializeDefaultOrganizations(): void {
+  const storage = getStorage();
+
+  // 检查是否已有单位
+  if (storage.organizations.length === 0) {
+    console.log('初始化默认单位数据...');
+
+    const defaultOrganization: Organization = {
+      id: 'test-org-001',
+      name: '测试单位',
+      code: 'test001',
+      type: 'family',
+      contactPerson: '张三',
+      contactPhone: '13800138000',
+      description: '这是一个测试单位，用于原型展示',
+      createTime: getCurrentTime(),
+    };
+
+    storage.organizations.push(defaultOrganization);
+
+    // 生成一些测试兑换码
+    const testCodes: RedemptionCode[] = [];
+    const { getPublishedCourses } = require('@/utils/portal-course-adapter');
+    const courses = getPublishedCourses();
+
+    for (let i = 0; i < 5; i++) {
+      const course = courses[i % courses.length];
+      const now = new Date();
+      const codeExpireTime = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+
+      testCodes.push({
+        id: generateId(),
+        code: generateCode(),
+        organizationId: defaultOrganization.id,
+        organizationName: defaultOrganization.name,
+        targetType: 'course',
+        targetIds: [course.id],
+        targetName: course.title,
+        codeExpireTime,
+        accessValidDays: 90, // 兑换后90天有效
+        status: 'unused',
+        createTime: getCurrentTime(),
+      });
+    }
+
+    storage.redemptionCodes.push(...testCodes);
+
+    setStorage(storage);
+    console.log('默认单位数据初始化完成！');
+  }
+}
+
 

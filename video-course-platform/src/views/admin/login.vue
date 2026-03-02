@@ -2,40 +2,52 @@
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores';
+import { loginUser } from '@/utils/user-storage';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
 const loginForm = ref({
-  username: 'admin',
-  password: '123456',
+  username: '',
+  password: '',
 });
 const loading = ref(false);
 
 async function handleLogin() {
   loading.value = true;
   try {
-    // 模拟登录延迟
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
+    // 验证用户
+    const user = loginUser(loginForm.value.username, loginForm.value.password);
+
     // 设置登录信息
-    authStore.setToken('admin-token-123456');
+    const token = `token-${user.userId}-${Date.now()}`;
+    authStore.setToken(token);
     authStore.setUserInfo({
-      userId: '1',
-      username: loginForm.value.username,
-      nickname: '管理员',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
-      roles: ['admin'],
+      userId: user.userId,
+      username: user.username,
+      nickname: user.nickname,
+      avatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.username,
+      roles: [user.role || 'student'],
+      organizationId: user.organizationId,
     });
 
     ElMessage.success('登录成功');
-    
-    // 跳转到后台主页Banner配置或重定向页面
-    const redirect = (route.query.redirect as string) || '/admin/home/banner';
+
+    // 根据角色跳转到不同页面
+    const role = user.role || 'student';
+    let defaultRoute = '/admin/home/banner';
+
+    if (role === 'admin') {
+      defaultRoute = '/admin/home/banner';
+    } else if (role === 'org_admin') {
+      defaultRoute = '/admin/org/students';
+    }
+
+    const redirect = (route.query.redirect as string) || defaultRoute;
     router.push(redirect);
-  } catch (error) {
-    ElMessage.error('登录失败');
+  } catch (error: any) {
+    ElMessage.error(error.message || '登录失败');
   } finally {
     loading.value = false;
   }
@@ -52,9 +64,9 @@ async function handleLogin() {
 
       <el-form :model="loginForm" class="login-form">
         <el-form-item>
-          <el-input 
-            v-model="loginForm.username" 
-            placeholder="请输入用户名" 
+          <el-input
+            v-model="loginForm.username"
+            placeholder="请输入用户名"
             size="large"
             prefix-icon="User"
           />
@@ -70,11 +82,11 @@ async function handleLogin() {
           />
         </el-form-item>
         <el-form-item>
-          <el-button 
-            type="primary" 
+          <el-button
+            type="primary"
             :loading="loading"
-            @click="handleLogin" 
-            size="large" 
+            @click="handleLogin"
+            size="large"
             style="width: 100%"
           >
             登录
@@ -83,7 +95,10 @@ async function handleLogin() {
       </el-form>
 
       <div class="login-tips">
-        <el-alert title="测试账号: admin / 123456" type="info" :closable="false" />
+        <el-alert title="测试账号" type="info" :closable="false">
+          <div>管理员账号：<strong>admin / 123456</strong></div>
+          <div>单位管理员账号：<strong>org_admin / 123456</strong></div>
+        </el-alert>
       </div>
     </div>
   </div>

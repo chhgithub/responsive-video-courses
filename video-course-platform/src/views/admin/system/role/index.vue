@@ -31,7 +31,9 @@ function generateMockData(): Role[] {
   return [
     { roleId: 1, roleName: '超级管理员', roleCode: 'super_admin', description: '拥有系统所有权限', isSystem: true, createTime: '2025-01-01' },
     { roleId: 2, roleName: '管理员', roleCode: 'admin', description: '拥有后台管理权限', isSystem: true, createTime: '2025-01-01' },
-    { roleId: 3, roleName: '教师', roleCode: 'teacher', description: '教师账号', isSystem: false, createTime: '2025-01-02' },
+    { roleId: 3, roleName: '单位管理员', roleCode: 'org_admin', description: '单位管理员，管理本单位学员和课程', isSystem: true, createTime: '2025-01-01' },
+    { roleId: 4, roleName: '教师', roleCode: 'teacher', description: '教师账号', isSystem: false, createTime: '2025-01-02' },
+    { roleId: 5, roleName: '学员', roleCode: 'student', description: '前台学员账号', isSystem: false, createTime: '2025-01-02' },
   ];
 }
 

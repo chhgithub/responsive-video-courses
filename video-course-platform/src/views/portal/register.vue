@@ -8,7 +8,6 @@ const router = useRouter();
 
 // 表单数据
 const registerForm = ref({
-  role: 'student' as 'student' | 'teacher',
   username: '',
   nickname: '',
   phone: '',
@@ -168,11 +167,6 @@ function handleAvatarUpload(event: Event) {
   reader.readAsDataURL(file);
 }
 
-// 选择角色
-function selectRole(role: 'student' | 'teacher') {
-  registerForm.value.role = role;
-}
-
 // 提交注册
 function handleRegister() {
   // 验证所有字段
@@ -285,31 +279,6 @@ function goToLogin() {
             <h2>创建账号</h2>
 
             <el-form :model="registerForm" label-position="top" class="register-form">
-              <!-- 角色选择 -->
-              <div class="form-group">
-                <label class="form-label">选择角色</label>
-                <div class="role-selection">
-                  <div
-                    class="role-card"
-                    :class="{ active: registerForm.role === 'student' }"
-                    @click="selectRole('student')"
-                  >
-                    <div class="role-icon">👨‍🎓</div>
-                    <div class="role-name">学员</div>
-                    <div class="role-desc">学习课程</div>
-                  </div>
-                  <div
-                    class="role-card"
-                    :class="{ active: registerForm.role === 'teacher' }"
-                    @click="selectRole('teacher')"
-                  >
-                    <div class="role-icon">👨‍🏫</div>
-                    <div class="role-name">讲师</div>
-                    <div class="role-desc">分享知识</div>
-                  </div>
-                </div>
-              </div>
-
               <!-- 用户名 -->
               <div class="form-group">
                 <label class="form-label">用户名</label>
@@ -569,63 +538,6 @@ function goToLogin() {
   color: $text-color-primary;
 }
 
-/* 角色选择 */
-.role-selection {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $spacing-base;
-}
-
-.role-card {
-  border: 2px solid $border-color-base;
-  border-radius: $border-radius-base;
-  padding: $spacing-base;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    border-color: #93c5fd;
-  }
-
-  &.active {
-    border-color: #3b82f6;
-    background: #eff6ff;
-    position: relative;
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 20px;
-      height: 20px;
-      background: #3b82f6;
-      border-radius: 50%;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E");
-      background-size: 12px;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
-  }
-}
-
-.role-icon {
-  font-size: $font-size-extra-extra-large;
-  margin-bottom: $spacing-small;
-}
-
-.role-name {
-  font-weight: 500;
-  color: $text-color-primary;
-  margin-bottom: 4px;
-}
-
-.role-desc {
-  font-size: $font-size-small;
-  color: $text-color-secondary;
-}
-
 /* 错误提示 */
 .error-text {
   margin-top: 4px;
@@ -794,10 +706,6 @@ function goToLogin() {
 
   .form-section {
     padding: $spacing-large;
-  }
-
-  .role-selection {
-    grid-template-columns: 1fr;
   }
 
   .avatar-upload {

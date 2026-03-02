@@ -145,6 +145,32 @@ const routes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: 'org',
+        name: 'AdminOrg',
+        redirect: '/admin/org/students',
+        meta: { title: '单位信息', icon: 'office-building' },
+        children: [
+          {
+            path: 'students',
+            name: 'AdminOrgStudents',
+            component: () => import('@/views/admin/org/students/index.vue'),
+            meta: { title: '学员管理' },
+          },
+          {
+            path: 'codes',
+            name: 'AdminOrgCodes',
+            component: () => import('@/views/admin/org/codes/index.vue'),
+            meta: { title: '激活码管理' },
+          },
+          {
+            path: 'progress',
+            name: 'AdminOrgProgress',
+            component: () => import('@/views/admin/org/progress/index.vue'),
+            meta: { title: '学习进度' },
+          },
+        ],
+      },
+      {
         path: 'system',
         name: 'AdminSystem',
         redirect: '/admin/system/user',
@@ -155,6 +181,18 @@ const routes: RouteRecordRaw[] = [
             name: 'AdminSystemUser',
             component: () => import('@/views/admin/system/user/index.vue'),
             meta: { title: '用户管理' },
+          },
+          {
+            path: 'tag',
+            name: 'AdminSystemTag',
+            component: () => import('@/views/admin/system/tag/index.vue'),
+            meta: { title: '用户标签' },
+          },
+          {
+            path: 'broadcast',
+            name: 'AdminSystemBroadcast',
+            component: () => import('@/views/admin/system/broadcast/index.vue'),
+            meta: { title: '群发消息' },
           },
           {
             path: 'role',

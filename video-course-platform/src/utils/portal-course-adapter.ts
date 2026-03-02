@@ -57,7 +57,7 @@ function mapAdminCourseToPortal(adminCourse: AdminCourse): PortalCourse {
     id: String(adminCourse.courseId),
     title: adminCourse.courseName,
     coverImage: adminCourse.courseCover,
-    teacher: { name: adminCourse.teacherName },
+    teacher: { name: adminCourse.teacherNames?.[0] || '讲师' },
     category: adminCourse.categoryName,
     tags: [
       adminCourse.difficulty === 'beginner' ? '入门' :

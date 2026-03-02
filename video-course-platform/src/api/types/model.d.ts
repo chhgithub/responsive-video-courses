@@ -2,6 +2,9 @@
 
 import type { PageParams } from './common';
 
+// 用户角色
+export type UserRole = 'admin' | 'org_admin' | 'teacher' | 'student';
+
 // 用户信息
 export interface UserInfo {
   userId: string;
@@ -10,7 +13,13 @@ export interface UserInfo {
   avatar?: string;
   email?: string;
   phone?: string;
+  role?: UserRole;
   roles?: string[];
+
+  // 单位管理员专属字段
+  organizationId?: string;
+  organizationName?: string;
+
   createTime?: string;
 }
 
@@ -38,8 +47,8 @@ export interface Course {
   courseIntro: string;
   categoryId?: string;
   categoryName?: string;
-  teacherId?: string;
-  teacherName?: string;
+  teacherIds?: string[];
+  teacherNames?: string[];
   price: number;
   originalPrice?: number;
   isFree: boolean;

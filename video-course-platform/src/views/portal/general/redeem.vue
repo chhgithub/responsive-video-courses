@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAuthStore } from '@/stores';
-import { redeemCourse, validateRedemptionCode } from '@/utils/general-education-storage';
+import { redeemCourse, validateRedemptionCode, getAllOrganizations } from '@/utils/general-education-storage';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
 
 const authStore = useAuthStore();
@@ -9,12 +9,20 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const redeemStep = ref(1); // 1: 输入兑换码  2: 确认课程  3: 兑换成功
 
+const selectedOrganization = ref('');
 const codeInput = ref('');
 const validationResult = ref<any>(null);
-const course = ref<any>(null);
+const items = ref<any[]>([]); // 可能是课程或套餐
+const targetType = ref<'course' | 'package'>('course');
 
 // 第一步：验证兑换码
 async function handleValidateCode() {
+  // 双重校验1：检查是否选择了单位
+  if (!selectedOrganization.value) {
+    ElMessage.warning('请选择单位');
+    return;
+  }
+
   if (!codeInput.value.trim()) {
     ElMessage.warning('请输入兑换码');
     return;
@@ -29,12 +37,32 @@ async function handleValidateCode() {
       return;
     }
 
-    validationResult.value = result.code;
+    // 双重校验3：检查单位是否匹配
+    if (result.code.organizationId !== selectedOrganization.value) {
+      ElMessage.error('兑换码与选择的单位不匹配');
+      return;
+    }
 
-    // 获取课程信息
-    course.value = getPortalCourseById(result.code.courseId);
-    if (!course.value) {
-      ElMessage.error('课程不存在');
+    validationResult.value = result.code;
+    targetType.value = result.code.targetType;
+
+    // 获取课程或套餐信息
+    items.value = [];
+    if (result.code.targetType === 'course') {
+      for (const targetId of result.code.targetIds) {
+        const course = getPortalCourseById(targetId);
+        if (course) items.value.push(course);
+      }
+    } else {
+      const { getPackageById } = require('@/utils/course-package-storage');
+      for (const targetId of result.code.targetIds) {
+        const pkg = getPackageById(parseInt(targetId));
+        if (pkg) items.value.push(pkg);
+      }
+    }
+
+    if (items.value.length === 0) {
+      ElMessage.error('课程/套餐不存在');
       return;
     }
 
@@ -58,7 +86,8 @@ async function handleConfirmRedeem() {
     const result = redeemCourse(
       authStore.userInfo.userId,
       authStore.userInfo.nickname || authStore.userInfo.username,
-      codeInput.value.trim()
+      codeInput.value.trim(),
+      selectedOrganization.value // 传递选择的单位ID
     );
 
     if (result.success) {
@@ -76,15 +105,23 @@ async function handleConfirmRedeem() {
 // 重新兑换
 function handleRedeemAgain() {
   redeemStep.value = 1;
+  selectedOrganization.value = '';
   codeInput.value = '';
   validationResult.value = null;
-  course.value = null;
+  items.value = [];
 }
 
 // 跳转学习
 function handleGoToCourse() {
-  if (course.value) {
-    window.location.href = `/portal/course-learn/${course.value.id}`;
+  if (items.value.length > 0) {
+    // 如果是课程，直接跳转；如果是套餐，跳转到第一个课程
+    const firstItem = items.value[0];
+    if (targetType.value === 'course') {
+      window.location.href = `/portal/course-learn/${firstItem.id}`;
+    } else {
+      // 套餐：跳转到第一个课程
+      window.location.href = `/portal/course-learn/${firstItem.courses[0].courseId}`;
+    }
   }
 }
 
@@ -134,6 +171,24 @@ function formatExpireTime(expireTime: string) {
               </template>
 
               <el-form label-position="top" label-width="120px">
+                <el-form-item label="选择单位" required>
+                  <el-select
+                    v-model="selectedOrganization"
+                    filterable
+                    placeholder="请搜索单位名称"
+                    size="large"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="org in getAllOrganizations()"
+                      :key="org.id"
+                      :label="org.name"
+                      :value="org.id"
+                    />
+                  </el-select>
+                  <div class="field-tip">请先选择兑换码所属的单位</div>
+                </el-form-item>
+
                 <el-form-item label="兑换码">
                   <el-input
                     v-model="codeInput"
@@ -165,56 +220,73 @@ function formatExpireTime(expireTime: string) {
                 <h3>使用说明</h3>
               </template>
               <div class="tips-content">
-                <p>1. 输入您的兑换码（由单位提供）</p>
-                <p>2. 系统验证兑换码并显示对应课程</p>
-                <p>3. 确认课程信息后完成兑换</p>
-                <p>4. 兑换成功后可在"我的课程"中学习</p>
-                <p class="text-warning">注意：兑换码有效期为兑换后的30天，请及时学习</p>
+                <p>1. 选择兑换码所属的单位</p>
+                <p>2. 输入您的兑换码（由单位提供）</p>
+                <p>3. 系统验证兑换码并显示对应课程/套餐</p>
+                <p>4. 确认课程信息后完成兑换</p>
+                <p>5. 兑换成功后可在"我的课程"中学习</p>
+                <p class="text-warning">注意：兑换码必须与选择的单位匹配</p>
               </div>
             </el-card>
           </div>
 
           <!-- 步骤2: 确认课程 -->
-          <div v-if="redeemStep === 2 && course" class="step-content">
+          <div v-if="redeemStep === 2 && items.length > 0" class="step-content">
             <el-card class="course-card" shadow="hover">
               <template #header>
-                <h2>确认兑换课程</h2>
+                <h2>确认兑换{{ targetType === 'package' ? '套餐' : '课程' }}</h2>
               </template>
 
-              <div class="course-detail">
-                <el-image
-                  :src="course.coverImage"
-                  fit="cover"
-                  class="course-cover"
-                />
-                <div class="course-info">
-                  <h3 class="course-title">{{ course.title }}</h3>
-                  <div class="course-meta">
-                    <el-tag size="small">{{ course.category }}</el-tag>
-                    <span class="separator">•</span>
-                    <el-rate
-                      v-model="course.rating"
-                      disabled
-                      show-score
-                      text-color="#ff9900"
-                    />
-                  </div>
-                  <p class="course-desc">{{ course.courseIntro }}</p>
-                  <div class="course-tags">
-                    <el-tag
-                      v-for="tag in course.tags"
-                      :key="tag"
-                      size="small"
-                      type="info"
-                    >
-                      {{ tag }}
-                    </el-tag>
-                  </div>
-                  <div class="course-access">
-                    <p><strong>有效期：</strong>兑换后30天</p>
-                    <p><strong>单位：</strong>{{ validationResult?.organizationName }}</p>
+              <div v-for="(item, index) in items" :key="index" class="course-item">
+                <div v-if="targetType === 'course'" class="course-detail">
+                  <el-image
+                    :src="item.coverImage"
+                    fit="cover"
+                    class="course-cover"
+                  />
+                  <div class="course-info">
+                    <h3 class="course-title">{{ item.title }}</h3>
+                    <div class="course-meta">
+                      <el-tag size="small">{{ item.category }}</el-tag>
+                      <span class="separator">•</span>
+                      <el-rate
+                        v-model="item.rating"
+                        disabled
+                        show-score
+                        text-color="#ff9900"
+                      />
+                    </div>
+                    <p class="course-desc">{{ item.courseIntro }}</p>
                   </div>
                 </div>
+
+                <div v-else class="package-detail">
+                  <el-image
+                    :src="item.packageCover"
+                    fit="cover"
+                    class="course-cover"
+                  />
+                  <div class="course-info">
+                    <h3 class="course-title">{{ item.packageName }}</h3>
+                    <p class="course-desc">{{ item.packageDesc }}</p>
+                    <div class="package-courses">
+                      <p><strong>包含课程：</strong></p>
+                      <ul>
+                        <li v-for="course in item.courses" :key="course.courseId">
+                          {{ course.courseName }} {{ course.isRequired ? '(必修)' : '(选修)' }}
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <el-divider v-if="index < items.length - 1" />
+              </div>
+
+              <div class="course-access">
+                <p><strong>类型：</strong>{{ targetType === 'package' ? '课程套餐' : '课程' }}</p>
+                <p><strong>有效期：</strong>{{ validationResult?.accessValidDays ? `${validationResult.accessValidDays}天` : '永不过期' }}</p>
+                <p><strong>单位：</strong>{{ validationResult?.organizationName }}</p>
               </div>
 
               <div class="action-buttons">
@@ -239,14 +311,17 @@ function formatExpireTime(expireTime: string) {
                   <CircleCheck />
                 </el-icon>
                 <h2 class="success-title">兑换成功！</h2>
-                <p class="success-message">您已成功获得课程访问权限</p>
+                <p class="success-message">您已成功获得{{ targetType === 'package' ? '套餐' : '课程' }}访问权限</p>
 
                 <el-descriptions :column="1" border class="success-info">
-                  <el-descriptions-item label="课程名称">
-                    {{ course?.title }}
+                  <el-descriptions-item :label="targetType === 'package' ? '套餐名称' : '课程名称'">
+                    {{ items.map(item => targetType === 'course' ? item.title : item.packageName).join(', ') }}
+                  </el-descriptions-item>
+                  <el-descriptions-item label="类型">
+                    {{ targetType === 'package' ? '课程套餐' : '课程' }}
                   </el-descriptions-item>
                   <el-descriptions-item label="有效期">
-                    30天
+                    {{ validationResult?.accessValidDays ? `${validationResult.accessValidDays}天` : '永不过期' }}
                   </el-descriptions-item>
                   <el-descriptions-item label="兑换码">
                     {{ codeInput }}
@@ -363,7 +438,16 @@ function formatExpireTime(expireTime: string) {
 }
 
 // Course Detail
-.course-detail {
+.course-item {
+  margin-bottom: $spacing-large;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.course-detail,
+.package-detail {
   display: flex;
   gap: $spacing-large;
 
@@ -408,20 +492,44 @@ function formatExpireTime(expireTime: string) {
       margin-bottom: $spacing-large;
     }
 
-    .course-access {
+    .package-courses {
+      margin-bottom: $spacing-base;
+
       p {
-        font-size: $font-size-small;
-        color: $text-color-secondary;
-        margin-bottom: $spacing-small;
+        font-size: $font-size-base;
+        color: $text-color-primary;
+        margin: 0 0 $spacing-small 0;
+      }
 
-        &:last-child {
-          margin-bottom: 0;
-        }
+      ul {
+        padding-left: 20px;
+        margin: 0;
 
-        strong {
-          color: $text-color-primary;
+        li {
+          line-height: 1.8;
+          color: $text-color-regular;
         }
       }
+    }
+  }
+}
+
+.course-access {
+  margin-top: $spacing-large;
+  padding-top: $spacing-large;
+  border-top: 1px solid $border-color-light;
+
+  p {
+    font-size: $font-size-small;
+    color: $text-color-secondary;
+    margin-bottom: $spacing-small;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    strong {
+      color: $text-color-primary;
     }
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import {
   getAllRedemptionCodes,
@@ -7,6 +7,8 @@ import {
   deleteRedemptionCode,
   getAllOrganizations,
 } from '@/utils/general-education-storage';
+import { getPublishedCourses } from '@/utils/portal-course-adapter';
+import { getAllPackages } from '@/utils/course-package-storage';
 import type { RedemptionCode } from '@/types/general-education';
 
 const loading = ref(false);
@@ -18,12 +20,20 @@ const searchKeyword = ref('');
 const generateDialogVisible = ref(false);
 const generateForm = ref({
   organizationId: '',
-  courseId: '',
-  courseName: '',
+  targetType: 'course' as 'course' | 'package',
+  targetIds: [] as string[],
+  targetName: '',
   count: 1,
-  expireDays: 30,
+  codeExpireDays: 30,
+  codeNeverExpire: false,
+  accessValidDays: 30,
+  accessNeverExpire: false,
   note: '',
 });
+
+// 课程列表和套餐列表
+const courseList = ref<any[]>([]);
+const packageList = ref<any[]>([]);
 
 // 状态映射
 const statusMap: Record<string, { text: string; type: any }> = {
@@ -56,7 +66,7 @@ const filteredCodes = computed(() => {
     const keyword = searchKeyword.value.toLowerCase();
     result = result.filter(c =>
       c.code.toLowerCase().includes(keyword) ||
-      c.courseName.toLowerCase().includes(keyword) ||
+      c.targetName.toLowerCase().includes(keyword) ||
       c.organizationName.toLowerCase().includes(keyword)
     );
   }
@@ -64,17 +74,81 @@ const filteredCodes = computed(() => {
   return result;
 });
 
+// 根据类型显示的选项列表
+const targetOptions = computed(() => {
+  return generateForm.value.targetType === 'course'
+    ? courseList.value.map((c: any) => ({ id: c.id, name: c.title }))
+    : packageList.value.map((p: any) => ({ id: p.packageId.toString(), name: p.packageName }));
+});
+
+// 动态获取兑换码的目标名称
+function getTargetName(code: RedemptionCode): string {
+  // 如果有 targetName（旧数据），直接返回
+  if (code.targetName) {
+    return code.targetName;
+  }
+
+  // 否则动态获取
+  if (code.targetType === 'course') {
+    if (code.targetIds.length === 1) {
+      const course = courseList.value.find((c: any) => c.id === code.targetIds[0]);
+      return course?.title || '未知课程';
+    }
+    return `${code.targetIds.length}个课程`;
+  } else {
+    if (code.targetIds.length === 1) {
+      const pkg = packageList.value.find((p: any) => p.packageId.toString() === code.targetIds[0]);
+      return pkg?.packageName || '未知套餐';
+    }
+    return `${code.targetIds.length}个套餐`;
+  }
+}
+
+// 监听选择变化，自动填充兑换内容
+watch(() => [generateForm.value.targetType, generateForm.value.targetIds], () => {
+  if (generateForm.value.targetIds.length === 0) {
+    generateForm.value.targetName = '';
+    return;
+  }
+
+  if (generateForm.value.targetType === 'course') {
+    if (generateForm.value.targetIds.length === 1) {
+      const course = courseList.value.find((c: any) => c.id === generateForm.value.targetIds[0]);
+      generateForm.value.targetName = course?.title || '';
+    } else {
+      generateForm.value.targetName = `${generateForm.value.targetIds.length}个课程`;
+    }
+  } else {
+    if (generateForm.value.targetIds.length === 1) {
+      const pkg = packageList.value.find((p: any) => p.packageId.toString() === generateForm.value.targetIds[0]);
+      generateForm.value.targetName = pkg?.packageName || '';
+    } else {
+      generateForm.value.targetName = `${generateForm.value.targetIds.length}个套餐`;
+    }
+  }
+});
+
 // 打开生成对话框
 function openGenerateDialog() {
   generateForm.value = {
     organizationId: '',
-    courseId: '',
-    courseName: '',
+    targetType: 'course',
+    targetIds: [],
+    targetName: '',
     count: 1,
-    expireDays: 30,
+    codeExpireDays: 30,
+    codeNeverExpire: false,
+    accessValidDays: 30,
+    accessNeverExpire: false,
     note: '',
   };
   generateDialogVisible.value = true;
+}
+
+// 初始化数据
+function initData() {
+  courseList.value = getPublishedCourses();
+  packageList.value = getAllPackages();
 }
 
 // 生成兑换码
@@ -83,12 +157,12 @@ async function handleGenerate() {
     ElMessage.warning('请选择单位');
     return;
   }
-  if (!generateForm.value.courseId) {
-    ElMessage.warning('请输入课程ID');
+  if (generateForm.value.targetIds.length === 0) {
+    ElMessage.warning('请选择课程或套餐');
     return;
   }
-  if (!generateForm.value.courseName) {
-    ElMessage.warning('请输入课程名称');
+  if (!generateForm.value.targetName) {
+    ElMessage.warning('请输入兑换内容');
     return;
   }
 
@@ -102,10 +176,12 @@ async function handleGenerate() {
     const generatedCodes = generateRedemptionCodes({
       organizationId: org.id,
       organizationName: org.name,
-      courseId: generateForm.value.courseId,
-      courseName: generateForm.value.courseName,
+      targetType: generateForm.value.targetType,
+      targetIds: generateForm.value.targetIds,
+      targetName: generateForm.value.targetName,
+      codeExpireDays: generateForm.value.codeNeverExpire ? undefined : generateForm.value.codeExpireDays,
+      accessValidDays: generateForm.value.accessNeverExpire ? undefined : generateForm.value.accessValidDays,
       count: generateForm.value.count,
-      expireDays: generateForm.value.expireDays,
       note: generateForm.value.note,
     });
 
@@ -146,7 +222,9 @@ function formatTime(time?: string) {
 }
 
 // 格式化过期时间
-function formatExpireTime(expireTime: string) {
+function formatExpireTime(expireTime?: string) {
+  if (!expireTime) return '永不过期';
+
   const now = new Date();
   const expire = new Date(expireTime);
   const diffDays = Math.ceil((expire.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
@@ -164,6 +242,7 @@ function copyCode(code: string) {
 }
 
 onMounted(() => {
+  initData();
   loadCodes();
 });
 </script>
@@ -223,7 +302,19 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="courseName" label="课程名称" min-width="200" />
+        <el-table-column prop="targetType" label="类型" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.targetType === 'package' ? 'warning' : 'primary'" size="small">
+              {{ row.targetType === 'package' ? '套餐' : '课程' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="兑换内容" min-width="200">
+          <template #default="{ row }">
+            {{ getTargetName(row) }}
+          </template>
+        </el-table-column>
 
         <el-table-column prop="organizationName" label="单位" width="150" />
 
@@ -237,7 +328,7 @@ onMounted(() => {
 
         <el-table-column label="有效期" width="120">
           <template #default="{ row }">
-            {{ formatExpireTime(row.expireTime) }}
+            {{ formatExpireTime(row.codeExpireTime) }}
           </template>
         </el-table-column>
 
@@ -283,8 +374,8 @@ onMounted(() => {
     </el-card>
 
     <!-- 生成对话框 -->
-    <el-dialog v-model="generateDialogVisible" title="生成兑换码" width="500px">
-      <el-form :model="generateForm" label-width="120px">
+    <el-dialog v-model="generateDialogVisible" title="生成兑换码" width="600px">
+      <el-form :model="generateForm" label-width="140px">
         <el-form-item label="选择单位" required>
           <el-select v-model="generateForm.organizationId" placeholder="请选择单位" style="width: 100%">
             <el-option
@@ -299,21 +390,65 @@ onMounted(() => {
           </div>
         </el-form-item>
 
-        <el-form-item label="课程ID" required>
-          <el-input v-model="generateForm.courseId" placeholder="请输入课程ID（如：1, 2, 3）" />
+        <el-form-item label="类型" required>
+          <el-radio-group v-model="generateForm.targetType">
+            <el-radio value="course">课程</el-radio>
+            <el-radio value="package">课程套餐</el-radio>
+          </el-radio-group>
         </el-form-item>
 
-        <el-form-item label="课程名称" required>
-          <el-input v-model="generateForm.courseName" placeholder="请输入课程名称" />
+        <el-form-item :label="generateForm.targetType === 'course' ? '选择课程' : '选择套餐'" required>
+          <el-select
+            v-model="generateForm.targetIds"
+            multiple
+            filterable
+            placeholder="可选择多个"
+            style="width: 100%"
+            @change="() => {}"
+          >
+            <el-option
+              v-for="item in targetOptions"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+          <div class="field-tip">选择后自动填充兑换内容</div>
+        </el-form-item>
+
+        <el-form-item label="兑换内容" required>
+          <el-input
+            v-model="generateForm.targetName"
+            placeholder="自动填充，可修改"
+            style="width: 100%"
+          />
+          <div class="field-tip">如："Vue3入门"、"2个课程"、"全栈开发套餐"</div>
         </el-form-item>
 
         <el-form-item label="生成数量" required>
           <el-input-number v-model="generateForm.count" :min="1" :max="100" />
         </el-form-item>
 
-        <el-form-item label="有效期" required>
-          <el-input-number v-model="generateForm.expireDays" :min="1" :max="365" />
-          <div class="field-tip">天</div>
+        <el-form-item label="兑换码有效期">
+          <el-checkbox v-model="generateForm.codeNeverExpire">永不过期</el-checkbox>
+          <el-input-number
+            v-if="!generateForm.codeNeverExpire"
+            v-model="generateForm.codeExpireDays"
+            :min="1"
+            :max="3650"
+          />
+          <div class="field-tip" v-if="!generateForm.codeNeverExpire">天</div>
+        </el-form-item>
+
+        <el-form-item label="兑换后有效期">
+          <el-checkbox v-model="generateForm.accessNeverExpire">永不过期</el-checkbox>
+          <el-input-number
+            v-if="!generateForm.accessNeverExpire"
+            v-model="generateForm.accessValidDays"
+            :min="1"
+            :max="3650"
+          />
+          <div class="field-tip" v-if="!generateForm.accessNeverExpire">天</div>
         </el-form-item>
 
         <el-form-item label="备注">

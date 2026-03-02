@@ -6,7 +6,8 @@
 export type ContentType = 'video' | 'audio' | 'ppt' | 'document' | 'rich-text';
 export type VideoType = 'upload' | 'third-party';
 export type CourseStatus = 'draft' | 'published' | 'offline';
-export type LearningStatus = 'learning' | 'completed' | 'dropped';
+// LearningStatus 已移至 learning-storage.ts，统一使用那里的 LearningStatus
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';  // 评价审核状态
 
 // 课时接口
 export interface Lesson {
@@ -50,8 +51,8 @@ export interface Course {
   courseName: string;
   categoryId: number;
   categoryName: string;
-  teacherId: number;
-  teacherName: string;
+  teacherIds?: number[];      // 讲师ID数组（可选）
+  teacherNames?: string[];    // 讲师名称数组（可选）
   courseType: string;
   difficulty: string;
   price: number;
@@ -92,27 +93,15 @@ export interface CourseReview {
   replyTime?: string;
   reviewTime: string;
   likes: number;
+  // 审核字段
+  status: ReviewStatus;        // 审核状态
+  rejectReason?: string;       // 拒绝原因
+  auditTime?: string;          // 审核时间
+  auditor?: string;            // 审核人
 }
 
-// 学员学习记录接口
-export interface StudentLearningRecord {
-  recordId: string;
-  courseId: number;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  enrollTime: string;
-  progress: number;
-  completedLessons: string[];
-  lastWatchTime: string;
-  lastWatchLesson: string;
-  totalWatchDuration: number;
-  status: LearningStatus;
-}
-
-const COURSE_STORAGE_KEY = 'admin_courses';
-const REVIEW_STORAGE_KEY = 'course_reviews';
-const LEARNING_RECORD_KEY = 'student_learning_records';
+// StudentLearningRecord 接口和相关功能已移至 learning-storage.ts，统一使用那里的学习记录管理
+const defaultLearningRecords: any[] = [];
 
 // 默认课程数据
 const defaultCourses: Course[] = [
@@ -121,8 +110,8 @@ const defaultCourses: Course[] = [
     courseName: 'Vue3 从入门到精通',
     categoryId: 1,
     categoryName: '前端开发',
-    teacherId: 1,
-    teacherName: '张老师',
+    teacherIds: [1],
+    teacherNames: ['张老师'],
     courseType: 'paid',
     difficulty: 'intermediate',
     price: 199,
@@ -195,8 +184,8 @@ const defaultCourses: Course[] = [
     courseName: 'React 实战开发',
     categoryId: 1,
     categoryName: '前端开发',
-    teacherId: 2,
-    teacherName: '李老师',
+    teacherIds: [2],
+    teacherNames: ['李老师'],
     courseType: 'paid',
     difficulty: 'intermediate',
     price: 299,
@@ -222,8 +211,8 @@ const defaultCourses: Course[] = [
     courseName: 'TypeScript 进阶',
     categoryId: 1,
     categoryName: '前端开发',
-    teacherId: 3,
-    teacherName: '王老师',
+    teacherIds: [3],
+    teacherNames: ['王老师'],
     courseType: 'paid',
     difficulty: 'advanced',
     price: 159,
@@ -258,6 +247,7 @@ const defaultReviews: CourseReview[] = [
     content: '课程内容很棒，老师讲得非常详细！',
     reviewTime: '2024-01-15',
     likes: 23,
+    status: 'approved',
   },
   {
     reviewId: 'r2',
@@ -271,6 +261,19 @@ const defaultReviews: CourseReview[] = [
     replyTime: '2024-01-14',
     reviewTime: '2024-01-13',
     likes: 12,
+    status: 'approved',
+  },
+  {
+    reviewId: 'r3',
+    courseId: 1,
+    userId: 'u3',
+    userName: '王五',
+    userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=u3',
+    rating: 2,
+    content: '课程质量一般，不太推荐',
+    reviewTime: '2024-01-16',
+    likes: 5,
+    status: 'pending',
   },
 ];
 
@@ -432,6 +435,7 @@ export function addReview(review: Omit<CourseReview, 'reviewId'>): CourseReview 
   const newItem: CourseReview = {
     ...review,
     reviewId: `r_${Date.now()}`,
+    status: 'pending',  // 默认待审核
   };
   list.push(newItem);
   localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(list));
@@ -479,6 +483,58 @@ export function replyReview(reviewId: string, replyContent: string): void {
     list[index].replyContent = replyContent;
     list[index].replyTime = new Date().toISOString().split('T')[0];
     localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(list));
+  }
+}
+
+// 审核评价
+export function auditReview(
+  reviewId: string,
+  status: ReviewStatus,
+  rejectReason?: string,
+  auditor?: string
+): void {
+  const list = JSON.parse(localStorage.getItem(REVIEW_STORAGE_KEY) || '[]');
+  const index = list.findIndex((r: CourseReview) => r.reviewId === reviewId);
+  if (index !== -1) {
+    list[index].status = status;
+    if (status === 'rejected') {
+      list[index].rejectReason = rejectReason;
+    } else {
+      // 如果审核通过，清除拒绝原因
+      delete list[index].rejectReason;
+    }
+    list[index].auditTime = new Date().toISOString().split('T')[0];
+    list[index].auditor = auditor || '系统管理员';
+    localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(list));
+  }
+}
+
+// 获取待审核评价数量
+export function getPendingReviewsCount(): number {
+  initReviewData();
+  const data = localStorage.getItem(REVIEW_STORAGE_KEY);
+  const reviews: CourseReview[] = data ? JSON.parse(data) : [];
+  return reviews.filter((r) => r.status === 'pending').length;
+}
+
+// 数据迁移 - 为旧数据添加审核状态
+export function migrateReviewData(): void {
+  const data = localStorage.getItem(REVIEW_STORAGE_KEY);
+  if (!data) return;
+
+  const reviews = JSON.parse(data);
+  let needUpdate = false;
+
+  reviews.forEach((review: any) => {
+    if (!review.status) {
+      review.status = 'approved';  // 旧数据默认已通过
+      needUpdate = true;
+    }
+  });
+
+  if (needUpdate) {
+    localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(reviews));
+    console.log('评价数据迁移完成');
   }
 }
 
@@ -547,4 +603,5 @@ export function updateLearningProgress(
 // 自动初始化
 initCourseData();
 initReviewData();
+migrateReviewData();  // 数据迁移
 initLearningRecordData();

@@ -28,7 +28,7 @@ const formRef = ref();
 const formData = ref({
   courseName: '',
   categoryId: undefined as number | undefined,
-  teacherId: undefined as number | undefined,
+  teacherIds: [] as number[],
   courseType: 'paid',
   difficulty: 'beginner',
   price: 0,
@@ -46,7 +46,6 @@ const formData = ref({
 const formRules = {
   courseName: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
   categoryId: [{ required: true, message: '请选择课程分类', trigger: 'change' }],
-  teacherId: [{ required: true, message: '请选择讲师', trigger: 'change' }],
   courseCover: [{ required: true, message: '请上传课程封面', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 };
@@ -105,7 +104,7 @@ async function loadCourseData() {
       formData.value = {
         courseName: `课程 ${props.courseId} - 实战教程`,
         categoryId: 1,
-        teacherId: 1,
+        teacherIds: [1],
         courseType: 'paid',
         difficulty: 'intermediate',
         price: 199,
@@ -130,6 +129,18 @@ async function handleSubmit() {
     await formRef.value?.validate();
     loading.value = true;
 
+    // 根据选中的讲师ID查找对应的讲师名称
+    const teacherNames = formData.value.teacherIds?.length
+      ? teacherOptions.value
+          .filter((t) => formData.value.teacherIds?.includes(t.teacherId))
+          .map((t) => t.teacherName)
+      : [];
+
+    console.log('提交的数据:', {
+      ...formData.value,
+      teacherNames,
+    });
+
     // 模拟提交
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -147,7 +158,7 @@ function handleClosed() {
   formData.value = {
     courseName: '',
     categoryId: undefined,
-    teacherId: undefined,
+    teacherIds: [],
     courseType: 'paid',
     difficulty: 'beginner',
     price: 0,
@@ -204,8 +215,15 @@ watch(
         </el-select>
       </el-form-item>
 
-      <el-form-item label="讲师" prop="teacherId">
-        <el-select v-model="formData.teacherId" placeholder="请选择讲师" style="width: 100%">
+      <el-form-item label="讲师">
+        <el-select
+          v-model="formData.teacherIds"
+          placeholder="请选择讲师（可多选）"
+          multiple
+          collapse-tags
+          collapse-tags-tooltip
+          style="width: 100%"
+        >
           <el-option
             v-for="teacher in teacherOptions"
             :key="teacher.teacherId"

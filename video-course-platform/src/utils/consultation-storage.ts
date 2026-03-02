@@ -2,17 +2,34 @@
  * 在线咨询数据存储管理
  */
 
+// 回复方式枚举
+export type ReplyMethod = 'online' | 'phone';
+
+// 回复记录接口
+export interface ReplyRecord {
+  replyId: string;
+  consultationId: string;
+  method: ReplyMethod;           // 回复方式：在线/电话
+  content: string;               // 回复内容
+  replyBy: string;              // 回复人
+  replyTime: string;             // 回复时间
+  phone?: string;               // 联系电话（电话回复时）
+  callDuration?: number;         // 通话时长（电话回复时，秒）
+  callStatus?: 'connected' | 'unconnected' | 'busy'; // 通话状态
+}
+
 export interface Reply {
   id: string;
   consultationId: string;
   responder: string;
-  replyType: 'online' | 'phone' | 'email';
+  replyType: 'online' | 'phone';
   content: string;
   createdAt: string;
 }
 
 export interface Consultation {
   id: string;
+  userId?: string;          // 用户ID（可选，已登录用户提交时填写）
   name: string;
   phone: string;
   email: string;
@@ -22,6 +39,8 @@ export interface Consultation {
   createdAt: string;
   repliedAt?: string;
   replies?: Reply[];
+  replyRecords?: ReplyRecord[];  // 新增回复记录字段
+  lastReplyMethod?: ReplyMethod;  // 新增最后回复方式
 }
 
 const CONSULTATION_STORAGE_KEY = 'portal_consultations';
@@ -100,7 +119,18 @@ export function getAllConsultations(): Consultation[] {
 
 // 根据ID获取咨询详情
 export function getConsultationById(id: string): Consultation | undefined {
-  return getAllConsultations().find((c) => c.id === id);
+  const consultation = getAllConsultations().find((c) => c.id === id);
+
+  if (consultation) {
+    // 加载回复记录
+    const REPLY_RECORD_STORAGE_KEY = 'consultation_reply_records';
+    const replyList = JSON.parse(localStorage.getItem(REPLY_RECORD_STORAGE_KEY) || '[]');
+    consultation.replyRecords = replyList
+      .filter((r: ReplyRecord) => r.consultationId === id)
+      .sort((a, b) => new Date(b.replyTime).getTime() - new Date(a.replyTime).getTime());
+  }
+
+  return consultation;
 }
 
 // 添加咨询
@@ -175,6 +205,53 @@ export function addReply(
 export function getReplies(consultationId: string): Reply[] {
   const consultation = getConsultationById(consultationId);
   return consultation?.replies || [];
+}
+
+// 添加回复记录（新功能）
+export function addReplyRecord(record: Omit<ReplyRecord, 'replyId', 'replyTime'>): ReplyRecord {
+  const REPLY_RECORD_STORAGE_KEY = 'consultation_reply_records';
+  const list = JSON.parse(localStorage.getItem(REPLY_RECORD_STORAGE_KEY) || '[]');
+
+  const newRecord: ReplyRecord = {
+    ...record,
+    replyId: `reply_${Date.now()}`,
+    replyTime: new Date().toISOString(),
+  };
+
+  list.push(newRecord);
+  localStorage.setItem(REPLY_RECORD_STORAGE_KEY, JSON.stringify(list));
+
+  // 更新咨询的回复方式记录
+  updateConsultationReplyMethod(record.consultationId, record.method);
+
+  return newRecord;
+}
+
+// 更新咨询的回复方式
+function updateConsultationReplyMethod(consultationId: string, method: ReplyMethod): void {
+  const consultations = getAllConsultations();
+  const index = consultations.findIndex((c: Consultation) => c.id === consultationId);
+  if (index !== -1) {
+    consultations[index].lastReplyMethod = method;
+    consultations[index].status = 'replied';
+    consultations[index].repliedAt = new Date().toLocaleString('zh-CN');
+
+    // 加载回复记录
+    const REPLY_RECORD_STORAGE_KEY = 'consultation_reply_records';
+    const replyList = JSON.parse(localStorage.getItem(REPLY_RECORD_STORAGE_KEY) || '[]');
+    consultations[index].replyRecords = replyList.filter((r: ReplyRecord) => r.consultationId === consultationId);
+
+    localStorage.setItem(CONSULTATION_STORAGE_KEY, JSON.stringify(consultations));
+  }
+}
+
+// 获取咨询的回复记录（新功能）
+export function getReplyRecords(consultationId: string): ReplyRecord[] {
+  const REPLY_RECORD_STORAGE_KEY = 'consultation_reply_records';
+  const list = JSON.parse(localStorage.getItem(REPLY_RECORD_STORAGE_KEY) || '[]');
+  return list
+    .filter((r: ReplyRecord) => r.consultationId === consultationId)
+    .sort((a, b) => new Date(b.replyTime).getTime() - new Date(a.replyTime).getTime());
 }
 
 // 删除咨询

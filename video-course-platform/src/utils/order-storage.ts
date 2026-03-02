@@ -5,6 +5,8 @@
 export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'alipay' | 'wechat';
 
+import { addLearningRecord } from './course-storage';
+
 export interface Order {
   orderId: string;
   userId: string;
@@ -120,6 +122,25 @@ export function payOrder(orderId: string, paymentMethod: PaymentMethod): Order {
 
   orders[index] = order;
   saveOrders(orders);
+
+  // 订单支付成功后，自动创建学习记录
+  try {
+    addLearningRecord({
+      courseId: parseInt(order.courseId),
+      userId: order.userId,
+      userName: order.userName || '',
+      userAvatar: order.userAvatar || '',
+      enrollTime: order.payTime,
+      progress: 0,
+      completedLessons: [],
+      lastWatchTime: '',
+      lastWatchLesson: '',
+      totalWatchDuration: 0,
+      status: 'learning',
+    });
+  } catch (error) {
+    console.error('创建学习记录失败:', error);
+  }
 
   return order;
 }

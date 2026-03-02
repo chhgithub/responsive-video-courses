@@ -45,6 +45,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/member/my-favorites.vue'),
         meta: { title: '我的收藏' },
       },
+      {
+        path: 'message',
+        name: 'MemberMessage',
+        component: () => import('@/views/member/message/index.vue'),
+        meta: { title: '消息中心' },
+      },
     ],
   },
 ];

@@ -9,6 +9,8 @@ import {
 } from '@/utils/news-storage';
 import { getPublishedCourses } from '@/utils/portal-course-adapter';
 import type { PortalCourse } from '@/utils/portal-course-adapter';
+import { addConsultation } from '@/utils/consultation-storage';
+import { ElMessage } from 'element-plus';
 
 import BannerCarousel from './components/BannerCarousel.vue';
 import ConsultationForm from './components/ConsultationForm.vue';
@@ -151,6 +153,13 @@ async function loadFeaturedCourses() {
 // 咨询提交
 function handleConsultSubmit(data: unknown) {
   console.log('咨询提交:', data);
+  try {
+    addConsultation(data as any);
+    ElMessage.success('咨询已提交，我们会尽快回复您！');
+  } catch (error: any) {
+    console.error('提交咨询失败:', error);
+    ElMessage.error('提交咨询失败，请重试');
+  }
 }
 
 onMounted(() => {

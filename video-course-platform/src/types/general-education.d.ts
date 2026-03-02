@@ -31,6 +31,11 @@ export interface Organization {
 export type RedemptionCodeStatus = 'unused' | 'used' | 'expired';
 
 /**
+ * 兑换码目标类型
+ */
+export type RedemptionCodeTargetType = 'course' | 'package';
+
+/**
  * 兑换码信息
  */
 export interface RedemptionCode {
@@ -38,12 +43,21 @@ export interface RedemptionCode {
   code: string;           // 兑换码（唯一）
   organizationId: string; // 所属单位ID
   organizationName: string; // 单位名称（冗余，便于查询）
-  courseId: string;       // 关联的课程ID
-  courseName: string;     // 课程名称（冗余）
+
+  // 目标内容（课程或套餐）
+  targetType: RedemptionCodeTargetType; // 目标类型：课程/套餐
+  targetIds: string[];                  // 目标ID列表（支持多个）
+  targetName?: string;                 // 目标名称（可选，兼容旧数据，新数据不存储）
+
+  // 兑换码有效期
+  codeExpireTime?: string;  // 兑换码过期时间（空=永不过期）
+
+  // 兑换后有效期
+  accessValidDays?: number; // 兑换后有效期天数（空=永不过期）
+
   status: RedemptionCodeStatus;
   usedBy?: string;        // 使用者用户ID
   usedTime?: string;      // 使用时间
-  expireTime: string;    // 过期时间
   note?: string;          // 备注
   createTime: string;
 }
@@ -115,12 +129,27 @@ export interface UserCourseAccess {
   id: string;
   userId: string;
   courseId: string;
+  packageName?: string;          // 套餐名称（如果是套餐兑换）
   accessSource: AccessSource;     // 来源：购买/兑换
   redemptionCode?: string;        // 兑换码（如果是兑换）
   organizationId?: string;        // 单位ID（如果是兑换）
   organizationName?: string;      // 单位名称
   acquireTime: string;            // 获取时间
   expireTime?: string;            // 过期时间（兑换课程有时限）
+}
+
+// ==================== 用户单位绑定关系 ====================
+
+/**
+ * 用户-单位绑定关系
+ */
+export interface UserOrganization {
+  id: string;
+  userId: string;                 // 用户ID
+  organizationId: string;        // 单位ID
+  organizationName: string;      // 单位名称
+  bindTime: string;               // 绑定时间（首次使用该单位兑换码的时间）
+  redeemCount: number;           // 已兑换次数
 }
 
 // ==================== 存储数据结构 ====================
@@ -135,4 +164,5 @@ export interface GeneralEducationStorage {
   redemptionRecords: RedemptionRecord[];
   intros: GeneralEducationIntro[];
   userCourseAccess: UserCourseAccess[];
+  userOrganizations: UserOrganization[]; // 用户-单位绑定关系
 }

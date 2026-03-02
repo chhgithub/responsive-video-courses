@@ -331,7 +331,11 @@ onMounted(() => {
         </el-table-column>
         <el-table-column prop="courseName" label="课程名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="categoryName" label="分类" width="120" />
-        <el-table-column prop="teacherName" label="讲师" width="120" />
+        <el-table-column label="讲师" width="150">
+          <template #default="{ row }">
+            {{ row.teacherNames?.length ? row.teacherNames.join('、') : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="价格" width="120">
           <template #default="{ row }">
             <el-tag v-if="row.isFree" type="success">免费</el-tag>

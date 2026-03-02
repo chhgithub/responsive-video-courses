@@ -2,6 +2,8 @@
  * 前台用户数据存储管理
  */
 
+import type { UserRole } from '@/api/types/model';
+
 export interface User {
   userId: string;
   username: string;
@@ -10,23 +12,27 @@ export interface User {
   avatar?: string;
   phone?: string;
   email?: string;
+  role?: UserRole;
   gender?: 'male' | 'female' | 'other';
   age?: number;
   birthday?: string;
+  organizationId?: string; // 绑定的单位ID
   createTime: string;
 }
 
 const USER_STORAGE_KEY = 'portal_users';
+const USER_STORAGE_VERSION = '3.0'; // 用户数据版本
 
 // 默认用户数据（测试用）
 const defaultUsers: User[] = [
   {
     userId: '1',
     username: 'test',
-    password: 'test', // 实际应该加密
-    nickname: '测试用户',
+    password: 'test',
+    nickname: '测试学员',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '13800138000',
+    role: 'student',
     gender: 'male',
     age: 25,
     createTime: '2024-01-01',
@@ -34,24 +40,120 @@ const defaultUsers: User[] = [
   {
     userId: '2',
     username: 'admin',
-    password: 'admin',
-    nickname: '管理员',
+    password: '123456',
+    nickname: '总管理员',
     avatar: 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png',
     phone: '13900139000',
+    role: 'admin',
     gender: 'female',
     age: 30,
     createTime: '2024-01-02',
   },
+  {
+    userId: '3',
+    username: 'org_admin',
+    password: '123456',
+    nickname: '单位管理员',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=org_admin',
+    phone: '13900240000',
+    role: 'org_admin',
+    gender: 'male',
+    age: 35,
+    organizationId: 'test-org-001',
+    createTime: '2024-01-03',
+  },
+  // 测试单位学员（test-org-001）
+  {
+    userId: '1001',
+    username: 'student1',
+    password: '123456',
+    nickname: '张三',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=student1',
+    phone: '13800138001',
+    email: 'zhangsan@test.com',
+    role: 'student',
+    gender: 'male',
+    age: 22,
+    organizationId: 'test-org-001',
+    createTime: '2024-02-01',
+  },
+  {
+    userId: '1002',
+    username: 'student2',
+    password: '123456',
+    nickname: '李四',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=student2',
+    phone: '13800138002',
+    email: 'lisi@test.com',
+    role: 'student',
+    gender: 'female',
+    age: 23,
+    organizationId: 'test-org-001',
+    createTime: '2024-02-02',
+  },
+  {
+    userId: '1003',
+    username: 'student3',
+    password: '123456',
+    nickname: '王五',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=student3',
+    phone: '13800138003',
+    email: 'wangwu@test.com',
+    role: 'student',
+    gender: 'male',
+    age: 21,
+    organizationId: 'test-org-001',
+    createTime: '2024-02-03',
+  },
+  {
+    userId: '1004',
+    username: 'student4',
+    password: '123456',
+    nickname: '赵六',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=student4',
+    phone: '13800138004',
+    email: 'zhaoliu@test.com',
+    role: 'student',
+    gender: 'female',
+    age: 24,
+    organizationId: 'test-org-001',
+    createTime: '2024-02-04',
+  },
+  {
+    userId: '1005',
+    username: 'student5',
+    password: '123456',
+    nickname: '孙七',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=student5',
+    phone: '13800138005',
+    email: 'sunqi@test.com',
+    role: 'student',
+    gender: 'male',
+    age: 25,
+    organizationId: 'test-org-001',
+    createTime: '2024-02-05',
+  },
 ];
 
 /**
- * 初始化用户数据
+ * 初始化用户数据（检查版本）
  */
 export function initUserData() {
   const existing = localStorage.getItem(USER_STORAGE_KEY);
+
   if (!existing) {
     console.log('初始化默认用户数据...');
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(defaultUsers));
+    localStorage.setItem(USER_STORAGE_KEY + '_version', USER_STORAGE_VERSION);
+    return;
+  }
+
+  // 检查版本，如果不匹配则重新初始化
+  const savedVersion = localStorage.getItem(USER_STORAGE_KEY + '_version');
+  if (savedVersion !== USER_STORAGE_VERSION) {
+    console.log('用户数据版本更新，重新初始化...');
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(defaultUsers));
+    localStorage.setItem(USER_STORAGE_KEY + '_version', USER_STORAGE_VERSION);
   }
 }
 
@@ -102,6 +204,11 @@ export function registerUser(userData: Omit<User, 'userId' | 'createTime'>): Use
   // 检查手机号是否已存在
   if (userData.phone && getUserByPhone(userData.phone)) {
     throw new Error('手机号已被注册');
+  }
+
+  // 单位管理员必须绑定单位
+  if (userData.role === 'org_admin' && !userData.organizationId) {
+    throw new Error('单位管理员必须绑定单位');
   }
 
   // 创建新用户
