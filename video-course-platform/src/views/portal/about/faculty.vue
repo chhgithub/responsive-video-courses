@@ -253,8 +253,8 @@ async function handleSubmitConsultation() {
 
                   <el-form-item label="专业领域" required>
                     <el-input
-                      :model-value="applicationForm.specialties.join(', ')"
-                      placeholder="多个领域用逗号分隔"
+                      :model-value="applicationForm.specialties.join('、')"
+                      placeholder="多个领域用顿号分隔"
                       @input="handleSpecialtiesInput"
                     />
                     <div class="preview-tags">

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores';
 import { ElMessage } from 'element-plus';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
 import { createOrder, payOrder } from '@/utils/order-storage';
-import type { PaymentMethod } from '@/utils/order-storage';
+import type { PaymentMethod, PurchaseType } from '@/utils/order-storage';
 import {
   getPackagesByCourse,
   type CoursePackage,
@@ -21,6 +21,8 @@ const loading = ref(false);
 const paying = ref(false);
 const course = ref<any>(null);
 const selectedPayment = ref<PaymentMethod>('alipay');
+const selectedPurchaseType = ref<PurchaseType>('purchase');
+const redeemCode = ref('');  // 兑换码
 
 const orderId = ref<string>('');
 
@@ -85,6 +87,7 @@ async function createOrderData() {
       userName: authStore.userInfo.nickname || authStore.userInfo.username,
       userAvatar: authStore.userInfo.avatar,
       userEmail: authStore.userInfo.email,
+      purchaseType: selectedPurchaseType.value,  // 添加购买方式
       courseId: course.value.id,
       courseName: course.value.title,
       courseCover: course.value.coverImage,
@@ -104,6 +107,11 @@ async function createOrderData() {
 // 选择支付方式
 function selectPayment(method: PaymentMethod) {
   selectedPayment.value = method;
+}
+
+// 选择购买方式
+function selectPurchaseType(type: PurchaseType) {
+  selectedPurchaseType.value = type;
 }
 
 // 确认支付
@@ -215,6 +223,45 @@ function handleCancel() {
           </div>
         </el-card>
 
+        <!-- 购买方式 -->
+        <!-- <el-card class="purchase-type-card" shadow="never">
+          <template #header>
+            <div class="card-header">
+              <span class="header-title">选择购买方式</span>
+            </div>
+          </template>
+          <div class="purchase-types">
+            <div
+              class="purchase-type"
+              :class="{ active: selectedPurchaseType === 'purchase' }"
+              @click="selectPurchaseType('purchase')"
+            >
+              <div class="type-content">
+                <el-icon><Wallet /></el-icon>
+                <span class="type-name">购买</span>
+                <span class="type-desc">使用支付宝或微信支付</span>
+              </div>
+              <div v-if="selectedPurchaseType === 'purchase'" class="check-icon">
+                <el-icon><Check /></el-icon>
+              </div>
+            </div>
+            <div
+              class="purchase-type"
+              :class="{ active: selectedPurchaseType === 'redeem' }"
+              @click="selectPurchaseType('redeem')"
+            >
+              <div class="type-content">
+                <el-icon><Key /></el-icon>
+                <span class="type-name">兑换</span>
+                <span class="type-desc">使用兑换码兑换</span>
+              </div>
+              <div v-if="selectedPurchaseType === 'redeem'" class="check-icon">
+                <el-icon><Check /></el-icon>
+              </div>
+            </div>
+          </div>
+        </el-card> -->
+
         <!-- 支付方式 -->
         <el-card class="payment-card" shadow="never">
           <template #header>
@@ -262,10 +309,26 @@ function handleCancel() {
               </div>
             </div>
           </div>
+
+          <!-- 兑换码输入（仅兑换时显示） -->
+          <el-card v-if="selectedPurchaseType === 'redeem'" class="redeem-card" shadow="never">
+            <template #header>
+              <div class="card-header">
+                <span class="header-title">输入兑换码</span>
+              </div>
+            </template>
+            <el-input
+              v-model="redeemCode"
+              placeholder="请输入兑换码"
+              size="large"
+              clearable
+            />
+          </el-card>
         </el-card>
 
-        <!-- 订单详情 -->
-        <el-card class="order-card" shadow="never">
+        <!-- 支付方式（仅购买时显示） -->
+        <el-card v-if="selectedPurchaseType === 'purchase'" class="payment-card" shadow="never">
+          <el-card class="order-card" shadow="never">
           <template #header>
             <div class="card-header">
               <span class="header-title">订单详情</span>
@@ -287,6 +350,7 @@ function handleCancel() {
               <span class="item-value final-price">¥{{ course.price }}</span>
             </div>
           </div>
+          </el-card>
         </el-card>
 
         <!-- 操作按钮 -->

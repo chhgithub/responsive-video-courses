@@ -12,6 +12,7 @@ import {
   getEstimatedRecipientCount,
   type BroadcastRecord,
   type BroadcastTargetType,
+  type BroadcastMethod,
   type MessageType,
 } from '@/utils/broadcast-storage';
 import { getAllTags } from '@/utils/user-tag-storage';
@@ -49,7 +50,9 @@ const broadcastRecords = ref<BroadcastRecord[]>([]);
 const broadcastForm = ref({
   targetType: 'all' as BroadcastTargetType,
   targetIds: [] as string[],
+  method: 'message' as BroadcastMethod,
   messageType: 'announcement' as MessageType,
+  smsContent: '',
   title: '',
   content: '',
   actionUrl: '',
@@ -60,7 +63,14 @@ const broadcastForm = ref({
 const formRules = {
   title: [{ required: true, message: '请输入消息标题', trigger: 'blur' }],
   content: [{ required: true, message: '请输入消息内容', trigger: 'blur' }],
+  // smsContent: [{ required: true, message: '请输入短信内容', trigger: 'blur' }],
 };
+
+// 发送方式选项
+const broadcastMethodOptions = [
+  { label: '站内信', value: 'message' },
+  { label: '短信', value: 'sms' },
+];
 
 // 消息类型选项
 const messageTypeOptions = [
@@ -107,7 +117,9 @@ function openSendDialog() {
   broadcastForm.value = {
     targetType: 'all',
     targetIds: [],
+    method: 'message',
     messageType: 'announcement',
+    smsContent: '',
     title: '',
     content: '',
     actionUrl: '',
@@ -122,7 +134,9 @@ function closeSendDialog() {
   broadcastForm.value = {
     targetType: 'all',
     targetIds: [],
+    method: 'message',
     messageType: 'announcement',
+    smsContent: '',
     title: '',
     content: '',
     actionUrl: '',
@@ -132,14 +146,24 @@ function closeSendDialog() {
 
 // 发送消息
 async function handleSend() {
-  if (!broadcastForm.value.title.trim()) {
-    ElMessage.warning('请输入消息标题');
-    return;
+  // 站内信需要标题和内容
+  if (broadcastForm.value.method === 'message') {
+    if (!broadcastForm.value.title.trim()) {
+      ElMessage.warning('请输入消息标题');
+      return;
+    }
+    if (!broadcastForm.value.content.trim()) {
+      ElMessage.warning('请输入消息内容');
+      return;
+    }
   }
-  if (!broadcastForm.value.content.trim()) {
-    ElMessage.warning('请输入消息内容');
-    return;
-  }
+  // 短信需要内容
+  // if (broadcastForm.value.method === 'sms') {
+  //   if (!broadcastForm.value.smsContent.trim()) {
+  //     ElMessage.warning('请输入短信内容');
+  //     return;
+  //   }
+  // }
 
   if (broadcastForm.value.targetType !== 'all' && broadcastForm.value.targetIds.length === 0) {
     ElMessage.warning('请选择目标');
@@ -156,6 +180,7 @@ async function handleSend() {
     switch (broadcastForm.value.targetType) {
       case 'all':
         await broadcastToAll(
+          broadcastForm.value.method,
           broadcastForm.value.messageType,
           broadcastForm.value.title,
           broadcastForm.value.content,
@@ -171,6 +196,7 @@ async function handleSend() {
         await broadcastByTag(
           tagId,
           tag?.tagName || '未知标签',
+          broadcastForm.value.method,
           broadcastForm.value.messageType,
           broadcastForm.value.title,
           broadcastForm.value.content,
@@ -186,6 +212,7 @@ async function handleSend() {
         await broadcastByCourseStudents(
           courseId,
           course?.courseName || '未知课程',
+          broadcastForm.value.method,
           broadcastForm.value.messageType,
           broadcastForm.value.title,
           broadcastForm.value.content,
@@ -201,6 +228,7 @@ async function handleSend() {
         await broadcastByPackageStudents(
           packageId,
           pkg?.packageName || '未知套餐',
+          broadcastForm.value.method,
           broadcastForm.value.messageType,
           broadcastForm.value.title,
           broadcastForm.value.content,
@@ -216,6 +244,7 @@ async function handleSend() {
         await broadcastByOrganizationMembers(
           orgId,
           org?.name || '未知单位',
+          broadcastForm.value.method,
           broadcastForm.value.messageType,
           broadcastForm.value.title,
           broadcastForm.value.content,
@@ -269,6 +298,15 @@ function getStatusText(status: BroadcastRecord['status']) {
     failed: '发送失败',
   };
   return textMap[status];
+}
+
+// 获取发送方式文本
+function getMethodText(method: BroadcastMethod) {
+  const textMap: Record<BroadcastMethod, string> = {
+    message: '站内信',
+    sms: '短信',
+  };
+  return textMap[method];
 }
 
 // 获取消息类型文本
@@ -330,6 +368,13 @@ onMounted(() => {
         <el-table-column label="目标" width="200">
           <template #default="{ row }">
             {{ row.targetName }}
+          </template>
+        </el-table-column>
+        <el-table-column label="发送方式" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.method === 'sms' ? 'warning' : 'primary'" size="small">
+              {{ getMethodText(row.method) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="消息类型" width="120">
@@ -460,6 +505,17 @@ onMounted(() => {
           <span class="estimate-count">{{ estimatedCount }} 人</span>
         </el-form-item>
 
+        <el-form-item label="发送方式">
+          <el-select v-model="broadcastForm.method" style="width: 100%">
+            <el-option
+              v-for="option in broadcastMethodOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="消息类型">
           <el-select v-model="broadcastForm.messageType" style="width: 100%">
             <el-option
@@ -471,18 +527,8 @@ onMounted(() => {
           </el-select>
         </el-form-item>
 
-        <el-form-item label="优先级">
-          <el-select v-model="broadcastForm.priority" style="width: 100%">
-            <el-option
-              v-for="option in priorityOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="消息标题" required>
+        <!-- 站内信：显示消息标题和内容 -->
+        <el-form-item v-if="broadcastForm.method === 'message'" label="消息标题" required>
           <el-input
             v-model="broadcastForm.title"
             placeholder="请输入消息标题"
@@ -491,7 +537,7 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-form-item label="消息内容" required>
+        <el-form-item v-if="broadcastForm.method === 'message'" label="消息内容" required>
           <el-input
             v-model="broadcastForm.content"
             type="textarea"
@@ -502,11 +548,27 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-form-item label="操作链接">
+        <!-- 短信：显示短信内容 -->
+        <!-- <el-form-item v-if="broadcastForm.method === 'sms'" label="短信内容" required>
           <el-input
-            v-model="broadcastForm.actionUrl"
-            placeholder="请输入操作链接（可选）"
+            v-model="broadcastForm.smsContent"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入短信内容"
+            maxlength="500"
+            show-word-limit
           />
+        </el-form-item> -->
+
+        <el-form-item label="优先级">
+          <el-select v-model="broadcastForm.priority" style="width: 100%">
+            <el-option
+              v-for="option in priorityOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
         </el-form-item>
 
         <el-alert

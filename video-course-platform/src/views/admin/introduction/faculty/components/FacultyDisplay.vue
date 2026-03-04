@@ -34,7 +34,7 @@ const formData = ref<TeacherForm>({
 
 const formRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  avatar: [{ required: true, message: '请输入头像URL', trigger: 'blur' }],
+  // avatar: [{ required: true, message: '请输入头像URL', trigger: 'blur' }],
   title: [{ required: true, message: '请输入头衔', trigger: 'blur' }],
   intro: [{ required: true, message: '请输入简介', trigger: 'blur' }],
 };
@@ -198,17 +198,17 @@ function handleAchievementsInput(value: string) {
               <el-icon><Plus /></el-icon>
             </div>
           </div>
-          <el-input
+          <!-- <el-input
             v-model="formData.avatar"
             placeholder="请输入头像URL"
             style="margin-top: 10px"
-          />
+          /> -->
         </el-form-item>
 
         <el-form-item label="专业领域">
           <el-input
-            :model-value="formData.specialties.join(', ')"
-            placeholder="多个领域用逗号分隔"
+            :model-value="formData.specialties.join('、')"
+            placeholder="多个领域用顿号分隔"
             @input="handleSpecialtiesInput"
           />
           <div class="preview-tags">

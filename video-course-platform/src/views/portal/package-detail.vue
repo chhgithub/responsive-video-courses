@@ -12,8 +12,10 @@ import {
 } from '@/utils/course-package-storage';
 import {
   addPackageLearningRecord,
+  getPackageLearningRecordsByUser,
   type PackageLearningRecord,
 } from '@/utils/course-package-storage';
+import { getUserOrders, type Order } from '@/utils/order-storage';
 
 const route = useRoute();
 const router = useRouter();
@@ -30,13 +32,36 @@ const packageId = computed(() => parseInt(route.params.id as string));
 const checkPurchased = computed(() => {
   if (!authStore.userInfo || !pkg.value) return false;
 
-  const recordsData = localStorage.getItem('package_learning_records');
-  if (!recordsData) return false;
+  const userId = authStore.userInfo.userId;
+  const pid = packageId.value;
 
-  const records: PackageLearningRecord[] = JSON.parse(recordsData);
-  return records.some(
-    r => r.packageId === packageId.value && r.userId === authStore.userInfo.userId
-  );
+  // 方法1：检查学习记录
+  const recordsData = localStorage.getItem('package_learning_records');
+  let hasLearningRecord = false;
+  if (recordsData) {
+    try {
+      const records: PackageLearningRecord[] = JSON.parse(recordsData);
+      hasLearningRecord = records.some(
+        r => r.packageId === pid && r.userId === userId
+      );
+    } catch (e) {
+      console.error('解析学习记录失败:', e);
+    }
+  }
+
+  // 方法2：检查订单记录（包含已支付和已兑换的套餐订单）
+  let hasPaidOrder = false;
+  try {
+    const orders = getUserOrders(userId);
+    hasPaidOrder = orders.some(
+      (o: Order) => o.type === 'package' && o.packageId === pid.toString() && (o.status === 'paid' || o.status === 'refunded' || o.status === 'refund_failed')
+    );
+  } catch (e) {
+    console.error('检查订单记录失败:', e);
+  }
+
+  // 任一方法满足即可
+  return hasLearningRecord || hasPaidOrder;
 });
 
 // 加载套餐详情
@@ -214,7 +239,7 @@ onMounted(() => {
 
             <!-- 操作按钮 -->
             <div class="action-buttons">
-              <el-button
+              <!-- <el-button
                 v-if="isPurchased"
                 type="success"
                 size="large"
@@ -222,9 +247,9 @@ onMounted(() => {
                 @click="startLearning"
               >
                 开始学习
-              </el-button>
+              </el-button> -->
               <el-button
-                v-else
+                v-if="!isPurchased"
                 type="danger"
                 size="large"
                 :loading="purchasing"
@@ -232,9 +257,6 @@ onMounted(() => {
                 @click="handlePurchase"
               >
                 {{ purchasing ? '购买中...' : '立即购买' }}
-              </el-button>
-              <el-button size="large" @click="router.push('/portal/packages')">
-                返回列表
               </el-button>
             </div>
           </div>
@@ -280,13 +302,24 @@ onMounted(() => {
               <!-- <el-tag v-if="course.isRequired" type="danger" size="small">必修</el-tag>
               <el-tag v-else type="info" size="small">选修</el-tag> -->
             </div>
-            <el-button
-              link
-              type="primary"
-              @click="goToCourseDetail(course.courseId)"
-            >
-              查看课程详情
-            </el-button>
+            <div class="course-actions">
+              <el-button
+                v-if="isPurchased"
+                type="success"
+                size="small"
+                :icon="VideoPlay"
+                @click="router.push(`/portal/course-learn/${course.courseId}`)"
+              >
+                开始学习
+              </el-button>
+              <el-button
+                link
+                type="primary"
+                @click="goToCourseDetail(course.courseId)"
+              >
+                查看课程详情
+              </el-button>
+            </div>
           </div>
         </div>
       </el-card>
@@ -482,6 +515,18 @@ onMounted(() => {
   @media (max-width: 640px) {
     flex-direction: column;
     text-align: center;
+  }
+}
+
+.course-actions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-small;
+  align-items: flex-start;
+
+  @media (max-width: 640px) {
+    align-items: center;
+    width: 100%;
   }
 }
 

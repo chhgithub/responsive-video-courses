@@ -225,7 +225,6 @@ watch(
             <div class="student-info">
               <div class="student-name">{{ student.userName }}</div>
               <div class="student-meta">
-                <span>ID: {{ student.userId }}</span>
                 <span>报名时间: {{ student.enrollTime }}</span>
                 <span v-if="student.expiryTime">
                   到期时间: {{ student.expiryTime }}
@@ -297,10 +296,6 @@ watch(
           <el-avatar :src="currentStudent.userAvatar" :size="60" />
           <div class="info-content">
             <div class="student-name">{{ currentStudent.userName }}</div>
-            <div class="info-row">
-              <span class="label">用户ID:</span>
-              <span class="value">{{ currentStudent.userId }}</span>
-            </div>
             <div class="info-row">
               <span class="label">报名时间:</span>
               <span class="value">{{ currentStudent.enrollTime }}</span>

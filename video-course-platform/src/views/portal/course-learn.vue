@@ -7,6 +7,7 @@ import { getPortalCourseById } from '@/utils/portal-course-adapter';
 import { hasUserPurchasedCourse } from '@/utils/order-storage';
 import { getCourseLearningRecord, updateLearningProgress } from '@/utils/learning-storage';
 import { checkUserCourseAccess } from '@/utils/general-education-storage';
+import { getPackageLearningRecordsByUser } from '@/utils/course-package-storage';
 
 const router = useRouter();
 const route = useRoute();
@@ -58,13 +59,19 @@ function checkAccess() {
     return false;
   }
 
-  // 检查是否已购买
+  // 检查是否已购买单课程
   const purchased = hasUserPurchasedCourse(authStore.userInfo.userId, courseId);
 
   // 检查是否已兑换（通识教育）
   const redeemed = checkUserCourseAccess(authStore.userInfo.userId, courseId);
 
-  if (!purchased && !redeemed) {
+  // 检查是否购买了包含此课程的套餐
+  const packageRecords = getPackageLearningRecordsByUser(authStore.userInfo.userId);
+  const hasPackage = packageRecords.some(record =>
+    record.courseProgress?.some(cp => cp.courseId === parseInt(courseId))
+  );
+
+  if (!purchased && !redeemed && !hasPackage) {
     ElMessageBox.confirm('该课程需要购买后才能学习', '提示', {
       confirmButtonText: '去购买',
       cancelButtonText: '返回',

@@ -301,7 +301,7 @@ function handleVideoUrlInput() {
         </div>
       </el-form-item>
 
-      <el-form-item label="封面图" prop="thumbnailUrl">
+      <!-- <el-form-item label="封面图" prop="thumbnailUrl">
         <el-upload
           v-model:file-list="thumbnailFileList"
           class="thumbnail-uploader"
@@ -315,7 +315,7 @@ function handleVideoUrlInput() {
           <el-icon><Plus /></el-icon>
         </el-upload>
         <div class="form-hint">建议尺寸：300x200，支持 jpg、png 格式</div>
-      </el-form-item>
+      </el-form-item> -->
 
       <el-form-item v-if="formData.thumbnailUrl" label="预览">
         <el-image

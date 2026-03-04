@@ -23,6 +23,9 @@ export type BroadcastTargetType =
   | 'package'     // 学习某套餐的用户
   | 'organization'; // 某单位的成员
 
+// 群发发送方式
+export type BroadcastMethod = 'message' | 'sms';
+
 // 群发记录接口
 export interface BroadcastRecord {
   broadcastId: string;
@@ -31,6 +34,7 @@ export interface BroadcastRecord {
   targetIds: string[];             // 目标ID列表（标签ID、课程ID或单位ID）
 
   // 消息内容
+  method: BroadcastMethod;          // 发送方式：站内信/短信
   type: MessageType;               // 消息类型
   title: string;                   // 消息标题
   content: string;                 // 消息内容
@@ -146,6 +150,7 @@ function getAllUserIds(): string[] {
 export async function broadcastByTag(
   tagId: string,
   tagName: string,
+  method: BroadcastMethod,
   messageType: MessageType,
   title: string,
   content: string,
@@ -162,6 +167,7 @@ export async function broadcastByTag(
     target: 'tag',
     targetName: `标签：${tagName}`,
     targetIds: [tagId],
+    method,
     type: messageType,
     title,
     content,
@@ -180,7 +186,7 @@ export async function broadcastByTag(
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // 调用广播消息函数
-    broadcastMessage(userIds, {
+    broadcastMessage(userIds, method, {
       type: messageType,
       title,
       content,
@@ -202,6 +208,7 @@ export async function broadcastByTag(
 export async function broadcastByCourseStudents(
   courseId: number,
   courseName: string,
+  method: BroadcastMethod,
   messageType: MessageType,
   title: string,
   content: string,
@@ -219,6 +226,7 @@ export async function broadcastByCourseStudents(
     target: 'course',
     targetName: `课程学员：${courseName}`,
     targetIds: [courseId.toString()],
+    method,
     type: messageType,
     title,
     content,
@@ -237,7 +245,7 @@ export async function broadcastByCourseStudents(
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // 调用广播消息函数
-    broadcastMessage(userIds, {
+    broadcastMessage(userIds, method, {
       type: messageType,
       title,
       content,
@@ -259,6 +267,7 @@ export async function broadcastByCourseStudents(
 export async function broadcastByPackageStudents(
   packageId: number,
   packageName: string,
+  method: BroadcastMethod,
   messageType: MessageType,
   title: string,
   content: string,
@@ -276,6 +285,7 @@ export async function broadcastByPackageStudents(
     target: 'package',
     targetName: `套餐学员：${packageName}`,
     targetIds: [packageId.toString()],
+    method,
     type: messageType,
     title,
     content,
@@ -294,7 +304,7 @@ export async function broadcastByPackageStudents(
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // 调用广播消息函数
-    broadcastMessage(userIds, {
+    broadcastMessage(userIds, method, {
       type: messageType,
       title,
       content,
@@ -316,6 +326,7 @@ export async function broadcastByPackageStudents(
 export async function broadcastByOrganizationMembers(
   organizationId: string,
   organizationName: string,
+  method: BroadcastMethod,
   messageType: MessageType,
   title: string,
   content: string,
@@ -335,6 +346,7 @@ export async function broadcastByOrganizationMembers(
     target: 'organization',
     targetName: `单位成员：${organizationName}`,
     targetIds: [organizationId],
+    method,
     type: messageType,
     title,
     content,
@@ -353,7 +365,7 @@ export async function broadcastByOrganizationMembers(
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // 调用广播消息函数
-    broadcastMessage(userIds, {
+    broadcastMessage(userIds, method, {
       type: messageType,
       title,
       content,
@@ -373,6 +385,7 @@ export async function broadcastByOrganizationMembers(
 
 // 全员群发
 export async function broadcastToAll(
+  method: BroadcastMethod,
   messageType: MessageType,
   title: string,
   content: string,
@@ -389,6 +402,7 @@ export async function broadcastToAll(
     target: 'all',
     targetName: '全部用户',
     targetIds: [],
+    method,
     type: messageType,
     title,
     content,
@@ -407,7 +421,7 @@ export async function broadcastToAll(
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // 调用广播消息函数
-    broadcastMessage(userIds, {
+    broadcastMessage(userIds, method, {
       type: messageType,
       title,
       content,

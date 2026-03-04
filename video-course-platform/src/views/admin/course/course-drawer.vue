@@ -40,8 +40,66 @@ const formData = ref({
   courseCover: '',
   courseIntro: '',
   sortOrder: 0,
-  status: 'draft',
+  status: 'offline',
 });
+
+// 上传文件列表
+const coverFileList = ref([]);
+const uploading = ref(false);
+const uploadProgress = ref(0);
+
+// 图片上传前验证
+const beforeCoverUpload: UploadProps['beforeUpload'] = (rawFile) => {
+  const isImage = rawFile.type.startsWith('image/');
+  const isLt5M = rawFile.size / 1024 / 1024 < 5;
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！');
+    return false;
+  }
+
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB！');
+    return false;
+  }
+
+  return true;
+};
+
+// 图片上传处理
+const handleCoverUpload: UploadProps['onChange'] = (uploadFile) => {
+  if (!beforeCoverUpload(uploadFile.raw)) {
+    return;
+  }
+
+  const file = uploadFile.raw;
+  uploading.value = true;
+  uploadProgress.value = 0;
+
+  // 模拟上传进度
+  const interval = setInterval(() => {
+    uploadProgress.value += 10;
+    if (uploadProgress.value >= 100) {
+      clearInterval(interval);
+      uploadProgress.value = 100;
+
+      // 模拟获取图片URL
+      setTimeout(() => {
+        formData.value.courseCover = `https://picsum.photos/seed/${Date.now()}/1280/400`;
+        ElMessage.success('封面上传成功');
+        uploading.value = false;
+        uploadProgress.value = 0;
+      }, 500);
+    }
+  }, 100);
+};
+
+// 移除图片
+const handleCoverRemove: UploadProps['onRemove'] = () => {
+  formData.value.courseCover = '';
+  coverFileList.value = [];
+  uploadProgress.value = 0;
+};
 
 const formRules = {
   courseName: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
@@ -71,9 +129,8 @@ const difficulties = [
 ];
 
 const statuses = [
-  { label: '草稿', value: 'draft' },
-  { label: '已发布', value: 'published' },
-  { label: '已下架', value: 'offline' },
+  { label: '上架', value: 'published' },
+  { label: '未上架', value: 'offline' },
 ];
 
 async function loadOptions() {
@@ -272,19 +329,6 @@ watch(
         <el-switch v-model="formData.isFree" active-text="是" inactive-text="否" />
       </el-form-item>
 
-      <!-- <el-form-item label="可试看" prop="isTrial">
-        <el-switch v-model="formData.isTrial" active-text="是" inactive-text="否" />
-      </el-form-item> -->
-
-      <el-form-item v-if="formData.isTrial" label="试看时长" prop="trialDuration">
-        <el-input-number
-          v-model="formData.trialDuration"
-          :min="0"
-          placeholder="试看时长（秒）"
-          style="width: 100%"
-        />
-      </el-form-item>
-
       <el-form-item label="有效期（天）" prop="validDays">
         <el-input-number
           v-model="formData.validDays"
@@ -295,7 +339,34 @@ watch(
       </el-form-item>
 
       <el-form-item label="课程封面" prop="courseCover">
-        <el-input v-model="formData.courseCover" placeholder="请输入课程封面URL" />
+        <el-upload
+          v-model:file-list="coverFileList"
+          :auto-upload="false"
+          :before-upload="beforeCoverUpload"
+          :on-change="handleCoverUpload"
+          :on-remove="handleCoverRemove"
+          accept="image/*"
+          :limit="1"
+          drag
+          list-type="picture-card"
+        >
+          <template #default>
+            <div v-if="!formData.courseCover" class="upload-content">
+              <el-icon class="upload-icon"><UploadFilled /></el-icon>
+              <div class="upload-text">
+                <p>拖拽图片到此处或<em>点击上传</em></p>
+                <p class="upload-hint">支持 jpg、png、gif 格式，大小不超过 5MB</p>
+              </div>
+            </div>
+            <div v-else class="uploaded-image">
+              <img :src="formData.courseCover" alt="课程封面预览" />
+              <div class="image-mask">
+                <el-icon @click="handleCoverRemove"><Delete /></el-icon>
+              </div>
+            </div>
+          </template>
+        </el-upload>
+        <el-progress v-if="uploading" :percentage="uploadProgress" />
       </el-form-item>
 
       <el-form-item label="课程简介" prop="courseIntro">

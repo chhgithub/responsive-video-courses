@@ -61,6 +61,7 @@ export function sendMessageToUser(message: Omit<UserMessage, 'messageId', 'statu
 // 群发消息
 export function broadcastMessage(
   userIds: string[],
+  method: 'message' | 'sms',
   message: Omit<UserMessage, 'messageId', 'userId', 'status', 'createdAt'>
 ): void {
   initMessageData();

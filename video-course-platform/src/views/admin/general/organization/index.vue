@@ -31,7 +31,7 @@ const formData = ref({
 const formRules = {
   name: [{ required: true, message: '请输入单位名称', trigger: 'blur' }],
   code: [{ required: true, message: '请输入单位编码', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择单位类型', trigger: 'change' }],
+  // type: [{ required: true, message: '请选择单位类型', trigger: 'change' }],
 };
 
 const formRef = ref();
@@ -155,13 +155,13 @@ onMounted(() => {
       >
         <el-table-column prop="name" label="单位名称" width="200" />
         <el-table-column prop="code" label="单位编码" width="150" />
-        <el-table-column prop="type" label="单位类型" width="120">
+        <!-- <el-table-column prop="type" label="单位类型" width="120">
           <template #default="{ row }">
             <el-tag :type="row.type === 'family' ? 'success' : 'primary'">
               {{ typeMap[row.type] }}
             </el-tag>
           </template>
-        </el-table-column>
+        </el-table-column> -->
         <el-table-column prop="contactPerson" label="联系人" width="120" />
         <el-table-column prop="contactPhone" label="联系电话" width="130" />
         <el-table-column prop="description" label="描述" show-overflow-tooltip />
@@ -216,12 +216,12 @@ onMounted(() => {
           <div class="field-tip">用于生成兑换码前缀，建议使用英文或拼音</div>
         </el-form-item>
 
-        <el-form-item label="单位类型" prop="type">
+        <!-- <el-form-item label="单位类型" prop="type">
           <el-radio-group v-model="formData.type">
             <el-radio label="family">家庭教育</el-radio>
             <el-radio label="school">校园教育</el-radio>
           </el-radio-group>
-        </el-form-item>
+        </el-form-item> -->
 
         <el-form-item label="联系人">
           <el-input v-model="formData.contactPerson" placeholder="请输入联系人姓名" />

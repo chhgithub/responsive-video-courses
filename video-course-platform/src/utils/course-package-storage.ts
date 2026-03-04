@@ -560,10 +560,25 @@ export function replyPackageReview(reviewId: string, replyContent: string): void
 
 // ============ 套餐学员学习记录管理 ============
 
-export function initPackageLearningRecordData() {
+export function initPackageLearningRecordData(force: boolean = true) {
   const existing = localStorage.getItem(PACKAGE_LEARNING_RECORD_KEY);
-  if (!existing) {
+  if (!existing || force) {
+    console.log('localStorage中没有套餐学习记录数据，初始化默认数据...');
     localStorage.setItem(PACKAGE_LEARNING_RECORD_KEY, JSON.stringify(defaultLearningRecords));
+  } else {
+    try {
+      const data = JSON.parse(existing);
+      // 如果套餐学习记录数量少于默认数量（2条），强制重新初始化
+      if (!Array.isArray(data) || data.length < 2) {
+        console.log('套餐学习记录数据不足（现有', data?.length || 0, '条），重新初始化默认数据...');
+        localStorage.setItem(PACKAGE_LEARNING_RECORD_KEY, JSON.stringify(defaultLearningRecords));
+      } else {
+        console.log('套餐学习记录数据正常，共', data.length, '条记录');
+      }
+    } catch (error) {
+      console.error('套餐学习记录数据解析失败，重新初始化:', error);
+      localStorage.setItem(PACKAGE_LEARNING_RECORD_KEY, JSON.stringify(defaultLearningRecords));
+    }
   }
 }
 
@@ -577,6 +592,13 @@ export function getPackageLearningRecords(packageId: number): PackageLearningRec
 export function getPackageStudentDetail(packageId: number, userId: string): PackageLearningRecord | undefined {
   const records = getPackageLearningRecords(packageId);
   return records.find((r) => r.userId === userId);
+}
+
+export function getPackageLearningRecordsByUser(userId: string): PackageLearningRecord[] {
+  initPackageLearningRecordData();
+  const data = localStorage.getItem(PACKAGE_LEARNING_RECORD_KEY);
+  const records: PackageLearningRecord[] = data ? JSON.parse(data) : [];
+  return records.filter((r) => r.userId === userId);
 }
 
 export function addPackageLearningRecord(record: Omit<PackageLearningRecord, 'recordId'>): PackageLearningRecord {

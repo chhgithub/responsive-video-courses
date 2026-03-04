@@ -105,7 +105,34 @@ export interface CourseReview {
 }
 
 // 默认学习记录（统一使用通识教育的学习记录管理）
-const defaultLearningRecords: any[] = [];
+const defaultLearningRecords: any[] = [
+  {
+    recordId: 'lr_001',
+    courseId: 1,
+    userId: 'u001',
+    userName: '张小明',
+    userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhangxiaoming',
+    enrollTime: '2024-01-10',
+    progress: 85,
+    completedLessons: ['l1', 'l2', 'l3'],
+    totalWatchDuration: 145800,
+    lastWatchTime: '2024-01-15 14:30',
+    status: 'learning',
+  },
+  {
+    recordId: 'lr_002',
+    courseId: 1,
+    userId: 'u002',
+    userName: '李小红',
+    userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=lixiaohong',
+    enrollTime: '2024-01-08',
+    progress: 100,
+    completedLessons: ['l1', 'l2', 'l3', 'l4'],
+    totalWatchDuration: 180000,
+    lastWatchTime: '2024-01-12 09:15',
+    status: 'completed',
+  },
+];
 
 // 默认课程数据
 const defaultCourses: Course[] = [
@@ -510,10 +537,25 @@ export function migrateReviewData(): void {
 
 // ============ 学员学习记录管理 ============
 
-export function initLearningRecordData() {
+export function initLearningRecordData(force: boolean = true) {
   const existing = localStorage.getItem(LEARNING_RECORD_KEY);
-  if (!existing) {
+  if (!existing || force) {
+    console.log('localStorage中没有学习记录数据，初始化默认数据...');
     localStorage.setItem(LEARNING_RECORD_KEY, JSON.stringify(defaultLearningRecords));
+  } else {
+    try {
+      const data = JSON.parse(existing);
+      // 如果学习记录数量少于默认数量（2条），强制重新初始化
+      if (!Array.isArray(data) || data.length < 2) {
+        console.log('学习记录数据不足（现有', data?.length || 0, '条），重新初始化默认数据...');
+        localStorage.setItem(LEARNING_RECORD_KEY, JSON.stringify(defaultLearningRecords));
+      } else {
+        console.log('学习记录数据正常，共', data.length, '条记录');
+      }
+    } catch (error) {
+      console.error('学习记录数据解析失败，重新初始化:', error);
+      localStorage.setItem(LEARNING_RECORD_KEY, JSON.stringify(defaultLearningRecords));
+    }
   }
 }
 

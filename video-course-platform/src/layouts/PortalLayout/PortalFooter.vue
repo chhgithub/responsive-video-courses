@@ -38,7 +38,7 @@
         </div>
 
         <!-- 关注我们 -->
-        <div class="footer-section">
+        <!-- <div class="footer-section">
           <h3>关注我们</h3>
           <div class="social-links">
             <el-button circle>
@@ -48,7 +48,7 @@
               <el-icon><ChatDotRound /></el-icon>
             </el-button>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <div class="footer-bottom">

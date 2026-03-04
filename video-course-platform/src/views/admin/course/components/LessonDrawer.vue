@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { FormInstance, FormRules, UploadUserFile, UploadProps } from 'element-plus';
 import type { ContentType, Lesson } from '@/utils/course-storage';
 import { getAllVideos, formatDuration as formatVideoDuration } from '@/utils/video-storage';
@@ -25,7 +25,7 @@ const loading = ref(false);
 const formData = ref({
   lessonName: '',
   lessonOrder: 0,
-  videoType: 'upload' as 'upload' | 'third-party',
+  videoType: 'upload' as 'upload' | 'library' | 'third-party',
   videoId: '',
   videoUrl: '',
   duration: 0,
@@ -38,6 +38,10 @@ const videoList = ref(getAllVideos());
 
 // 上传文件列表
 const videoFileList = ref<UploadUserFile[]>([]);
+
+// 上传状态
+const uploading = ref(false);
+const uploadProgress = ref(0);
 
 // 是否为编辑模式
 const isEdit = computed(() => !!props.lessonId);
@@ -164,6 +168,13 @@ function formatDurationText(seconds: number): string {
   const secs = seconds % 60;
   return minutes > 0 ? `${minutes}分${secs}秒` : `${secs}秒`;
 }
+
+// 当视频来源改变时清空相关字段
+watch(() => formData.value.videoType, () => {
+  formData.value.videoId = '';
+  formData.value.videoUrl = '';
+  videoFileList.value = [];
+});
 </script>
 
 <template>
@@ -203,6 +214,7 @@ function formatDurationText(seconds: number): string {
       <el-form-item label="视频来源" prop="videoType">
         <el-radio-group v-model="formData.videoType">
           <el-radio value="upload">本地上传</el-radio>
+          <el-radio value="library">视频库选择</el-radio>
           <el-radio value="third-party">第三方URL</el-radio>
         </el-radio-group>
       </el-form-item>
@@ -235,6 +247,33 @@ function formatDurationText(seconds: number): string {
           <div v-if="uploading" class="upload-progress">
             <el-progress :percentage="uploadProgress" />
           </div>
+        </el-form-item>
+      </template>
+
+      <!-- 视频库选择 -->
+      <template v-else-if="formData.videoType === 'library'">
+        <el-form-item label="选择视频" prop="videoId">
+          <el-select
+            v-model="formData.videoId"
+            placeholder="请从视频库中选择视频"
+            style="width: 100%"
+            filterable
+          >
+            <el-option
+              v-for="video in videoList"
+              :key="video.id"
+              :label="`${video.title} (${video.category}) - ${formatVideoDuration(video.duration)}`"
+              :value="video.id"
+            >
+              <div class="video-option">
+                <div class="video-option-title">{{ video.title }}</div>
+                <div class="video-option-meta">
+                  <span class="video-option-category">{{ video.category }}</span>
+                  <span class="video-option-duration">{{ formatVideoDuration(video.duration) }}</span>
+                </div>
+              </div>
+            </el-option>
+          </el-select>
         </el-form-item>
       </template>
 
@@ -353,5 +392,34 @@ function formatDurationText(seconds: number): string {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.video-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .video-option-title {
+    font-size: $font-size-base;
+    color: $text-color-primary;
+    font-weight: 500;
+  }
+
+  .video-option-meta {
+    display: flex;
+    gap: 12px;
+    font-size: $font-size-small;
+    color: $text-color-secondary;
+
+    .video-option-category {
+      background-color: #f5f7fa;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    .video-option-duration {
+      color: #909399;
+    }
+  }
 }
 </style>

@@ -201,7 +201,6 @@ watch(
             <div class="student-info">
               <div class="student-name">{{ student.userName }}</div>
               <div class="student-meta">
-                <span>ID: {{ student.userId }}</span>
                 <span>报名时间: {{ student.enrollTime }}</span>
               </div>
             </div>

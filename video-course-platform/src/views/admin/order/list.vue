@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { adminGetAllOrders, adminUpdateOrderStatus, adminAddOrderNote, type Order, OrderStatus } from '@/utils/order-storage';
+import { adminGetAllOrders, adminUpdateOrderStatus, adminAddOrderNote, type Order, OrderStatus, PurchaseType } from '@/utils/order-storage';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import OrderDetailDialog from './components/OrderDetailDialog.vue';
 
@@ -21,7 +21,9 @@ const statusOptions = [
   { label: '待支付', value: 'pending' },
   { label: '已支付', value: 'paid' },
   { label: '已取消', value: 'cancelled' },
+  { label: '退款中', value: 'refunding' },
   { label: '已退款', value: 'refunded' },
+  { label: '退款失败', value: 'refund_failed' },
 ];
 
 // 状态映射
@@ -29,7 +31,15 @@ const statusMap: Record<OrderStatus, { text: string; type: any }> = {
   pending: { text: '待支付', type: 'warning' },
   paid: { text: '已支付', type: 'success' },
   cancelled: { text: '已取消', type: 'info' },
+  refunding: { text: '退款中', type: 'warning' },
   refunded: { text: '已退款', type: 'danger' },
+  refund_failed: { text: '退款失败', type: 'danger' },
+};
+
+// 购买方式映射
+const purchaseTypeMap: Record<PurchaseType, { text: string; type: any }> = {
+  purchase: { text: '购买', type: 'primary' },
+  redeem: { text: '兑换', type: 'success' },
 };
 
 // 过滤后的订单
@@ -139,12 +149,38 @@ async function handleRefund(order: Order) {
       inputErrorMessage: '请输入退款原因',
     });
 
-    const success = adminUpdateOrderStatus(order.orderId, 'refunded', value);
+    const success = adminUpdateOrderStatus(order.orderId, 'refunding', value);
     if (success) {
-      ElMessage.success('退款成功');
+      ElMessage.success('退款已提交');
       await loadOrders();
     } else {
-      ElMessage.error('退款失败');
+      ElMessage.error('退款提交失败');
+    }
+  } catch (error) {
+    // 用户取消
+  }
+}
+
+// 重新发起退款（仅对退款失败的订单）
+async function handleRetryRefund(order: Order) {
+  if (order.status !== 'refund_failed') {
+    ElMessage.warning('只能对退款失败的订单重新发起退款');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm('确认要重新发起退款吗？', '确认操作', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    });
+
+    const success = adminUpdateOrderStatus(order.orderId, 'refunding', '重新发起退款');
+    if (success) {
+      ElMessage.success('重新发起退款成功');
+      await loadOrders();
+    } else {
+      ElMessage.error('重新发起退款失败');
     }
   } catch (error) {
     // 用户取消
@@ -285,6 +321,13 @@ onMounted(() => {
             {{ row.paymentMethod === 'alipay' ? '支付宝' : row.paymentMethod === 'wechat' ? '微信' : '-' }}
           </template>
         </el-table-column>
+        <el-table-column prop="purchaseType" label="购买方式" width="100">
+          <template #default="{ row }">
+            <el-tag :type="purchaseTypeMap[row.purchaseType].type" size="small">
+              {{ purchaseTypeMap[row.purchaseType]?.text || '-' }}
+            </el-tag>
+          </template>
+        </el-table-column>
 
         <el-table-column prop="status" label="订单状态" width="100">
           <template #default="{ row }">
@@ -315,7 +358,7 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="handleViewDetail(row)">
               查看详情
@@ -346,6 +389,15 @@ onMounted(() => {
               @click="handleRefund(row)"
             >
               退款
+            </el-button>
+            <el-button
+              v-if="row.status === 'refund_failed'"
+              link
+              type="warning"
+              size="small"
+              @click="handleRetryRefund(row)"
+            >
+              重新退款
             </el-button>
             <el-button link type="info" size="small" @click="handleAddNote(row)">
               备注
