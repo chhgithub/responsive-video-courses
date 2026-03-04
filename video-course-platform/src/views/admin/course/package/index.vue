@@ -9,7 +9,6 @@ import {
 } from '@/utils/course-package-storage';
 import PackageDrawer from './package-drawer.vue';
 import PackageCourseManager from './package-course-manager.vue';
-import PackageReview from './components/PackageReview.vue';
 import PackageStudent from './components/PackageStudent.vue';
 
 const loading = ref(false);
@@ -37,10 +36,6 @@ const currentPackageId = ref<number>();
 // 课程管理弹窗
 const showCourseManager = ref(false);
 const currentPackageForCourse = ref<CoursePackage>();
-
-// 评价列表弹窗
-const showReviewList = ref(false);
-const currentPackageForReview = ref<CoursePackage>();
 
 // 学员列表弹窗
 const showStudentList = ref(false);
@@ -148,11 +143,6 @@ function handleManageCourses(row: CoursePackage) {
   showCourseManager.value = true;
 }
 
-function handleViewReview(row: CoursePackage) {
-  currentPackageForReview.value = row;
-  showReviewList.value = true;
-}
-
 function handleViewStudent(row: CoursePackage) {
   currentPackageForStudent.value = row;
   showStudentList.value = true;
@@ -166,13 +156,8 @@ function handleMoreCommand(command: string, row: CoursePackage) {
       loadPackages();
       break;
     case 'offline':
-      updatePackageStatus(row.packageId, 'offline');
+      updatePackageStatus(row.packageId, 'draft');
       ElMessage.success('套餐已下架');
-      loadPackages();
-      break;
-    case 'copy':
-      copyPackage(row.packageId);
-      ElMessage.success('套餐复制成功');
       loadPackages();
       break;
     case 'delete':
@@ -227,9 +212,8 @@ function handleSizeChange(size: number) {
 // 获取状态标签
 function getStatusLabel(status: string): string {
   const labels = {
-    draft: '草稿',
-    published: '上架',
-    offline: '下架',
+    draft: '未上架',
+    published: '已上架',
   };
   return labels[status] || status;
 }
@@ -239,7 +223,6 @@ function getStatusColor(status: string): string {
   const colors = {
     draft: 'info',
     published: 'success',
-    offline: 'warning',
   };
   return colors[status] || 'default';
 }
@@ -280,9 +263,8 @@ onMounted(() => {
             clearable
             style="width: 120px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="上架" value="published" />
-            <el-option label="下架" value="offline" />
+            <el-option label="未上架" value="draft" />
+            <el-option label="已上架" value="published" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -381,7 +363,7 @@ onMounted(() => {
               >
                 <el-icon><Check /></el-icon>
                 <span class="course-name">{{ course.courseName }}</span>
-                <span v-if="!course.isRequired" class="course-tag">(选修)</span>
+                <!-- <span v-if="!course.isRequired" class="course-tag">(选修)</span> -->
               </div>
               <div v-if="pkg.courses.length > 3" class="more-courses">
                 等{{ pkg.courses.length }}门课程
@@ -418,9 +400,6 @@ onMounted(() => {
               <el-button link type="primary" size="small" @click="handleManageCourses(pkg)">
                 课程
               </el-button>
-              <el-button link type="primary" size="small" @click="handleViewReview(pkg)">
-                评价
-              </el-button>
               <el-button link type="primary" size="small" @click="handleViewStudent(pkg)">
                 学员
               </el-button>
@@ -436,7 +415,7 @@ onMounted(() => {
                     <el-dropdown-item v-if="pkg.status === 'published'" command="offline">
                       下架
                     </el-dropdown-item>
-                    <el-dropdown-item command="copy">复制套餐</el-dropdown-item>
+                    <!-- <el-dropdown-item command="copy">复制套餐</el-dropdown-item> -->
                     <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -482,14 +461,6 @@ onMounted(() => {
       v-model:visible="showCourseManager"
       :package="currentPackageForCourse"
       @success="handleCourseManagerSuccess"
-    />
-
-    <!-- 评价列表弹窗 -->
-    <PackageReview
-      v-if="currentPackageForReview"
-      v-model:visible="showReviewList"
-      :package-id="currentPackageForReview.packageId"
-      :package-name="currentPackageForReview.packageName"
     />
 
     <!-- 学员列表弹窗 -->

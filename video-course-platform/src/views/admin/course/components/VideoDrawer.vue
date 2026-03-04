@@ -27,7 +27,6 @@ const formData = ref({
   description: '',
   videoType: 'upload' as 'upload' | 'third-party',
   videoUrl: '',
-  thumbnailUrl: '',
   duration: 0,
   fileSize: 0,
   format: 'mp4',
@@ -37,7 +36,6 @@ const formData = ref({
 
 // 上传文件列表
 const videoFileList = ref<UploadUserFile[]>([]);
-const thumbnailFileList = ref<UploadUserFile[]>([]);
 
 // 是否为编辑模式
 const isEdit = computed(() => !!props.id);
@@ -102,7 +100,6 @@ function resetForm() {
     description: '',
     videoType: 'upload',
     videoUrl: '',
-    thumbnailUrl: '',
     duration: 0,
     fileSize: 0,
     format: 'mp4',
@@ -110,7 +107,6 @@ function resetForm() {
     category: '',
   };
   videoFileList.value = [];
-  thumbnailFileList.value = [];
   formRef.value?.resetFields();
 }
 
@@ -138,9 +134,6 @@ const handleVideoUpload: UploadProps['onChange'] = (uploadFile, uploadFiles) => 
         // 模拟获取视频时长（实际应该由后端返回）
         formData.value.duration = Math.floor(Math.random() * 3600) + 600; // 10-70分钟
 
-        // 自动生成封面（使用随机图片）
-        formData.value.thumbnailUrl = `https://picsum.photos/seed/${Date.now()}/300/200`;
-
         ElMessage.success('视频上传成功');
       }
     }, 200);
@@ -151,22 +144,6 @@ const handleVideoUpload: UploadProps['onChange'] = (uploadFile, uploadFiles) => 
 const handleVideoRemove: UploadProps['onRemove'] = () => {
   formData.value.videoUrl = '';
   formData.value.fileSize = 0;
-};
-
-// 封面上传处理
-const handleThumbnailUpload: UploadProps['onChange'] = (uploadFile) => {
-  if (uploadFile.raw) {
-    // 模拟上传
-    setTimeout(() => {
-      formData.value.thumbnailUrl = `https://picsum.photos/seed/${Date.now()}/300/200`;
-      ElMessage.success('封面上传成功');
-    }, 500);
-  }
-};
-
-// 移除封面
-const handleThumbnailRemove: UploadProps['onRemove'] = () => {
-  formData.value.thumbnailUrl = '';
 };
 
 // 提交表单
@@ -436,19 +413,6 @@ function handleVideoUrlInput() {
   margin-top: $spacing-base;
 }
 
-.thumbnail-uploader {
-  :deep(.el-upload-list--picture-card) {
-    .el-upload-list__item {
-      width: 150px;
-      height: 100px;
-    }
-  }
-
-  :deep(.el-upload--picture-card) {
-    width: 150px;
-    height: 100px;
-  }
-}
 
 .form-hint {
   margin-top: 4px;

@@ -23,7 +23,8 @@ import NewsSection from './components/NewsSection.vue';
 const banners = ref(
   getActiveBanners().map((b) => ({
     id: Number.parseInt(b.id),
-    image: b.imageUrl,
+    pcImage: b.pcImageUrl,
+    mobileImage: b.mobileImageUrl,
     title: b.title,
     link: b.link,
   })),

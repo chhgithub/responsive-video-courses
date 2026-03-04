@@ -8,6 +8,7 @@ import {
   untagUser,
   type UserTag,
 } from '@/utils/user-tag-storage';
+import { getAllOrganizations } from '@/utils/general-education-storage';
 
 interface SystemUser {
   userId: number;
@@ -68,9 +69,17 @@ const tagDialogVisible = ref(false);
 const tagDialogUserId = ref<number>();
 const selectedTags = ref<number[]>([]);
 
+// 单位选项
+const organizationOptions = ref<any[]>([]);
+
 // 加载标签选项
 async function loadTagOptions() {
   tagOptions.value = getAllTags();
+}
+
+// 加载单位选项
+function loadOrganizationOptions() {
+  organizationOptions.value = getAllOrganizations();
 }
 
 // 打开标签管理对话框
@@ -180,7 +189,7 @@ function loadList() {
 }
 
 function handleAdd() {
-  formData.value = { username: '', nickname: '', email: '', phone: '', status: 'active' };
+  formData.value = { username: '', nickname: '', email: '', phone: '', organizationId: '', status: 'active' };
   drawerVisible.value = true;
 }
 
@@ -211,6 +220,7 @@ function handleDelete(row: SystemUser) {
 onMounted(() => {
   loadList();
   loadTagOptions();
+  loadOrganizationOptions();
 });
 </script>
 
@@ -292,6 +302,16 @@ onMounted(() => {
             <el-radio label="active">正常</el-radio>
             <el-radio label="inactive">禁用</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="所属单位">
+          <el-select v-model="formData.organizationId" placeholder="请选择单位" style="width: 100%">
+            <el-option
+              v-for="org in organizationOptions"
+              :key="org.id"
+              :label="org.name"
+              :value="org.id"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>

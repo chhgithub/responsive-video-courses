@@ -276,11 +276,11 @@ function formatExpireTime(expireTime: string) {
                     <p class="course-desc">{{ item.packageDesc }}</p>
                     <div class="package-courses">
                       <p><strong>包含课程：</strong></p>
-                      <ul>
-                        <li v-for="course in item.courses" :key="course.courseId">
+                      <!-- <ul> -->
+                        <!-- <li v-for="course in item.courses" :key="course.courseId">
                           {{ course.courseName }} {{ course.isRequired ? '(必修)' : '(选修)' }}
-                        </li>
-                      </ul>
+                        </li> -->
+                      <!-- </ul> -->
                     </div>
                   </div>
                 </div>

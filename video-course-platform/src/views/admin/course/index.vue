@@ -157,9 +157,13 @@ function handleManageChapter(row: Course) {
   showChapterManager.value = true;
 }
 
-function handleViewReview(row: Course) {
-  currentCourseForReview.value = row;
-  showReviewList.value = true;
+function handleCopyLink(row: Course) {
+  const link = `${window.location.origin}/portal/courses/${row.courseId}`;
+  navigator.clipboard.writeText(link).then(() => {
+    ElMessage.success('课程链接已复制到剪贴板');
+  }).catch(() => {
+    ElMessage.error('复制失败，请手动复制');
+  });
 }
 
 function handleViewStudent(row: Course) {
@@ -175,13 +179,8 @@ function handleMoreCommand(command: string, row: Course) {
       loadCourses();
       break;
     case 'offline':
-      updateCourseStatus(row.courseId, 'offline');
+      updateCourseStatus(row.courseId, 'draft');
       ElMessage.success('课程已下架');
-      loadCourses();
-      break;
-    case 'copy':
-      copyCourse(row.courseId);
-      ElMessage.success('课程复制成功');
       loadCourses();
       break;
     case 'delete':
@@ -286,9 +285,8 @@ onMounted(() => {
             clearable
             style="width: 120px"
           >
-            <el-option label="草稿" value="draft" />
-            <el-option label="上架" value="published" />
-            <el-option label="下架" value="offline" />
+            <el-option label="未上架" value="draft" />
+            <el-option label="已上架" value="published" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -358,8 +356,8 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'published' ? 'success' : row.status === 'draft' ? 'info' : 'warning'">
-              {{ row.status === 'published' ? '上架' : row.status === 'draft' ? '草稿' : '下架' }}
+            <el-tag :type="row.status === 'published' ? 'success' : 'info'">
+              {{ row.status === 'published' ? '已上架' : '未上架' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -367,7 +365,7 @@ onMounted(() => {
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button link type="primary" size="small" @click="handleManageChapter(row)">章节</el-button>
-            <el-button link type="primary" size="small" @click="handleViewReview(row)">评价</el-button>
+            <el-button link type="primary" size="small" @click="handleCopyLink(row)">复制链接</el-button>
             <el-button link type="primary" size="small" @click="handleViewStudent(row)">学员</el-button>
             <el-dropdown @command="(cmd) => handleMoreCommand(cmd, row)">
               <el-button link type="primary" size="small">
@@ -381,7 +379,6 @@ onMounted(() => {
                   <el-dropdown-item v-if="row.status === 'published'" command="offline">
                     下架
                   </el-dropdown-item>
-                  <el-dropdown-item command="copy">复制课程</el-dropdown-item>
                   <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
                 </el-dropdown-menu>
               </template>

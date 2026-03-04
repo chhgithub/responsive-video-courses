@@ -272,9 +272,9 @@ watch(
         <el-switch v-model="formData.isFree" active-text="是" inactive-text="否" />
       </el-form-item>
 
-      <el-form-item label="可试看" prop="isTrial">
+      <!-- <el-form-item label="可试看" prop="isTrial">
         <el-switch v-model="formData.isTrial" active-text="是" inactive-text="否" />
-      </el-form-item>
+      </el-form-item> -->
 
       <el-form-item v-if="formData.isTrial" label="试看时长" prop="trialDuration">
         <el-input-number

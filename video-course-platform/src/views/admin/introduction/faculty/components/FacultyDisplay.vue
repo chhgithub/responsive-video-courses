@@ -25,6 +25,7 @@ const formData = ref<TeacherForm>({
   avatar: '',
   title: '',
   specialties: [],
+  content: '',
   intro: '',
   achievements: [],
   isPublished: false,
@@ -47,6 +48,7 @@ function handleAdd() {
     avatar: '',
     title: '',
     specialties: [],
+    content: '',
     intro: '',
     achievements: [],
     isPublished: false,
@@ -214,6 +216,17 @@ function handleAchievementsInput(value: string) {
               {{ spec }}
             </el-tag>
           </div>
+        </el-form-item>
+
+        <el-form-item label="内容">
+          <el-input
+            v-model="formData.content"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入内容"
+            maxlength="500"
+            show-word-limit
+          />
         </el-form-item>
 
         <el-form-item label="个人简介" prop="intro">

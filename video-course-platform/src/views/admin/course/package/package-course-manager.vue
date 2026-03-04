@@ -136,14 +136,14 @@ watch(
           </div>
 
           <div class="course-actions">
-            <el-button
+            <!-- <el-button
               link
               type="primary"
               size="small"
               @click="handleToggleRequired(course)"
             >
               {{ course.isRequired ? '设为选修' : '设为必修' }}
-            </el-button>
+            </el-button> -->
             <el-button
               link
               type="primary"

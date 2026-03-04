@@ -26,7 +26,7 @@ const formData = ref({
   content: '',
   publishTime: '',
   orderNum: 0,
-  isActive: true,
+  isActive: false,
 });
 
 // 上传组件引用
@@ -84,7 +84,7 @@ function resetForm() {
     content: '',
     publishTime: '',
     orderNum: 0,
-    isActive: true,
+    isActive: false,
   };
   formRef.value?.resetFields();
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import type { FormInstance, FormRules } from 'element-plus';
+import type { FormInstance, FormRules, UploadUserFile, UploadProps } from 'element-plus';
 import type { CoursePackage, PackageCourse } from '@/utils/course-package-storage';
 import {
   calculateOriginalPrice,
@@ -92,6 +92,9 @@ const allCourses = ref<Course[]>(mockCourses);
 // 选中的课程
 const selectedCourses = ref<PackageCourse[]>([]);
 
+// 封面上传文件列表
+const coverFileList = ref<UploadUserFile[]>([]);
+
 // 表单数据
 const formData = ref({
   packageName: '',
@@ -102,16 +105,14 @@ const formData = ref({
   discount: 0,
   validDays: 0,
   isPermanent: true,
-  isTrial: false,
-  trialDays: 0,
-  status: 'draft' as 'draft' | 'published' | 'offline',
+  status: 'draft' as 'draft' | 'published',
   sortOrder: 0,
 });
 
 const formRules = {
   packageName: [{ required: true, message: '请输入套餐名称', trigger: 'blur' }],
   packageDesc: [{ required: true, message: '请输入套餐描述', trigger: 'blur' }],
-  packageCover: [{ required: true, message: '请输入套餐封面URL', trigger: 'blur' }],
+  packageCover: [{ required: true, message: '请上传套餐封面', trigger: 'change' }],
   price: [{ required: true, message: '请输入套餐价格', trigger: 'blur' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 };
@@ -177,8 +178,6 @@ async function loadPackageData() {
         discount: 37.4,
         validDays: 365,
         isPermanent: false,
-        isTrial: true,
-        trialDays: 7,
         status: 'published',
         sortOrder: 1,
       };
@@ -200,6 +199,22 @@ async function loadPackageData() {
     }
   }
 }
+
+// 封面上传处理
+const handleCoverUpload: UploadProps['onChange'] = (uploadFile) => {
+  if (uploadFile.raw) {
+    // 模拟上传
+    setTimeout(() => {
+      formData.value.packageCover = `https://picsum.photos/seed/${Date.now()}/400/300`;
+      ElMessage.success('封面上传成功');
+    }, 500);
+  }
+};
+
+// 移除封面
+const handleCoverRemove: UploadProps['onRemove'] = () => {
+  formData.value.packageCover = '';
+};
 
 // 添加课程到套餐
 function handleAddCourse(course: Course) {
@@ -273,8 +288,8 @@ async function handleSubmit() {
       originalPrice: formData.value.originalPrice,
       discount: formData.value.discount,
       validDays: formData.value.isPermanent ? 0 : formData.value.validDays,
-      isTrial: formData.value.isTrial,
-      trialDays: formData.value.trialDays,
+      isTrial: false,
+      trialDays: 0,
       status: formData.value.status,
       courses: selectedCourses.value.map((c, index) => ({
         ...c,
@@ -312,12 +327,11 @@ function handleClosed() {
     discount: 0,
     validDays: 0,
     isPermanent: true,
-    isTrial: false,
-    trialDays: 0,
     status: 'draft',
     sortOrder: 0,
   };
   selectedCourses.value = [];
+  coverFileList.value = [];
 }
 
 watch(
@@ -371,10 +385,19 @@ watch(
         </el-form-item>
 
         <el-form-item label="封面图片" prop="packageCover">
-          <el-input
-            v-model="formData.packageCover"
-            placeholder="请输入封面图片URL"
-          />
+          <el-upload
+            v-model:file-list="coverFileList"
+            class="cover-uploader"
+            :auto-upload="false"
+            :on-change="handleCoverUpload"
+            :on-remove="handleCoverRemove"
+            accept="image/*"
+            :limit="1"
+            list-type="picture-card"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <div class="form-hint">建议尺寸：400x300，支持 jpg、png 格式</div>
         </el-form-item>
 
         <el-form-item label="有效期" prop="validDays">
@@ -469,20 +492,20 @@ watch(
                   <div class="course-meta">
                     <span>{{ course.teacherName }}</span>
                     <span>¥{{ course.originalPrice }}</span>
-                    <el-tag size="small" :type="course.isRequired ? 'primary' : 'info'">
+                    <!-- <el-tag size="small" :type="course.isRequired ? 'primary' : 'info'">
                       {{ course.isRequired ? '必修' : '选修' }}
-                    </el-tag>
+                    </el-tag> -->
                   </div>
                 </div>
                 <div class="course-actions">
-                  <el-button
+                  <!-- <el-button
                     link
                     type="primary"
                     size="small"
                     @click="handleToggleRequired(course)"
                   >
                     {{ course.isRequired ? '设为选修' : '设为必修' }}
-                  </el-button>
+                  </el-button> -->
                   <el-button link type="danger" size="small" @click="handleRemoveCourse(course.courseId)">
                     移除
                   </el-button>
@@ -498,27 +521,10 @@ watch(
       <div class="form-section">
         <div class="section-title">其他设置</div>
 
-        <el-form-item label="试听">
-          <div class="trial-setting">
-            <el-switch v-model="formData.isTrial" />
-            <span v-if="formData.isTrial" style="margin-left: 12px">
-              试听
-              <el-input-number
-                v-model="formData.trialDays"
-                :min="1"
-                :max="30"
-                style="width: 100px; margin: 0 8px"
-              />
-              天
-            </span>
-          </div>
-        </el-form-item>
-
         <el-form-item label="状态" prop="status">
           <el-select v-model="formData.status" placeholder="请选择状态" style="width: 100%">
-            <el-option label="草稿" value="draft" />
-            <el-option label="上架" value="published" />
-            <el-option label="下架" value="offline" />
+            <el-option label="未上架" value="draft" />
+            <el-option label="已上架" value="published" />
           </el-select>
         </el-form-item>
 
@@ -689,9 +695,18 @@ watch(
   flex-shrink: 0;
 }
 
-.trial-setting {
-  display: flex;
-  align-items: center;
+.cover-uploader {
+  :deep(.el-upload-list--picture-card) {
+    .el-upload-list__item {
+      width: 200px;
+      height: 150px;
+    }
+  }
+
+  :deep(.el-upload--picture-card) {
+    width: 200px;
+    height: 150px;
+  }
 }
 
 .drawer-footer {

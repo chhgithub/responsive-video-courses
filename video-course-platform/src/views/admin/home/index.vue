@@ -137,11 +137,22 @@ onMounted(() => {
       >
         <el-table-column type="selection" width="55" />
         <el-table-column prop="orderNum" label="排序" width="80" sortable />
-        <el-table-column label="图片" width="200">
+        <el-table-column label="PC端图片" width="200">
           <template #default="{ row }">
             <el-image
-              :src="row.imageUrl"
-              :preview-src-list="[row.imageUrl]"
+              :src="row.pcImageUrl"
+              :preview-src-list="[row.pcImageUrl]"
+              fit="cover"
+              style="width: 160px; height: 90px; border-radius: 4px"
+              preview-teleported
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="移动端图片" width="200">
+          <template #default="{ row }">
+            <el-image
+              :src="row.mobileImageUrl"
+              :preview-src-list="[row.mobileImageUrl]"
               fit="cover"
               style="width: 160px; height: 90px; border-radius: 4px"
               preview-teleported
@@ -149,6 +160,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="link" label="跳转链接" min-width="200" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === '1' ? 'success' : 'info'">

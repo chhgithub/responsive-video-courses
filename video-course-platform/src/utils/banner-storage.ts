@@ -5,7 +5,8 @@
 export interface Banner {
   id: string;
   title: string;
-  imageUrl: string;
+  pcImageUrl: string;
+  mobileImageUrl: string;
   link?: string;
   status: '0' | '1'; // '1' 启用, '0' 禁用
   orderNum: number;
@@ -19,7 +20,8 @@ const defaultBanners: Banner[] = [
   {
     id: '1',
     title: '欢迎来到视频课程平台',
-    imageUrl: 'https://picsum.photos/seed/banner1/1280/400',
+    pcImageUrl: 'https://picsum.photos/seed/banner1/1280/400',
+    mobileImageUrl: 'https://picsum.photos/seed/banner1-mobile/750/300',
     link: '/portal/courses',
     status: '1',
     orderNum: 1,
@@ -28,7 +30,8 @@ const defaultBanners: Banner[] = [
   {
     id: '2',
     title: '精品课程推荐',
-    imageUrl: 'https://picsum.photos/seed/banner2/1280/400',
+    pcImageUrl: 'https://picsum.photos/seed/banner2/1280/400',
+    mobileImageUrl: 'https://picsum.photos/seed/banner2-mobile/750/300',
     link: '/portal/courses',
     status: '1',
     orderNum: 2,
@@ -37,7 +40,8 @@ const defaultBanners: Banner[] = [
   {
     id: '3',
     title: '认证中心',
-    imageUrl: 'https://picsum.photos/seed/banner3/1280/400',
+    pcImageUrl: 'https://picsum.photos/seed/banner3/1280/400',
+    mobileImageUrl: 'https://picsum.photos/seed/banner3-mobile/750/300',
     link: '/portal/cert',
     status: '1',
     orderNum: 3,
@@ -108,14 +112,15 @@ export function saveBanners(banners: Banner[]) {
 /**
  * 添加 Banner
  */
-export function addBanner(banner: Partial<Banner> & { title: string; imageUrl: string }) {
+export function addBanner(banner: Partial<Banner> & { title: string; pcImageUrl: string; mobileImageUrl: string }) {
   const banners = getAllBanners();
   const newBanner: Banner = {
     id: Date.now().toString(),
     title: banner.title,
-    imageUrl: banner.imageUrl,
+    pcImageUrl: banner.pcImageUrl,
+    mobileImageUrl: banner.mobileImageUrl,
     link: banner.link || '',
-    status: banner.status || '1',
+    status: banner.status || '0',
     orderNum: banner.orderNum ?? 0,
     createTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };

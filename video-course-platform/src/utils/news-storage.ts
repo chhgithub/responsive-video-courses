@@ -237,6 +237,7 @@ export function addNews(news: Omit<News, 'id'>): News {
   const newItem: News = {
     ...news,
     id: Date.now().toString(),
+    isActive: news.isActive ?? false,
   };
   list.push(newItem);
   saveNews(list);
@@ -299,6 +300,7 @@ export function addActivity(activity: Omit<Activity, 'id'>): Activity {
   const newItem: Activity = {
     ...activity,
     id: Date.now().toString(),
+    isActive: activity.isActive ?? false,
   };
   list.push(newItem);
   saveActivities(list);
@@ -382,6 +384,7 @@ export function addHotTopic(hot: Omit<HotTopic, 'id'>): HotTopic {
   const newItem: HotTopic = {
     ...hot,
     id: Date.now().toString(),
+    isActive: hot.isActive ?? false,
   };
   list.push(newItem);
   saveHotTopics(list);

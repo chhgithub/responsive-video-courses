@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 interface Banner {
   id: number;
-  image: string;
+  pcImage: string;
+  mobileImage: string;
   title: string;
   link?: string;
 }
@@ -17,6 +18,14 @@ const props = defineProps<Props>();
 const router = useRouter();
 
 const currentIndex = ref(0);
+
+// 判断是否为移动端
+const isMobile = ref(window.innerWidth < 768);
+
+// 根据设备类型获取图片
+function getBannerImage(banner: Banner) {
+  return isMobile.value ? banner.mobileImage : banner.pcImage;
+}
 
 function goToBanner(banner: Banner) {
   if (banner.link) {
@@ -35,6 +44,19 @@ function prevBanner() {
 function goToBannerIndex(index: number) {
   currentIndex.value = index;
 }
+
+// 监听窗口大小变化
+function handleResize() {
+  isMobile.value = window.innerWidth < 768;
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
 </script>
 
 <template>
@@ -50,7 +72,7 @@ function goToBannerIndex(index: number) {
       >
         <div
           class="banner-bg"
-          :style="{ backgroundImage: `url(${banner.image})` }"
+          :style="{ backgroundImage: `url(${getBannerImage(banner)})` }"
         ></div>
         <div class="banner-overlay"></div>
         <div class="banner-content">
@@ -72,7 +94,7 @@ function goToBannerIndex(index: number) {
       </button>
       <button v-if="banners.length > 1" class="carousel-arrow next" @click="nextBanner">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7-7" />
         </svg>
       </button>
 

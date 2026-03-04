@@ -22,15 +22,18 @@ const loading = ref(false);
 // 表单数据
 const formData = ref({
   title: '',
+  link: '',
   orderNum: 0,
-  status: '1',
+  status: '0',
 });
 
 // 上传的图片URL
-const uploadedImageUrl = ref('');
+const uploadedPcImageUrl = ref('');
+const uploadedMobileImageUrl = ref('');
 
 // 上传组件引用
-const uploadRef = ref();
+const pcUploadRef = ref();
+const mobileUploadRef = ref();
 
 // 是否为编辑模式
 const isEdit = computed(() => !!props.id);
@@ -58,10 +61,12 @@ watch(
         if (banner) {
           formData.value = {
             title: banner.title,
+            link: banner.link || '',
             orderNum: banner.orderNum,
             status: banner.status,
           };
-          uploadedImageUrl.value = banner.imageUrl;
+          uploadedPcImageUrl.value = banner.pcImageUrl;
+          uploadedMobileImageUrl.value = banner.mobileImageUrl;
         }
       } else {
         // 新增模式：重置表单
@@ -89,22 +94,39 @@ function beforeUpload(file: File) {
 }
 
 // 自定义上传处理（转换为base64）
-function handleUpload(file: File) {
+function handlePcUpload(file: File) {
   const reader = new FileReader();
   reader.onload = (e) => {
-    uploadedImageUrl.value = e.target?.result as string;
-    ElMessage.success('图片上传成功');
+    uploadedPcImageUrl.value = e.target?.result as string;
+    ElMessage.success('PC端图片上传成功');
   };
   reader.onerror = () => {
-    ElMessage.error('图片上传失败');
+    ElMessage.error('PC端图片上传失败');
+  };
+  reader.readAsDataURL(file);
+  return false; // 阻止自动上传
+}
+
+function handleMobileUpload(file: File) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    uploadedMobileImageUrl.value = e.target?.result as string;
+    ElMessage.success('移动端图片上传成功');
+  };
+  reader.onerror = () => {
+    ElMessage.error('移动端图片上传失败');
   };
   reader.readAsDataURL(file);
   return false; // 阻止自动上传
 }
 
 // 删除图片
-function handleRemoveImage() {
-  uploadedImageUrl.value = '';
+function handleRemovePcImage() {
+  uploadedPcImageUrl.value = '';
+}
+
+function handleRemoveMobileImage() {
+  uploadedMobileImageUrl.value = '';
 }
 
 // 提交表单
@@ -114,8 +136,13 @@ async function handleSubmit() {
   try {
     await formRef.value.validate();
 
-    if (!uploadedImageUrl.value) {
-      ElMessage.error('请上传 Banner 图片');
+    if (!uploadedPcImageUrl.value) {
+      ElMessage.error('请上传 PC端 Banner 图片');
+      return;
+    }
+
+    if (!uploadedMobileImageUrl.value) {
+      ElMessage.error('请上传 移动端 Banner 图片');
       return;
     }
 
@@ -123,7 +150,9 @@ async function handleSubmit() {
 
     const data = {
       title: formData.value.title,
-      imageUrl: uploadedImageUrl.value,
+      link: formData.value.link,
+      pcImageUrl: uploadedPcImageUrl.value,
+      mobileImageUrl: uploadedMobileImageUrl.value,
       orderNum: formData.value.orderNum,
       status: formData.value.status,
     };
@@ -153,10 +182,12 @@ function handleClose() {
 function resetForm() {
   formData.value = {
     title: '',
+    link: '',
     orderNum: 0,
-    status: '1',
+    status: '0',
   };
-  uploadedImageUrl.value = '';
+  uploadedPcImageUrl.value = '';
+  uploadedMobileImageUrl.value = '';
   formRef.value?.resetFields();
 }
 </script>
@@ -187,27 +218,64 @@ function resetForm() {
         />
       </el-form-item>
 
-      <!-- Banner 图片 -->
-      <el-form-item label="Banner 图片" required>
+      <!-- 跳转链接 -->
+      <el-form-item label="跳转链接">
+        <el-input
+          v-model="formData.link"
+          placeholder="请输入跳转链接，例如：/portal/courses"
+          clearable
+        />
+      </el-form-item>
+
+      <!-- PC端 Banner 图片 -->
+      <el-form-item label="PC端图片" required>
         <el-upload
-          ref="uploadRef"
+          ref="pcUploadRef"
           :show-file-list="false"
           :before-upload="beforeUpload"
-          :http-request="({ file }) => handleUpload(file as File)"
+          :http-request="({ file }) => handlePcUpload(file as File)"
           accept="image/jpeg,image/jpg,image/png,image/gif"
           drag
         >
-          <div v-if="!uploadedImageUrl" class="upload-placeholder">
+          <div v-if="!uploadedPcImageUrl" class="upload-placeholder">
             <el-icon class="upload-icon"><UploadFilled /></el-icon>
             <div class="upload-text">
               <p>拖拽图片到此处或<em>点击上传</em></p>
+              <p class="upload-hint">PC端图片，建议尺寸 1280x400</p>
               <p class="upload-hint">支持 jpg、png、gif 格式，大小不超过 5MB</p>
             </div>
           </div>
           <div v-else class="uploaded-image">
-            <img :src="uploadedImageUrl" alt="Banner 预览" />
+            <img :src="uploadedPcImageUrl" alt="PC端 Banner 预览" />
             <div class="image-mask">
-              <el-icon @click.stop="handleRemoveImage"><Delete /></el-icon>
+              <el-icon @click.stop="handleRemovePcImage"><Delete /></el-icon>
+            </div>
+          </div>
+        </el-upload>
+      </el-form-item>
+
+      <!-- 移动端 Banner 图片 -->
+      <el-form-item label="移动端图片" required>
+        <el-upload
+          ref="mobileUploadRef"
+          :show-file-list="false"
+          :before-upload="beforeUpload"
+          :http-request="({ file }) => handleMobileUpload(file as File)"
+          accept="image/jpeg,image/jpg,image/png,image/gif"
+          drag
+        >
+          <div v-if="!uploadedMobileImageUrl" class="upload-placeholder">
+            <el-icon class="upload-icon"><UploadFilled /></el-icon>
+            <div class="upload-text">
+              <p>拖拽图片到此处或<em>点击上传</em></p>
+              <p class="upload-hint">移动端图片，建议尺寸 750x300</p>
+              <p class="upload-hint">支持 jpg、png、gif 格式，大小不超过 5MB</p>
+            </div>
+          </div>
+          <div v-else class="uploaded-image">
+            <img :src="uploadedMobileImageUrl" alt="移动端 Banner 预览" />
+            <div class="image-mask">
+              <el-icon @click.stop="handleRemoveMobileImage"><Delete /></el-icon>
             </div>
           </div>
         </el-upload>

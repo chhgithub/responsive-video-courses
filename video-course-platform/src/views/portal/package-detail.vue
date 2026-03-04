@@ -247,10 +247,10 @@ onMounted(() => {
             <span class="label">有效期：</span>
             <span class="value">{{ pkg.validDays > 0 ? `${pkg.validDays}天` : '永久有效' }}</span>
           </div>
-          <div class="attribute-item">
+          <!-- <div class="attribute-item">
             <span class="label">评价数：</span>
             <span class="value">{{ pkg.reviewCount }}条</span>
-          </div>
+          </div> -->
           <div class="attribute-item">
             <span class="label">创建时间：</span>
             <span class="value">{{ formatDate(pkg.createTime) }}</span>
@@ -277,8 +277,8 @@ onMounted(() => {
               <h3>{{ course.courseName }}</h3>
               <p>讲师：{{ course.teacherName }}</p>
               <p>原价：{{ formatPackagePrice(course.originalPrice) }}</p>
-              <el-tag v-if="course.isRequired" type="danger" size="small">必修</el-tag>
-              <el-tag v-else type="info" size="small">选修</el-tag>
+              <!-- <el-tag v-if="course.isRequired" type="danger" size="small">必修</el-tag>
+              <el-tag v-else type="info" size="small">选修</el-tag> -->
             </div>
             <el-button
               link

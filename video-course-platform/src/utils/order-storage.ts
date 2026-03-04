@@ -2,7 +2,7 @@
  * 订单数据存储管理
  */
 
-export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'refunded';
+export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'refunding' | 'refunded' | 'refund_failed';
 export type PaymentMethod = 'alipay' | 'wechat';
 export type OrderType = 'course' | 'package';  // 订单类型：单课程/课程套餐
 
@@ -42,6 +42,7 @@ export interface Order {
   adminNote?: string;     // 管理员备注
   refundTime?: string;    // 退款时间
   refundReason?: string;  // 退款原因
+  refundFailReason?: string; // 退款失败原因
 }
 
 const ORDER_STORAGE_KEY = 'portal_orders';
@@ -285,7 +286,17 @@ export function adminUpdateOrderStatus(
   const order = orders[index];
   order.status = status;
 
-  // 如果是退款，记录退款时间和原因
+  // 如果是退款中，记录退款原因
+  if (status === 'refunding') {
+    order.refundReason = reason;
+  }
+
+  // 如果是退款失败，记录失败原因
+  if (status === 'refund_failed') {
+    order.refundFailReason = reason;
+  }
+
+  // 如果是退款成功，记录退款时间和原因
   if (status === 'refunded') {
     order.refundTime = new Date().toISOString();
     order.refundReason = reason;

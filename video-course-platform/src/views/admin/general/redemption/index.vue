@@ -44,8 +44,14 @@ const packageList = ref<any[]>([]);
 const statusMap: Record<string, { text: string; type: any }> = {
   unused: { text: '未使用', type: 'success' },
   used: { text: '已使用', type: 'info' },
-  expired: { text: '已失效', type: 'danger' },
+  expired: { text: '已过期', type: 'danger' },
   offline: { text: '已下架', type: 'warning' },
+};
+
+// 兑换后状态映射
+const accessStatusMap: Record<string, { text: string; type: any }> = {
+  active: { text: '有效', type: 'success' },
+  expired_access: { text: '已过期', type: 'danger' },
 };
 
 // 状态选项
@@ -53,7 +59,7 @@ const statusOptions = [
   { label: '全部', value: '' },
   { label: '未使用', value: 'unused' },
   { label: '已使用', value: 'used' },
-  { label: '已失效', value: 'expired' },
+  { label: '已过期', value: 'expired' },
   { label: '已下架', value: 'offline' },
 ];
 
@@ -314,13 +320,47 @@ function formatTime(time?: string) {
   return new Date(time).toLocaleString('zh-CN');
 }
 
-// 格式化过期时间
-function formatExpireTime(expireTime?: string) {
+// 格式化兑换码过期时间
+function formatCodeExpireTime(expireTime?: string) {
   if (!expireTime) return '永不过期';
 
   const now = new Date();
   const expire = new Date(expireTime);
   const diffDays = Math.ceil((expire.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+
+  if (diffDays <= 0) return '已过期';
+  if (diffDays === 1) return '1天后过期';
+  if (diffDays < 30) return `${diffDays}天后过期`;
+  return `${Math.ceil(diffDays / 30)}个月后过期`;
+}
+
+// 获取兑换后状态
+function getAccessStatus(code: RedemptionCode): 'active' | 'expired_access' | null {
+  // 只有已使用的兑换码才有兑换后状态
+  if (code.status !== 'used') return null;
+
+  // 如果没有设置有效期，则永不过期
+  if (!code.accessValidDays) return 'active';
+
+  const now = new Date();
+  const usedTime = new Date(code.usedTime!);
+  const expireTime = new Date(usedTime.getTime() + code.accessValidDays * 24 * 60 * 60 * 1000);
+
+  return now > expireTime ? 'expired_access' : 'active';
+}
+
+// 格式化兑换后过期时间
+function formatAccessExpireTime(code: RedemptionCode): string {
+  // 只有已使用的兑换码才显示兑换后过期时间
+  if (code.status !== 'used') return '-';
+
+  // 如果没有设置有效期，则永不过期
+  if (!code.accessValidDays) return '永不过期';
+
+  const usedTime = new Date(code.usedTime!);
+  const expireTime = new Date(usedTime.getTime() + code.accessValidDays * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const diffDays = Math.ceil((expireTime.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
 
   if (diffDays <= 0) return '已过期';
   if (diffDays === 1) return '1天后过期';
@@ -430,7 +470,7 @@ onMounted(() => {
 
         <el-table-column prop="organizationName" label="单位" width="150" />
 
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" label="兑换码状态" width="120">
           <template #default="{ row }">
             <el-tag :type="statusMap[row.status].type">
               {{ statusMap[row.status].text }}
@@ -438,9 +478,24 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="有效期" width="120">
+        <el-table-column label="兑换后状态" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="getAccessStatus(row)" :type="accessStatusMap[getAccessStatus(row)!].type">
+              {{ accessStatusMap[getAccessStatus(row)!].text }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="兑换码有效期" width="150">
           <template #default="{ row }">
             {{ formatExpireTime(row.codeExpireTime) }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="兑换后有效期" width="150">
+          <template #default="{ row }">
+            {{ formatAccessExpireTime(row) }}
           </template>
         </el-table-column>
 

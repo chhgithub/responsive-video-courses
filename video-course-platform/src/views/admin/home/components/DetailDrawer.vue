@@ -340,11 +340,19 @@ function handleDelete() {
       <!-- 快速回复 -->
       <div class="quick-reply-section">
         <h3>✍️ 添加回复</h3>
-        <el-radio-group v-model="replyForm.method" size="small">
+        <!-- 前台已登录用户：可选择在线回复或电话回复 -->
+        <el-radio-group v-if="consultation.userId" v-model="replyForm.method" size="small">
           <el-radio-button label="online">
             <el-icon><ChatDotRound /></el-icon>
             在线回复
           </el-radio-button>
+          <el-radio-button label="phone">
+            <el-icon><Phone /></el-icon>
+            电话回复
+          </el-radio-button>
+        </el-radio-group>
+        <!-- 前台未登录用户：只能电话回复 -->
+        <el-radio-group v-else v-model="replyForm.method" size="small">
           <el-radio-button label="phone">
             <el-icon><Phone /></el-icon>
             电话回复

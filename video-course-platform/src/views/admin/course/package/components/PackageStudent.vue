@@ -249,7 +249,7 @@ watch(
             <div class="student-progress">
               <div class="progress-label">
                 整体进度: {{ student.progress }}%
-                (已完成{{ student.completedCourses?.length || 0 }}/{{ student.courseProgress?.length || 0 }}门必修课程)
+                (已完成{{ student.completedCourses?.length || 0 }}/{{ student.courseProgress?.length || 0 }}门课程)
               </div>
               <el-progress
                 :percentage="student.progress"

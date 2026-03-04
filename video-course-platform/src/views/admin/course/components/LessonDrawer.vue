@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, computed } from 'vue';
 import type { FormInstance, FormRules, UploadUserFile, UploadProps } from 'element-plus';
 import type { ContentType, Lesson } from '@/utils/course-storage';
 import { getAllVideos, formatDuration as formatVideoDuration } from '@/utils/video-storage';
@@ -25,15 +25,9 @@ const loading = ref(false);
 const formData = ref({
   lessonName: '',
   lessonOrder: 0,
-  contentType: 'video' as ContentType,
   videoType: 'upload' as 'upload' | 'third-party',
   videoId: '',
   videoUrl: '',
-  audioUrl: '',
-  audioDuration: 0,
-  fileUrl: '',
-  pageCount: 0,
-  richTextContent: '',
   duration: 0,
   isFree: false,
   isTrial: false,
@@ -43,20 +37,10 @@ const formData = ref({
 const videoList = ref(getAllVideos());
 
 // 上传文件列表
-const audioFileList = ref<UploadUserFile[]>([]);
-const fileFileList = ref<UploadUserFile[]>([]);
+const videoFileList = ref<UploadUserFile[]>([]);
 
 // 是否为编辑模式
 const isEdit = computed(() => !!props.lessonId);
-
-// 内容类型选项
-const contentTypeOptions = [
-  { label: '视频课程', value: 'video' },
-  { label: '音频课程', value: 'audio' },
-  { label: 'PPT课件', value: 'ppt' },
-  { label: '文档资料', value: 'document' },
-  { label: '富文本内容', value: 'rich-text' },
-];
 
 // 表单验证规则
 const rules: FormRules = {
@@ -64,40 +48,10 @@ const rules: FormRules = {
     { required: true, message: '请输入课时名称', trigger: 'blur' },
     { min: 2, max: 100, message: '课时名称长度应为 2-100 个字符', trigger: 'blur' },
   ],
-  contentType: [{ required: true, message: '请选择内容类型', trigger: 'change' }],
   videoId: [{ required: true, message: '请选择视频', trigger: 'change' }],
   videoUrl: [{ required: true, message: '请输入视频URL', trigger: 'blur' }],
-  audioUrl: [{ required: true, message: '请上传音频文件', trigger: 'change' }],
-  fileUrl: [{ required: true, message: '请上传文件', trigger: 'change' }],
-  richTextContent: [{ required: true, message: '请输入内容', trigger: 'blur' }],
   duration: [{ required: true, message: '请输入时长', trigger: 'blur' }],
 };
-
-// 监听内容类型变化
-watch(
-  () => formData.value.contentType,
-  (newType) => {
-    // 清空其他类型的数据
-    if (newType !== 'video') {
-      formData.value.videoId = '';
-      formData.value.videoUrl = '';
-      formData.value.videoType = 'upload';
-    }
-    if (newType !== 'audio') {
-      formData.value.audioUrl = '';
-      formData.value.audioDuration = 0;
-      audioFileList.value = [];
-    }
-    if (newType !== 'ppt' && newType !== 'document') {
-      formData.value.fileUrl = '';
-      formData.value.pageCount = 0;
-      fileFileList.value = [];
-    }
-    if (newType !== 'rich-text') {
-      formData.value.richTextContent = '';
-    }
-  }
-);
 
 // 监听visible变化，加载数据
 watch(
@@ -112,15 +66,9 @@ watch(
           formData.value = {
             lessonName: '示例课时',
             lessonOrder: 1,
-            contentType: 'video',
             videoType: 'upload',
             videoId: 'v1',
             videoUrl: '',
-            audioUrl: '',
-            audioDuration: 0,
-            fileUrl: '',
-            pageCount: 0,
-            richTextContent: '',
             duration: 1800,
             isFree: false,
             isTrial: true,
@@ -140,47 +88,46 @@ function resetForm() {
   formData.value = {
     lessonName: '',
     lessonOrder: 0,
-    contentType: 'video',
     videoType: 'upload',
     videoId: '',
     videoUrl: '',
-    audioUrl: '',
-    audioDuration: 0,
-    fileUrl: '',
-    pageCount: 0,
-    richTextContent: '',
     duration: 0,
     isFree: false,
     isTrial: false,
   };
-  audioFileList.value = [];
-  fileFileList.value = [];
+  videoFileList.value = [];
   formRef.value?.resetFields();
 }
 
-// 音频上传处理
-const handleAudioUpload: UploadProps['onChange'] = (uploadFile) => {
+// 视频上传处理（本地上传）
+const handleVideoUpload: UploadProps['onChange'] = (uploadFile) => {
+  videoFileList.value = uploadFile;
   if (uploadFile.raw) {
-    // 模拟上传
-    setTimeout(() => {
-      formData.value.audioUrl = `https://example.com/audio/${Date.now()}.mp3`;
-      formData.value.audioDuration = 1800; // 默认30分钟
-      ElMessage.success('音频上传成功');
-    }, 500);
+    uploading.value = true;
+
+    // 模拟上传进度
+    const interval = setInterval(() => {
+      uploadProgress.value += 10;
+      if (uploadProgress.value >= 100) {
+        clearInterval(interval);
+        uploading.value = false;
+
+        // 模拟获取视频信息
+        const file = uploadFile.raw;
+        formData.value.videoUrl = `https://example.com/videos/${Date.now()}.mp4`;
+
+        // 模拟获取视频时长
+        formData.value.duration = Math.floor(Math.random() * 3600) + 600; // 10-70分钟
+
+        ElMessage.success('视频上传成功');
+      }
+    }, 200);
   }
 };
 
-// 文件上传处理
-const handleFileUpload: UploadProps['onChange'] = (uploadFile) => {
-  if (uploadFile.raw) {
-    // 模拟上传
-    setTimeout(() => {
-      formData.value.fileUrl = `https://example.com/files/${Date.now()}.pptx`;
-      formData.value.pageCount = Math.floor(Math.random() * 50) + 10;
-      formData.value.duration = 600; // 默认10分钟
-      ElMessage.success('文件上传成功');
-    }, 500);
-  }
+// 移除视频
+const handleVideoRemove: UploadProps['onRemove'] = () => {
+  formData.value.videoUrl = '';
 };
 
 // 提交表单
@@ -252,62 +199,48 @@ function formatDurationText(seconds: number): string {
         />
       </el-form-item>
 
-      <el-form-item label="内容类型" prop="contentType">
-        <el-select
-          v-model="formData.contentType"
-          placeholder="请选择内容类型"
-          style="width: 100%"
-        >
-          <el-option
-            v-for="type in contentTypeOptions"
-            :key="type.value"
-            :label="type.label"
-            :value="type.value"
-          />
-        </el-select>
+      <!-- 视频来源 -->
+      <el-form-item label="视频来源" prop="videoType">
+        <el-radio-group v-model="formData.videoType">
+          <el-radio value="upload">本地上传</el-radio>
+          <el-radio value="third-party">第三方URL</el-radio>
+        </el-radio-group>
       </el-form-item>
 
-      <!-- 视频类型 -->
-      <template v-if="formData.contentType === 'video'">
-        <el-form-item label="视频来源" prop="videoType">
-          <el-radio-group v-model="formData.videoType">
-            <el-radio value="upload">从视频库选择</el-radio>
-            <el-radio value="third-party">第三方URL</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <el-form-item
-          v-if="formData.videoType === 'upload'"
-          label="选择视频"
-          prop="videoId"
-        >
-          <el-select
-            v-model="formData.videoId"
-            placeholder="请选择视频"
-            filterable
-            style="width: 100%"
+      <!-- 本地上传 -->
+      <template v-if="formData.videoType === 'upload'">
+        <el-form-item label="视频文件" prop="videoId">
+          <el-upload
+            v-model:file-list="videoFileList"
+            class="video-uploader"
+            :auto-upload="false"
+            :on-change="handleVideoUpload"
+            :on-remove="handleVideoRemove"
+            accept="video/*"
+            :limit="1"
+            drag
           >
-            <el-option
-              v-for="video in videoList"
-              :key="video.id"
-              :label="video.title"
-              :value="video.id"
-            >
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span>{{ video.title }}</span>
-                <span style="color: #999; font-size: 12px;">
-                  {{ formatVideoDuration(video.duration) }}
-                </span>
+            <div v-if="!formData.videoUrl" class="upload-content">
+              <el-icon class="upload-icon"><UploadFilled /></el-icon>
+              <div class="upload-text">
+                拖拽视频到此处或 <em>点击上传</em>
               </div>
-            </el-option>
-          </el-select>
+              <div class="upload-hint">支持 mp4, avi, mov, wmv, flv 格式</div>
+            </div>
+            <div v-else class="video-uploaded">
+              <el-icon><VideoCamera /></el-icon>
+              <span>视频已上传</span>
+            </div>
+          </el-upload>
+          <div v-if="uploading" class="upload-progress">
+            <el-progress :percentage="uploadProgress" />
+          </div>
         </el-form-item>
+      </template>
 
-        <el-form-item
-          v-else
-          label="视频URL"
-          prop="videoUrl"
-        >
+      <!-- 第三方视频 -->
+      <template v-else>
+        <el-form-item label="视频URL" prop="videoUrl">
           <el-input
             v-model="formData.videoUrl"
             placeholder="请输入第三方视频URL（支持阿里云OSS、腾讯云COS、七牛云等）"
@@ -315,90 +248,7 @@ function formatDurationText(seconds: number): string {
         </el-form-item>
       </template>
 
-      <!-- 音频类型 -->
-      <template v-if="formData.contentType === 'audio'">
-        <el-form-item label="音频文件" prop="audioUrl">
-          <el-upload
-            v-model:file-list="audioFileList"
-            :auto-upload="false"
-            :on-change="handleAudioUpload"
-            accept="audio/*"
-            :limit="1"
-            drag
-          >
-            <div class="upload-content">
-              <el-icon class="upload-icon"><UploadFilled /></el-icon>
-              <div class="upload-text">
-                拖拽音频到此处或 <em>点击上传</em>
-              </div>
-              <div class="upload-hint">支持 mp3, wav, m4a, aac 格式</div>
-            </div>
-          </el-upload>
-        </el-form-item>
-
-        <el-form-item label="音频时长" prop="audioDuration">
-          <el-input-number
-            v-model="formData.audioDuration"
-            :min="0"
-            :step="60"
-            placeholder="单位：秒"
-            style="width: 100%"
-          />
-          <div class="form-hint">
-            时长：{{ formatDurationText(formData.audioDuration) }}
-          </div>
-        </el-form-item>
-      </template>
-
-      <!-- PPT/文档类型 -->
-      <template v-if="formData.contentType === 'ppt' || formData.contentType === 'document'">
-        <el-form-item label="上传文件" prop="fileUrl">
-          <el-upload
-            v-model:file-list="fileFileList"
-            :auto-upload="false"
-            :on-change="handleFileUpload"
-            :accept="formData.contentType === 'ppt' ? '.ppt,.pptx' : '.pdf,.doc,.docx'"
-            :limit="1"
-            drag
-          >
-            <div class="upload-content">
-              <el-icon class="upload-icon"><UploadFilled /></el-icon>
-              <div class="upload-text">
-                拖拽文件到此处或 <em>点击上传</em>
-              </div>
-              <div class="upload-hint">
-                {{ formData.contentType === 'ppt' ? '支持 ppt, pptx 格式' : '支持 pdf, doc, docx 格式' }}
-              </div>
-            </div>
-          </el-upload>
-        </el-form-item>
-
-        <el-form-item label="页数" prop="pageCount">
-          <el-input-number
-            v-model="formData.pageCount"
-            :min="0"
-            placeholder="文件页数"
-            style="width: 100%"
-          />
-        </el-form-item>
-      </template>
-
-      <!-- 富文本类型 -->
-      <template v-if="formData.contentType === 'rich-text'">
-        <el-form-item label="内容" prop="richTextContent">
-          <el-input
-            v-model="formData.richTextContent"
-            type="textarea"
-            :rows="10"
-            placeholder="请输入富文本内容（支持HTML标签）"
-          />
-          <div class="form-hint">
-            提示：可以使用 HTML 标签，如 &lt;p&gt;、&lt;img&gt;、&lt;video&gt; 等
-          </div>
-        </el-form-item>
-      </template>
-
-      <!-- 通用字段 -->
+      <!-- 学习时长 -->
       <el-form-item label="学习时长" prop="duration">
         <el-input-number
           v-model="formData.duration"
@@ -461,6 +311,36 @@ function formatDurationText(seconds: number): string {
     font-size: $font-size-small;
     color: $text-color-secondary;
   }
+}
+
+.video-uploaded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #67c23a;
+  font-size: $font-size-medium;
+
+  .el-icon {
+    font-size: 32px;
+  }
+}
+
+.video-uploader {
+  width: 100%;
+
+  :deep(.el-upload) {
+    width: 100%;
+  }
+
+  :deep(.el-upload-dragger) {
+    width: 100%;
+    padding: 40px;
+  }
+}
+
+.upload-progress {
+  margin-top: $spacing-base;
 }
 
 .form-hint {

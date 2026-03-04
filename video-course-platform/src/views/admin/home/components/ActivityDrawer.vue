@@ -27,7 +27,7 @@ const formData = ref({
   location: '',
   description: '',
   orderNum: 0,
-  isActive: true,
+  isActive: false,
 });
 
 // 是否为编辑模式
@@ -98,7 +98,7 @@ function resetForm() {
     location: '',
     description: '',
     orderNum: 0,
-    isActive: true,
+    isActive: false,
   };
   formRef.value?.resetFields();
 }
