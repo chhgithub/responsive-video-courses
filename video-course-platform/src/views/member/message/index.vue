@@ -14,6 +14,11 @@ import {
   type UserMessage,
   type MessageType,
 } from '@/utils/message-storage';
+import {
+  initMockMessageData,
+  isMockDataInitialized,
+  setMockDataInitialized,
+} from '@/utils/mock-message-data';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -24,7 +29,7 @@ function handleBack() {
 }
 
 const loading = ref(false);
-const activeTab = ref<'all' | 'unread' | 'consultation' | 'system'>('all');
+const activeTab = ref<'all' | 'unread' | 'consultation' | 'system' | 'announcement'>('all');
 const messages = ref<UserMessage[]>([]);
 
 // 获取当前用户
@@ -41,6 +46,10 @@ const systemUnread = computed(() => {
   const msgs = getUserMessages(currentUser.value || '', 'system');
   return msgs.filter(m => m.status === 'unread').length;
 });
+const announcementUnread = computed(() => {
+  const msgs = getUserMessages(currentUser.value || '', 'announcement');
+  return msgs.filter(m => m.status === 'unread').length;
+});
 
 // 加载消息
 async function loadMessages() {
@@ -55,9 +64,18 @@ async function loadMessages() {
       type = 'consultation';
     } else if (activeTab.value === 'system') {
       type = 'system';
+    } else if (activeTab.value === 'announcement') {
+      type = 'announcement';
+    } else if (activeTab.value === 'unread') {
+      // 未读不需要类型筛选，在获取后过滤
     }
 
     messages.value = getUserMessages(currentUser.value, type);
+
+    // 如果是未读tab，再过滤未读消息
+    if (activeTab.value === 'unread') {
+      messages.value = messages.value.filter(m => m.status === 'unread');
+    }
   } finally {
     loading.value = false;
   }
@@ -179,6 +197,11 @@ function getMessageIconColor(type: MessageType) {
 }
 
 onMounted(() => {
+  // 如果还没有初始化测试数据，则自动初始化
+  if (!isMockDataInitialized()) {
+    initMockMessageData(currentUser.value || 'mock_user_001');
+    setMockDataInitialized();
+  }
   loadMessages();
 });
 </script>
@@ -231,6 +254,12 @@ onMounted(() => {
             <el-badge v-if="systemUnread > 0" :value="systemUnread" :max="99" type="warning" class="tab-badge" />
           </template>
         </el-tab-pane>
+        <el-tab-pane label="公告" name="announcement">
+          <template #label>
+            公告
+            <el-badge v-if="announcementUnread > 0" :value="announcementUnread" :max="99" type="primary" class="tab-badge" />
+          </template>
+        </el-tab-pane>
       </el-tabs>
 
       <!-- 消息列表 -->
@@ -273,7 +302,7 @@ onMounted(() => {
       <div class="message-actions">
         <el-button
           link
-          type="danger"
+          type="text"
           @click="handleClearAll"
         >
           清空所有消息
