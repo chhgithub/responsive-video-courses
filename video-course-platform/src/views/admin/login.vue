@@ -97,7 +97,7 @@ async function handleLogin() {
       <div class="login-tips">
         <el-alert title="测试账号" type="info" :closable="false">
           <div>管理员账号：<strong>admin / 123456</strong></div>
-          <div>单位管理员账号：<strong>org_admin / 123456</strong></div>
+          <!-- <div>单位管理员账号：<strong>org_admin / 123456</strong></div> -->
         </el-alert>
       </div>
     </div>

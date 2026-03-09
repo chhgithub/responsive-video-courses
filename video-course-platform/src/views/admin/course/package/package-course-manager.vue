@@ -130,9 +130,9 @@ watch(
               <span>讲师：{{ course.teacherName }}</span>
               <span>原价：¥{{ course.originalPrice }}</span>
             </div>
-            <el-tag :type="course.isRequired ? 'primary' : 'info'" size="small">
+            <!-- <el-tag :type="course.isRequired ? 'primary' : 'info'" size="small">
               {{ course.isRequired ? '必修' : '选修' }}
-            </el-tag>
+            </el-tag> -->
           </div>
 
           <div class="course-actions">

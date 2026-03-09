@@ -48,10 +48,10 @@ async function handleSave() {
   }
 }
 
-// 切换发布状态
-function handleTogglePublish() {
-  emit('togglePublish');
-}
+// 切换发布状态（不再使用）
+// function handleTogglePublish() {
+//   emit('togglePublish');
+// }
 </script>
 
 <template>
@@ -62,15 +62,6 @@ function handleTogglePublish() {
         <h3>联系我们信息编辑</h3>
       </div>
       <div class="toolbar-right">
-        <el-tag :type="formData.isPublished ? 'success' : 'info'" size="large">
-          {{ formData.isPublished ? '已发布' : '草稿' }}
-        </el-tag>
-        <el-button
-          :type="formData.isPublished ? 'warning' : 'success'"
-          @click="handleTogglePublish"
-        >
-          {{ formData.isPublished ? '取消发布' : '发布' }}
-        </el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">
           保存
         </el-button>
@@ -126,16 +117,16 @@ function handleTogglePublish() {
         <el-input v-model="contactInfo.wechatAccount" placeholder="请输入微信公众号名称" />
       </el-form-item>
 
-      <el-form-item label="地图坐标">
+      <!-- <el-form-item label="地图坐标">
         <el-input v-model="contactInfo.coordinates" placeholder="请输入地图坐标，格式：经度,纬度，如：116.404,39.915" />
         <div class="field-tip">
           <el-text type="info" size="small">
             可在地图应用中获取精确坐标，用于在前台展示地图位置
           </el-text>
         </div>
-      </el-form-item>
+      </el-form-item> -->
 
-      <el-form-item label="二维码">
+      <!-- <el-form-item label="二维码">
         <div class="qr-code-uploader">
           <div v-if="contactInfo.qrCode" class="qr-preview">
             <img :src="contactInfo.qrCode" alt="二维码" />
@@ -154,7 +145,7 @@ function handleTogglePublish() {
         <div class="field-tip">
           <el-text type="info" size="small">建议尺寸：200x200px，支持JPG、PNG格式</el-text>
         </div>
-      </el-form-item>
+      </el-form-item> -->
 
       <el-form-item label="排序">
         <el-input-number v-model="formData.sortOrder" :min="1" :max="999" />

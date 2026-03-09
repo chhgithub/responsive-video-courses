@@ -93,8 +93,12 @@ export interface CourseReview {
   userAvatar: string;
   rating: number;
   content: string;
+  // 讲师回复
   replyContent?: string;
   replyTime?: string;
+  // 用户对讲师回复的再回复
+  userReplyContent?: string;
+  userReplyTime?: string;
   reviewTime: string;
   likes: number;
   // 审核字段
@@ -361,12 +365,53 @@ export function updateCourse(id: number, data: Partial<Course>): void {
 }
 
 export function deleteCourse(id: number): void {
+  // 方案A：检查课程是否已有订单
+  const { getAllOrders } = require('./order-storage');
+  const orders = getAllOrders();
+
+  // 检查是否有该课程的已支付订单
+  const hasPaidOrders = orders.some(
+    (order: any) =>
+      (order.type === 'course' && order.courseId === id && order.status === 'paid') ||
+      (order.type === 'package' && order.packageCourses?.some((c: any) => c.courseId === id))
+  );
+
+  if (hasPaidOrders) {
+    throw new Error('该课程已有订单，不允许删除。请先下架课程或将订单处理完毕。');
+  }
+
   const list = getAllCourses();
   const newList = list.filter((item) => item.courseId !== id);
   saveCourses(newList);
 }
 
 export function batchDeleteCourses(ids: number[]): void {
+  // 方案A：检查课程是否已有订单
+  const { getAllOrders } = require('./order-storage');
+  const orders = getAllOrders();
+
+  // 检查是否有这些课程的已支付订单
+  const coursesWithOrders: number[] = [];
+  for (const courseId of ids) {
+    const hasPaidOrders = orders.some(
+      (order: any) =>
+        (order.type === 'course' && order.courseId === courseId && order.status === 'paid') ||
+        (order.type === 'package' && order.packageCourses?.some((c: any) => c.courseId === courseId))
+    );
+
+    if (hasPaidOrders) {
+      const course = getCourseById(courseId);
+      coursesWithOrders.push(courseId);
+    }
+  }
+
+  if (coursesWithOrders.length > 0) {
+    const courseNames = coursesWithOrders
+      .map(id => getCourseById(id)?.courseName || `课程${id}`)
+      .join('、');
+    throw new Error(`以下课程已有订单，不允许删除：${courseNames}。请先下架课程或将订单处理完毕。`);
+  }
+
   const list = getAllCourses();
   const newList = list.filter((item) => !ids.includes(item.courseId));
   saveCourses(newList);
@@ -411,6 +456,29 @@ export function saveCourses(courses: Course[]) {
   localStorage.setItem(COURSE_STORAGE_KEY, JSON.stringify(courses));
 }
 
+// 根据课程价格自动调整课时免费状态
+export function updateLessonFreeStatusByPrice(course: Course): Course {
+  const updatedCourse = { ...course };
+
+  if (course.price === 0) {
+    // 课程免费：所有课时自动设置为免费
+    updatedCourse.chapters = course.chapters.map(chapter => ({
+      ...chapter,
+      lessons: chapter.lessons.map(lesson => ({
+        ...lesson,
+        isFree: true,
+      })),
+    }));
+    updatedCourse.isFree = true;
+  } else {
+    // 课程付费：课时免费状态由用户设置，默认不免费（但保留已设置的免费课时）
+    // 注意：这里不会强制修改已设置的免费状态，只是更新课程isFree标志
+    updatedCourse.isFree = false;
+  }
+
+  return updatedCourse;
+}
+
 // ============ 课程评价管理 ============
 
 export function initReviewData() {
@@ -449,6 +517,16 @@ export function addReview(review: Omit<CourseReview, 'reviewId'>): CourseReview 
   }
 
   return newItem;
+}
+
+// 更新评价（支持用户回复讲师）
+export function updateReview(review: CourseReview): void {
+  const list = JSON.parse(localStorage.getItem(REVIEW_STORAGE_KEY) || '[]');
+  const index = list.findIndex((r: CourseReview) => r.reviewId === review.reviewId);
+  if (index !== -1) {
+    list[index] = { ...list[index], ...review };
+    localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(list));
+  }
 }
 
 export function deleteReview(reviewId: string): void {

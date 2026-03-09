@@ -83,6 +83,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/portal/general/my-courses.vue'),
         meta: { title: '我的兑换', requiresAuth: true },
       },
+      // 单位管理员专属页面（新增）
+      {
+        path: '/admin/org/students',
+        name: 'PortalOrgStudents',
+        component: () => import('@/views/portal/org/students.vue'),
+        meta: { title: '学员管理', requiresAuth: true, orgAdminOnly: true },
+      },
+      {
+        path: '/admin/org/codes',
+        name: 'PortalOrgCodes',
+        component: () => import('@/views/portal/org/codes.vue'),
+        meta: { title: '兑换码管理', requiresAuth: true, orgAdminOnly: true },
+      },
+      {
+        path: '/admin/org/progress',
+        name: 'PortalOrgProgress',
+        component: () => import('@/views/portal/org/progress.vue'),
+        meta: { title: '学习进度', requiresAuth: true, orgAdminOnly: true },
+      },
       // 认证中心路由
       {
         path: 'cert',

@@ -11,11 +11,15 @@ import {
 import { getPublishedCourses } from '@/utils/portal-course-adapter';
 import { getAllPackages } from '@/utils/course-package-storage';
 import type { RedemptionCode } from '@/types/general-education';
+import RedemptionRecords from './records.vue';
 
 const loading = ref(false);
 const codes = ref<RedemptionCode[]>([]);
 const selectedStatus = ref('');
 const searchKeyword = ref('');
+
+// 标签页
+const activeTab = ref('codes');
 
 // 批量选择
 const selectedCodeIds = ref<string[]>([]);
@@ -34,11 +38,34 @@ const generateForm = ref({
   accessValidDays: 30,
   accessNeverExpire: false,
   note: '',
+  // 新增字段
+  contactName: '',
+  contactPhone: '',
+  contactEmail: '',
+  remark: '',
 });
 
 // 课程列表和套餐列表
 const courseList = ref<any[]>([]);
 const packageList = ref<any[]>([]);
+
+// 单位列表
+const orgList = ref<any[]>([]);
+
+// 计算总价
+const totalPrice = computed(() => {
+  if (generateForm.value.targetType === 'course') {
+    return generateForm.value.targetIds.reduce((sum, courseId) => {
+      const course = courseList.value.find(c => c.id === courseId);
+      return sum + (course?.price || 0) * generateForm.value.count;
+    }, 0);
+  } else {
+    return generateForm.value.targetIds.reduce((sum, packageId) => {
+      const pkg = packageList.value.find(p => p.packageId.toString() === packageId);
+      return sum + (pkg?.price || 0) * generateForm.value.count;
+    }, 0);
+  }
+});
 
 // 状态映射
 const statusMap: Record<string, { text: string; type: any }> = {
@@ -242,10 +269,12 @@ function openGenerateDialog() {
 function initData() {
   courseList.value = getPublishedCourses();
   packageList.value = getAllPackages();
+  orgList.value = getAllOrganizations();
 }
 
-// 生成兑换码
+// 生成兑换码（同时生成兑换订单）
 async function handleGenerate() {
+  // 基础验证
   if (!generateForm.value.organizationId) {
     ElMessage.warning('请选择单位');
     return;
@@ -254,18 +283,25 @@ async function handleGenerate() {
     ElMessage.warning('请选择课程或套餐');
     return;
   }
-  if (!generateForm.value.targetName) {
-    ElMessage.warning('请输入兑换内容');
-    return;
-  }
+  // if (!generateForm.value.contactName || !generateForm.value.contactPhone) {
+  //   ElMessage.warning('请填写联系信息');
+  //   return;
+  // }
 
   try {
-    const org = getAllOrganizations().find(o => o.id === generateForm.value.organizationId);
+    const org = orgList.value.find(o => o.id === generateForm.value.organizationId);
     if (!org) {
       ElMessage.error('单位不存在');
       return;
     }
 
+    const confirm = await ElMessageBox.confirm(
+      `确认生成兑换码？\n\n单位：${org.name}\n${generateForm.value.targetType === 'course' ? '课程' : '套餐'}：${generateForm.value.targetName}\n生成数量：${generateForm.value.count}个`,
+      '确认操作',
+      { type: 'warning' }
+    );
+
+    // 1. 生成兑换码
     const generatedCodes = generateRedemptionCodes({
       organizationId: org.id,
       organizationName: org.name,
@@ -275,14 +311,79 @@ async function handleGenerate() {
       codeExpireDays: generateForm.value.codeNeverExpire ? undefined : generateForm.value.codeExpireDays,
       accessValidDays: generateForm.value.accessNeverExpire ? undefined : generateForm.value.accessValidDays,
       count: generateForm.value.count,
-      note: generateForm.value.note,
+      note: generateForm.value.remark,
     });
 
-    ElMessage.success(`成功生成 ${generatedCodes.length} 个兑换码`);
+    // 2. 创建兑换订单
+    const orderId = `R${Date.now()}`;
+    const newOrder = {
+      orderId,
+      orderType: generateForm.value.targetType,
+      status: 'completed',
+      orgId: org.id,
+      orgName: org.name,
+      contactName: generateForm.value.contactName,
+      contactPhone: generateForm.value.contactPhone,
+      contactEmail: generateForm.value.contactEmail,
+      totalPrice: totalPrice.value,
+      totalQuantity: generateForm.value.count,
+      codeCount: {
+        total: generatedCodes.length,
+        used: 0,
+      },
+      createTime: new Date().toISOString(),
+      remark: generateForm.value.remark,
+      adminNote: '',
+      createdBy: 'admin',
+    };
+
+    // 添加课程或套餐
+    if (generateForm.value.targetType === 'course') {
+      newOrder.courses = generateForm.value.targetIds.map(courseId => {
+        const course = courseList.value.find(c => c.id === courseId);
+        return {
+          courseId: course.id,
+          courseName: course.title,
+          courseCover: course.cover,
+          price: course.price,
+          quantity: generateForm.value.count,
+          totalPrice: course.price * generateForm.value.count,
+        };
+      });
+    } else {
+      newOrder.packages = generateForm.value.targetIds.map(packageId => {
+        const pkg = packageList.value.find(p => p.packageId.toString() === packageId);
+        return {
+          packageId: pkg.packageId,
+          packageName: pkg.packageName,
+          packageCover: pkg.cover,
+          price: pkg.price,
+          quantity: generateForm.value.count,
+          totalPrice: pkg.price * generateForm.value.count,
+        };
+      });
+    }
+
+    // 保存兑换订单
+    let redeemOrders = JSON.parse(localStorage.getItem('redeem_orders') || '[]');
+    redeemOrders.unshift(newOrder);
+    localStorage.setItem('redeem_orders', JSON.stringify(redeemOrders));
+
+    // 更新兑换码的订单关联
+    const redemptionCodes = JSON.parse(localStorage.getItem('redemption_codes') || '[]');
+    generatedCodes.forEach((code, index) => {
+      code.orderId = orderId;
+      redemptionCodes.unshift(code);
+    });
+    localStorage.setItem('redemption_codes', JSON.stringify(redemptionCodes));
+
+    ElMessage.success(`成功生成 ${generatedCodes.length} 个兑换码并创建订单`);
     generateDialogVisible.value = false;
     await loadCodes();
   } catch (error: any) {
-    ElMessage.error(error.message || '生成失败');
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败');
+    }
   }
 }
 
@@ -334,6 +435,11 @@ function formatCodeExpireTime(expireTime?: string) {
   return `${Math.ceil(diffDays / 30)}个月后过期`;
 }
 
+// 别名：格式化过期时间
+function formatExpireTime(expireTime?: string) {
+  return formatCodeExpireTime(expireTime);
+}
+
 // 获取兑换后状态
 function getAccessStatus(code: RedemptionCode): 'active' | 'expired_access' | null {
   // 只有已使用的兑换码才有兑换后状态
@@ -374,6 +480,45 @@ function copyCode(code: string) {
   ElMessage.success('兑换码已复制');
 }
 
+// 导出兑换码
+function handleExport() {
+  if (selectedCodeIds.value.length === 0) {
+    ElMessage.warning('请选择要导出的兑换码');
+    return;
+  }
+
+  const selectedCodesData = filteredCodes.value.filter(c => selectedCodeIds.value.includes(c.id));
+
+  try {
+    // 生成CSV内容
+    const csvContent = [
+      ['兑换码', '类型', '关联商品', '状态', '订单号', '有效期', '创建时间'].join(','),
+      ...selectedCodesData.map(code => [
+        code.code,
+        code.targetType === 'package' ? '套餐' : '课程',
+        code.targetName,
+        code.status === 'unused' ? '未使用' : code.status === 'used' ? '已使用' : code.status === 'expired' ? '已过期' : code.status === 'offline' ? '已下架' : code.status,
+        code.orderId || '-',
+        code.codeExpireTime ? formatCodeExpireTime(code.codeExpireTime) : '永不过期',
+        code.createTime,
+      ].join(',')),
+    ].join('\n');
+
+    // 创建下载链接
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `兑换码_${new Date().getTime()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    ElMessage.success(`已导出 ${selectedCodeIds.value.length} 个兑换码`);
+  } catch (error) {
+    console.error('导出失败:', error);
+    ElMessage.error('导出失败');
+  }
+}
+
 onMounted(() => {
   initData();
   loadCodes();
@@ -382,16 +527,20 @@ onMounted(() => {
 
 <template>
   <div class="redemption-page">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h2>兑换码管理</h2>
-      <el-button type="primary" @click="openGenerateDialog">
-        <el-icon><Plus /></el-icon>
-        生成兑换码
-      </el-button>
-    </div>
+    <!-- 标签页 -->
+    <el-tabs v-model="activeTab" class="tabs-container">
+      <el-tab-pane label="兑换码管理" name="codes">
+        <div class="tab-content">
+          <!-- 页面标题 -->
+          <div class="page-header">
+            <h2>兑换码管理</h2>
+            <el-button type="primary" @click="openGenerateDialog">
+              <el-icon><Plus /></el-icon>
+              生成兑换码
+            </el-button>
+          </div>
 
-    <!-- 筛选栏 -->
+          <!-- 筛选栏 -->
     <el-card class="filter-card" shadow="never">
       <el-form :inline="true">
         <el-form-item label="状态">
@@ -434,7 +583,15 @@ onMounted(() => {
         @click="handleBatchOffline"
       >
         <el-icon><CircleClose /></el-icon>
-        批量下架（{{ selectedCodeIds.length }}）
+        批量下架
+      </el-button>
+      <el-button
+        :disabled="selectedCodeIds.length === 0"
+        type="success"
+        @click="handleExport"
+      >
+        <el-icon><Download /></el-icon>
+        导出兑换码
       </el-button>
     </div>
 
@@ -556,6 +713,13 @@ onMounted(() => {
         <el-button type="primary" @click="openGenerateDialog">生成兑换码</el-button>
       </el-empty>
     </el-card>
+        </div>
+      </el-tab-pane>
+
+      <el-tab-pane label="兑换记录" name="records">
+        <RedemptionRecords />
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 生成对话框 -->
     <el-dialog v-model="generateDialogVisible" title="生成兑换码" width="600px">
@@ -613,6 +777,37 @@ onMounted(() => {
           <el-input-number v-model="generateForm.count" :min="1" :max="100" />
         </el-form-item>
 
+        <el-divider content-position="left" />
+
+        <!-- 联系信息 -->
+        <!-- <el-form-item label="联系人" required>
+          <el-input v-model="generateForm.contactName" placeholder="请输入联系人" style="width: 100%" />
+        </el-form-item>
+
+        <el-form-item label="联系电话" required>
+          <el-input v-model="generateForm.contactPhone" placeholder="请输入联系电话" style="width: 100%" />
+        </el-form-item>
+
+        <el-form-item label="联系邮箱">
+          <el-input v-model="generateForm.contactEmail" placeholder="请输入联系邮箱（选填）" style="width: 100%" />
+        </el-form-item>
+
+        <el-divider content-position="left" />
+
+        <el-form-item label="备注">
+          <el-input
+            v-model="generateForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="填写备注信息（选填）"
+            style="width: 100%"
+          />
+        </el-form-item>
+
+        <el-form-item label="总价">
+          <span class="total-price">¥{{ totalPrice }}</span>
+        </el-form-item> -->
+
         <el-form-item label="兑换码有效期">
           <el-checkbox v-model="generateForm.codeNeverExpire">永不过期</el-checkbox>
           <el-input-number
@@ -654,6 +849,15 @@ onMounted(() => {
 
 .redemption-page {
   padding: $spacing-large;
+
+  .tabs-container {
+    background: #fff;
+    border-radius: $border-radius-base;
+
+    .tab-content {
+      padding: $spacing-large;
+    }
+  }
 
   .page-header {
     display: flex;

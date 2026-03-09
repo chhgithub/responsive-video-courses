@@ -75,7 +75,7 @@ const broadcastMethodOptions = [
 // 消息类型选项
 const messageTypeOptions = [
   { label: '系统通知', value: 'system' },
-  { label: '课程相关', value: 'course' },
+  // { label: '课程相关', value: 'course' },
   { label: '公告', value: 'announcement' },
 ];
 

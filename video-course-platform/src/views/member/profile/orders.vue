@@ -1,22 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { getUserOrders, payOrder, cancelOrder, getOrderStats, forceRefreshOrderData, adminUpdateOrderStatus, type Order } from '@/utils/order-storage';
+import { Refresh, ShoppingCart, Key, InfoFilled, OfficeBuilding } from '@element-plus/icons-vue';
+import { getUserOrders, payOrder, cancelOrder, getOrderStats, forceRefreshOrderData, forceRefreshRefundData, type Order } from '@/utils/order-storage';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
+import { applyForRefund, getOrderRefundApplications, type RefundApplication } from '@/utils/order-storage';
+import { getRedemptionRecordsByUserId, type RedemptionRecord } from '@/utils/general-education-storage';
+import { getPortalCourseById as getCourseById } from '@/utils/portal-course-adapter';
+import { getPackageById } from '@/utils/course-package-storage';
 
 const router = useRouter();
 const authStore = useAuthStore();
 
 const loading = ref(false);
-type OrderStatusType = 'all' | 'pending' | 'paid' | 'cancelled' | 'refunding' | 'refunded' | 'refund_failed';
+type OrderStatusType = 'all' | 'pending' | 'paid' | 'cancelled' | 'refund_pending' | 'refunding' | 'refunded' | 'refund_failed';
 
-// 当前状态筛选
+// Tab切换：购买订单 | 兑换记录
+type TabType = 'purchase' | 'redeem';
+const activeTab = ref<TabType>('purchase');
+
+// 当前状态筛选（购买订单）
 const activeStatus = ref<OrderStatusType>('all');
 
-// 订单列表
+// 兑换记录状态筛选
+const redeemStatus = ref<'all' | 'used' | 'expired'>('all');
+
+// 购买订单列表
 const orders = ref<Order[]>([]);
+
+// 兑换记录列表
+const redemptionRecords = ref<RedemptionRecord[]>([]);
 
 // 订单状态配置
 const statusConfig = [
@@ -24,9 +39,17 @@ const statusConfig = [
   { key: 'pending' as OrderStatusType, label: '待付款', count: 0 },
   { key: 'paid' as OrderStatusType, label: '已完成', count: 0 },
   { key: 'cancelled' as OrderStatusType, label: '已取消', count: 0 },
+  { key: 'refund_pending' as OrderStatusType, label: '退款审核中', count: 0 },
   { key: 'refunding' as OrderStatusType, label: '退款中', count: 0 },
   { key: 'refunded' as OrderStatusType, label: '已退款', count: 0 },
   { key: 'refund_failed' as OrderStatusType, label: '退款失败', count: 0 },
+];
+
+// 兑换记录状态配置
+const redeemStatusConfig = [
+  { key: 'all', label: '全部兑换', count: 0 },
+  { key: 'used', label: '已使用', count: 0 },
+  { key: 'expired', label: '已过期', count: 0 },
 ];
 
 // 退款相关
@@ -39,6 +62,10 @@ const refundForm = ref({
 });
 const refundDaysLeft = ref(0);
 
+// 退款记录对话框
+const refundHistoryDialogVisible = ref(false);
+const refundHistoryApplications = ref<RefundApplication[]>([]);
+
 // 根据筛选条件显示的订单
 const displayedOrders = computed(() => {
   if (activeStatus.value === 'all') {
@@ -46,6 +73,40 @@ const displayedOrders = computed(() => {
   }
   return orders.value.filter((order) => order.status === activeStatus.value);
 });
+
+// 检查兑换记录是否已过期
+function isRecordExpired(record: RedemptionRecord): boolean {
+  if (!record.accessValidDays) return false;
+  const now = new Date();
+  const redeemTime = new Date(record.redeemTime);
+  const expireTime = new Date(redeemTime.getTime() + record.accessValidDays * 24 * 60 * 60 * 1000);
+  return now > expireTime;
+}
+
+// 根据筛选条件显示的兑换记录
+const displayedRedeemRecords = computed(() => {
+  const records = redemptionRecords.value;
+
+  if (redeemStatus.value === 'all') {
+    return records;
+  }
+  if (redeemStatus.value === 'used') {
+    // 显示未过期的记录
+    return records.filter(r => !isRecordExpired(r));
+  }
+  if (redeemStatus.value === 'expired') {
+    // 显示已过期的记录
+    return records.filter(r => isRecordExpired(r));
+  }
+
+  return records;
+});
+
+// 检查订单是否有退款记录
+function hasRefundRecords(orderId: string): boolean {
+  const records = getOrderRefundApplications(orderId);
+  return records.length > 0;
+}
 
 // 更新状态计数
 function updateStatusCounts() {
@@ -55,9 +116,19 @@ function updateStatusCounts() {
   statusConfig[1].count = userOrders.filter(o => o.status === 'pending').length; // 待付款
   statusConfig[2].count = userOrders.filter(o => o.status === 'paid').length; // 已完成
   statusConfig[3].count = userOrders.filter(o => o.status === 'cancelled').length; // 已取消
-  statusConfig[4].count = userOrders.filter(o => o.status === 'refunding').length; // 退款中
-  statusConfig[5].count = userOrders.filter(o => o.status === 'refunded').length; // 已退款
-  statusConfig[6].count = userOrders.filter(o => o.status === 'refund_failed').length; // 退款失败
+  statusConfig[4].count = userOrders.filter(o => o.status === 'refund_pending').length; // 退款审核中
+  statusConfig[5].count = userOrders.filter(o => o.status === 'refunding').length; // 退款中
+  statusConfig[6].count = userOrders.filter(o => o.status === 'refunded').length; // 已退款
+  statusConfig[7].count = userOrders.filter(o => o.status === 'refund_failed').length; // 退款失败
+}
+
+// 更新兑换记录状态计数
+function updateRedeemStatusCounts() {
+  const records = redemptionRecords.value;
+
+  redeemStatusConfig[0].count = records.length; // 全部兑换
+  redeemStatusConfig[1].count = records.filter(r => !isRecordExpired(r)).length; // 已使用（未过期）
+  redeemStatusConfig[2].count = records.filter(r => isRecordExpired(r)).length; // 已过期
 }
 
 // 加载订单列表
@@ -77,6 +148,7 @@ async function loadOrders() {
     // 先强制刷新数据（确保测试数据存在）
     console.log('调用强制刷新订单数据...');
     forceRefreshOrderData();
+    forceRefreshRefundData();
 
     // 等待让 localStorage 更新完成
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -104,17 +176,73 @@ async function loadOrders() {
   }
 }
 
+// 加载兑换记录
+async function loadRedemptionRecords() {
+  if (!authStore.userInfo) {
+    console.warn('用户未登录');
+    ElMessage.warning('请先登录');
+    return;
+  }
+
+  const userId = authStore.userInfo.userId;
+  console.log('===== 开始加载兑换记录 =====');
+  console.log('当前用户ID:', userId);
+
+  loading.value = true;
+  try {
+    const records = getRedemptionRecordsByUserId(userId);
+    console.log('获取到兑换记录数量:', records.length, '条');
+
+    // 按兑换时间倒序
+    redemptionRecords.value = records.sort((a, b) =>
+      new Date(b.redeemTime).getTime() - new Date(a.redeemTime).getTime()
+    );
+
+    updateRedeemStatusCounts();
+    console.log('最终兑换记录:', redemptionRecords.value.length, '条');
+
+    if (redemptionRecords.value.length === 0) {
+      ElMessage.info('暂无兑换记录');
+    }
+  } catch (error: any) {
+    console.error('加载兑换记录失败:', error);
+    ElMessage.error(error.message || '加载兑换记录失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
 // 切换状态
 function handleStatusChange(status: OrderStatusType) {
   activeStatus.value = status;
 }
 
+// 切换兑换记录状态
+function handleRedeemStatusChange(status: 'all' | 'used' | 'expired') {
+  redeemStatus.value = status;
+}
+
+// 切换Tab
+function handleTabChange(tab: TabType) {
+  activeTab.value = tab;
+  if (tab === 'purchase') {
+    loadOrders();
+  } else {
+    loadRedemptionRecords();
+  }
+}
+
 // 手动刷新订单数据
 function handleForceRefresh() {
-  console.log('手动刷新订单数据...');
+  console.log('手动刷新数据...');
   forceRefreshOrderData();
-  loadOrders();
-  ElMessage.success('订单数据已刷新');
+  forceRefreshRefundData();
+  if (activeTab.value === 'purchase') {
+    loadOrders();
+  } else {
+    loadRedemptionRecords();
+  }
+  ElMessage.success('数据已刷新');
 }
 
 // 去支付
@@ -169,17 +297,6 @@ function handleViewPackage(packageId: string | undefined) {
   router.push(`/portal/package/${packageId}`);
 }
 
-// 开始学习（跳转到视频学习页面）
-function handleStartLearning(order: any) {
-  if (order.type === 'package') {
-    // 套餐订单：跳转到套餐详情页
-    router.push(`/portal/package/${order.packageId}`);
-  } else {
-    // 课程订单：跳转到课程学习页面
-    router.push(`/portal/course-learn/${order.courseId}`);
-  }
-}
-
 // 格式化时间
 function formatTime(timeStr: string): string {
   if (!timeStr) return '-';
@@ -201,23 +318,11 @@ function handleApplyRefund(order: Order) {
     return;
   }
 
-  // 退款中订单不允许重复申请
-  if (order.status === 'refunding') {
-    ElMessage.info('退款申请处理中，请勿重复提交');
+  // 只有已支付和退款失败的订单可以申请退款
+  if (order.status !== 'paid' && order.status !== 'refund_failed') {
+    ElMessage.info('当前订单状态不支持申请退款');
     return;
   }
-
-  // 检查退款期限（假设订单支付后7天内可申请退款）
-  // 暂时注释此限制以方便测试
-  // const payTime = order.payTime;
-  // if (payTime) {
-  //   const orderDate = new Date(payTime);
-  //   const daysSincePayment = Math.floor((Date.now() - orderDate.getTime()) / (1000 * 60 * 60 * 24));
-  //   if (daysSincePayment > 7) {
-  //     ElMessage.warning('已超过7天退款期限，无法申请退款');
-  //     return;
-  //   }
-  // }
 
   currentOrder.value = order;
   refundForm.value = {
@@ -225,6 +330,27 @@ function handleApplyRefund(order: Order) {
     description: '',
   };
   refundDialogVisible.value = true;
+}
+
+// 打开退款记录对话框
+function handleViewRefundHistory(order: Order) {
+  console.log('=== 打开退款记录 ===');
+  console.log('订单ID:', order.orderId);
+  console.log('订单名称:', order.type === 'course' ? order.courseName : order.packageName);
+  console.log('订单状态:', order.status);
+
+  currentOrder.value = order;
+  refundHistoryApplications.value = getOrderRefundApplications(order.orderId);
+
+  console.log('退款记录数量:', refundHistoryApplications.value.length);
+  console.log('退款记录详情:', refundHistoryApplications.value);
+
+  if (refundHistoryApplications.value.length === 0) {
+    console.warn('该订单暂无退款记录');
+    ElMessage.info('该订单暂无退款申请记录');
+  } else {
+    refundHistoryDialogVisible.value = true;
+  }
 }
 
 // 提交退款申请
@@ -236,21 +362,13 @@ async function handleSubmitRefund() {
     return;
   }
 
-  if (!refundForm.value.description || refundForm.value.description.length < 5) {
-    ElMessage.warning('请输入退款说明（至少5个字）');
-    return;
-  }
-
   refundSubmitting.value = true;
   try {
-    // 模拟提交延迟
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // 更新订单状态为"退款中"
-    adminUpdateOrderStatus(
+    // 调用新的退款申请 API
+    await applyForRefund(
       currentOrder.value.orderId,
-      'refunding',
-      refundForm.value.reason
+      refundForm.value.reason,
+      refundForm.value.description || undefined
     );
 
     console.log('退款申请已提交，订单ID:', currentOrder.value.orderId);
@@ -258,20 +376,23 @@ async function handleSubmitRefund() {
     // 关闭对话框
     refundDialogVisible.value = false;
 
+    ElMessage.success('退款申请已提交，请等待审核');
+
     // 使用 nextTick 确保数据更新后再切换标签
     await nextTick();
 
-    // 自动切换到"退款中"标签页
-    activeStatus.value = 'refunding';
-    console.log('已切换到退款中标签，当前状态:', activeStatus.value);
+    // 自动切换到"退款审核中"标签页
+    activeStatus.value = 'refund_pending';
+    console.log('已切换到退款审核中标签，当前状态:', activeStatus.value);
 
     // 等待 DOM 更新后再刷新数据
     await nextTick();
 
     // 重新加载订单列表
     await loadOrders();
-  } catch (error) {
-    ElMessage.error('提交失败，请稍后重试');
+  } catch (error: any) {
+    console.error('退款申请失败:', error);
+    ElMessage.error(error.message || '提交失败，请稍后重试');
   } finally {
     refundSubmitting.value = false;
   }
@@ -292,6 +413,7 @@ function getStatusType(status: string): 'warning' | 'success' | 'info' | 'danger
     pending: 'warning',
     paid: 'success',
     cancelled: 'info',
+    refund_pending: 'warning',
     refunding: 'warning',
     refunded: 'danger',
     refund_failed: 'danger',
@@ -305,6 +427,7 @@ function getStatusText(status: string): string {
     pending: '待付款',
     paid: '已完成',
     cancelled: '已取消',
+    refund_pending: '退款审核中',
     refunding: '退款中',
     refunded: '已退款',
     refund_failed: '退款失败',
@@ -312,55 +435,97 @@ function getStatusText(status: string): string {
   return map[status] || status;
 }
 
+// 获取课程/套餐封面
+function getCourseCover(courseId: string): string {
+  const course = getCourseById(courseId);
+  if (course) {
+    return course.cover || 'https://picsum.photos/seed/default/300/200';
+  }
+
+  // 如果不是课程，尝试获取套餐
+  const pkg = getPackageById(parseInt(courseId));
+  if (pkg) {
+    return pkg.packageCover || 'https://picsum.photos/seed/default/300/200';
+  }
+
+  return 'https://picsum.photos/seed/default/300/200';
+}
+
+// 获取兑换记录状态类型
+function getRedeemRecordStatusType(record: RedemptionRecord): any {
+  if (isRecordExpired(record)) {
+    return 'info';
+  }
+  return 'success';
+}
+
+// 获取兑换记录状态文本
+function getRedeemRecordStatusText(record: RedemptionRecord): string {
+  if (isRecordExpired(record)) {
+    return '已过期';
+  }
+  return '学习中';
+}
+
+// 判断是否为套餐兑换
+function isPackageRedemption(record: RedemptionRecord): boolean {
+  return !!record.packageId && !!record.packageName;
+}
+
 onMounted(() => {
-  loadOrders();
+  if (activeTab.value === 'purchase') {
+    loadOrders();
+  } else {
+    loadRedemptionRecords();
+  }
 });
 </script>
 
 <template>
   <div class="my-orders">
-    <!-- 调试信息 -->
-    <!-- <el-alert
-      v-if="authStore.userInfo"
-      title="调试信息"
-      type="info"
-      :closable="false"
-      style="margin-bottom: 20px;"
-    >
-      用户ID: {{ authStore.userInfo.userId }} | 用户名: {{ authStore.userInfo.username }}
-      | 订单数量: {{ orders.length }}
-    </el-alert>
-    <el-alert
-      v-else
-      title="未登录"
-      type="warning"
-      :closable="false"
-      style="margin-bottom: 20px;"
-    >
-      请先登录
-    </el-alert> -->
-
     <div class="page-header">
       <div class="header-left">
         <h2>订单记录</h2>
-        <p>查看您的所有订单</p>
+        <p>查看您的所有订单和兑换记录</p>
       </div>
       <el-button :icon="Refresh" @click="handleForceRefresh">刷新数据</el-button>
     </div>
 
-    <!-- 状态筛选 -->
-    <div class="status-tabs">
+    <!-- 二级Tab切换 -->
+    <div class="tab-switcher">
       <button
-        v-for="status in statusConfig"
-        :key="status.key"
-        class="status-tab"
-        :class="{ active: activeStatus === status.key }"
-        @click="handleStatusChange(status.key)"
+        class="tab-button"
+        :class="{ active: activeTab === 'purchase' }"
+        @click="handleTabChange('purchase')"
       >
-        <span class="tab-label">{{ status.label }}</span>
-        <span class="tab-count">({{ status.count }})</span>
+        <el-icon><ShoppingCart /></el-icon>
+        购买订单
+      </button>
+      <button
+        class="tab-button"
+        :class="{ active: activeTab === 'redeem' }"
+        @click="handleTabChange('redeem')"
+      >
+        <el-icon><Key /></el-icon>
+        兑换记录
       </button>
     </div>
+
+    <!-- 购买订单 -->
+    <template v-if="activeTab === 'purchase'">
+      <!-- 状态筛选 -->
+      <div class="status-tabs">
+        <button
+          v-for="status in statusConfig"
+          :key="status.key"
+          class="status-tab"
+          :class="{ active: activeStatus === status.key }"
+          @click="handleStatusChange(status.key)"
+        >
+          <span class="tab-label">{{ status.label }}</span>
+          <span class="tab-count">({{ status.count }})</span>
+        </button>
+      </div>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
@@ -419,16 +584,18 @@ onMounted(() => {
             <!-- 已完成订单 -->
             <template v-else-if="order.status === 'paid'">
               <el-button
-                type="success"
-                @click="handleStartLearning(order)"
-              >
-                开始学习
-              </el-button>
-              <el-button
                 type="warning"
                 @click="handleApplyRefund(order)"
               >
                 申请退款
+              </el-button>
+            </template>
+
+            <!-- 退款审核中订单 -->
+            <template v-else-if="order.status === 'refund_pending'">
+              <el-button type="info" disabled>退款审核中...</el-button>
+              <el-button v-if="hasRefundRecords(order.orderId)" type="info" @click="handleViewRefundHistory(order)">
+                查看记录
               </el-button>
             </template>
 
@@ -445,6 +612,9 @@ onMounted(() => {
             <!-- 退款中订单 -->
             <template v-else-if="order.status === 'refunding'">
               <el-button type="warning" disabled>退款处理中</el-button>
+              <el-button v-if="hasRefundRecords(order.orderId)" type="info" @click="handleViewRefundHistory(order)">
+                查看记录
+              </el-button>
             </template>
 
             <!-- 已退款订单 -->
@@ -454,6 +624,9 @@ onMounted(() => {
                 @click="order.type === 'package' ? handleViewPackage(order.packageId) : handleViewCourse(order.courseId)"
               >
                 再次购买
+              </el-button>
+              <el-button v-if="hasRefundRecords(order.orderId)" type="info" @click="handleViewRefundHistory(order)">
+                查看记录
               </el-button>
             </template>
 
@@ -465,11 +638,8 @@ onMounted(() => {
               >
                 重新申请退款
               </el-button>
-              <el-button
-                type="info"
-                @click="order.type === 'package' ? handleViewPackage(order.packageId) : handleViewCourse(order.courseId)"
-              >
-                再次购买
+              <el-button v-if="hasRefundRecords(order.orderId)" type="info" @click="handleViewRefundHistory(order)">
+                查看记录
               </el-button>
             </template>
           </div>
@@ -489,16 +659,21 @@ onMounted(() => {
         </div>
 
         <!-- 退款信息 -->
-        <div v-if="order.status === 'refunded' || order.status === 'refund_failed'" class="refund-info">
+        <!-- <div v-if="order.status === 'refunding'" class="refund-info">
           <div class="refund-reason">
             <span class="label">退款原因：</span>
             <span class="value">{{ order.refundReason || '-' }}</span>
           </div>
-          <!-- <div v-if="order.status === 'refund_failed'" class="refund-fail-reason">
-            <span class="label">失败原因：</span>
-            <span class="value">{{ order.refundFailReason || '-' }}</span>
-          </div> -->
-        </div>
+        </div> -->
+
+        <!-- 退款记录引导提示 -->
+        <!-- <div
+          v-if="hasRefundRecords(order.orderId) && ['refunded', 'refund_failed'].includes(order.status)"
+          class="refund-tip"
+        >
+          <el-icon><InfoFilled /></el-icon>
+          退款详情请查看退款记录
+        </div> -->
       </div>
     </div>
 
@@ -510,6 +685,75 @@ onMounted(() => {
         </el-button>
       </el-empty>
     </div>
+    </template>
+
+    <!-- 兑换记录 -->
+    <template v-if="activeTab === 'redeem'">
+      <!-- 状态筛选 -->
+      <div class="status-tabs">
+        <button
+          v-for="status in redeemStatusConfig"
+          :key="status.key"
+          class="status-tab"
+          :class="{ active: redeemStatus === status.key }"
+          @click="handleRedeemStatusChange(status.key)"
+        >
+          <span class="tab-label">{{ status.label }}</span>
+          <span class="tab-count">({{ status.count }})</span>
+        </button>
+      </div>
+
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-container">
+        <el-skeleton :rows="3" animated />
+      </div>
+
+      <!-- 兑换记录列表 -->
+      <div v-else-if="displayedRedeemRecords.length > 0" class="redeem-list">
+        <div v-for="record in displayedRedeemRecords" :key="record.id" class="redeem-card">
+          <!-- 兑换码头部 -->
+          <div class="redeem-header">
+            <div class="redeem-info">
+              <el-icon class="code-icon"><Key /></el-icon>
+              <span class="code-text">兑换码：{{ record.code }}</span>
+            </div>
+            <span class="redeem-time">{{ formatTime(record.redeemTime) }}</span>
+          </div>
+
+          <!-- 兑换内容 -->
+          <div class="redeem-content">
+            <el-image
+              :src="getCourseCover(record.courseId || record.packageId)"
+              fit="cover"
+              class="course-cover"
+            />
+            <div class="course-details">
+              <h3 class="course-name">{{ record.courseName }}</h3>
+              <el-tag v-if="isPackageRedemption(record)" size="small" type="warning" style="margin-bottom: 8px;">
+                套餐
+              </el-tag>
+              <div class="org-info">
+                <el-icon><OfficeBuilding /></el-icon>
+                <span>{{ record.organizationName }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 兑换底部 -->
+          <!-- <div class="redeem-footer">
+            <el-tag :type="getRedeemRecordStatusType(record)" size="large">
+              {{ getRedeemRecordStatusText(record) }}
+            </el-tag>
+          </div> -->
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-else class="empty-state">
+        <el-empty :description="redeemStatus === 'all' ? '暂无兑换记录' : `暂无${redeemStatusConfig.find(s => s.key === redeemStatus)?.label}`">
+        </el-empty>
+      </div>
+    </template>
 
     <!-- 退款申请对话框 -->
     <el-dialog
@@ -581,7 +825,8 @@ onMounted(() => {
               退款说明：<br>
               1. 订单支付后 <span style="color: #f56c6c;">7天</span> 内可申请退款<br>
               2. 套餐订单暂不支持线上退款，请联系客服处理<br>
-              3. 退款申请提交后订单状态变为"退款中"，请等待管理员审核
+              3. 退款申请提交后订单状态变为"退款审核中"，请等待管理员审核<br>
+              4. 可以多次申请退款，每次申请都会有独立记录
             </div>
           </template>
         </el-alert>
@@ -597,6 +842,61 @@ onMounted(() => {
           提交申请
         </el-button>
       </template>
+    </el-dialog>
+
+    <!-- 退款记录对话框 -->
+    <el-dialog
+      v-model="refundHistoryDialogVisible"
+      title="退款申请记录"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="refundHistoryApplications.length > 0" class="refund-history-dialog">
+        <div
+          v-for="(app, index) in refundHistoryApplications"
+          :key="app.id"
+          :class="['history-item', { 'latest': index === 0 }]"
+        >
+          <div class="history-header">
+            <el-tag v-if="index === 0" type="success" size="small">最新申请</el-tag>
+            <span class="history-title">第 {{ refundHistoryApplications.length - index }} 次退款申请</span>
+            <span class="history-time">{{ formatTime(app.applyTime) }}</span>
+          </div>
+          <div class="history-content">
+            <div class="history-reason">
+              <span class="label">退款原因:</span>
+              <span>{{ app.reasonType }}</span>
+            </div>
+            <div v-if="app.reasonDetail" class="history-detail">
+              <span class="label">详细说明:</span>
+              <span>{{ app.reasonDetail }}</span>
+            </div>
+            <div class="history-status">
+              <span class="label">审核状态:</span>
+              <el-tag v-if="app.auditStatus === 'pending'" type="warning" size="small">审核中...</el-tag>
+              <el-tag v-else-if="app.auditStatus === 'approved'" type="success" size="small">审核通过</el-tag>
+              <el-tag v-else-if="app.auditStatus === 'rejected'" type="danger" size="small">审核拒绝</el-tag>
+            </div>
+            <div v-if="app.auditBy" class="history-audit-by">
+              <span class="label">审核人:</span>
+              <span>{{ app.auditBy }}</span>
+            </div>
+            <div v-if="app.auditTime" class="history-audit-time">
+              <span class="label">审核时间:</span>
+              <span>{{ formatTime(app.auditTime) }}</span>
+            </div>
+            <div v-if="app.auditRemark" class="history-audit-remark">
+              <span class="label">审核意见:</span>
+              <span>{{ app.auditRemark }}</span>
+            </div>
+            <div v-if="app.refundTime" class="history-refund-time">
+              <span class="label">退款完成时间:</span>
+              <span>{{ formatTime(app.refundTime) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <el-empty v-else description="暂无退款申请记录" />
     </el-dialog>
   </div>
 </template>
@@ -623,6 +923,39 @@ onMounted(() => {
 
       p {
         color: $text-color-secondary;
+      }
+    }
+  }
+
+  // Tab切换器
+  .tab-switcher {
+    display: flex;
+    gap: $spacing-base;
+    margin-bottom: $spacing-extra-large;
+    padding-bottom: $spacing-base;
+    border-bottom: 1px solid $border-color-lighter;
+
+    .tab-button {
+      padding: $spacing-base $spacing-extra-large;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: $font-size-medium;
+      color: $text-color-secondary;
+      transition: $transition-base;
+      display: flex;
+      align-items: center;
+      gap: $spacing-small;
+
+      &:hover {
+        color: $--el-color-primary;
+      }
+
+      &.active {
+        color: $--el-color-primary;
+        border-bottom-color: $--el-color-primary;
+        font-weight: 600;
       }
     }
   }
@@ -671,6 +1004,97 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: $spacing-large;
+  }
+
+  .redeem-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-large;
+  }
+
+  .redeem-card {
+    background: #fff;
+    border: 1px solid $border-color-lighter;
+    border-radius: $border-radius-base;
+    padding: $spacing-large;
+    transition: $transition-base;
+
+    &:hover {
+      box-shadow: $box-shadow-base;
+    }
+  }
+
+  .redeem-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: $spacing-base;
+    margin-bottom: $spacing-base;
+    border-bottom: 1px solid $border-color-lighter;
+
+    .redeem-info {
+      display: flex;
+      align-items: center;
+      gap: $spacing-small;
+
+      .code-icon {
+        color: $--el-color-primary;
+      }
+
+      .code-text {
+        font-size: $font-size-base;
+        color: $text-color-primary;
+        font-weight: 500;
+      }
+    }
+
+    .redeem-time {
+      font-size: $font-size-small;
+      color: $text-color-placeholder;
+    }
+  }
+
+  .redeem-content {
+    display: flex;
+    align-items: center;
+    gap: $spacing-extra-large;
+    margin-bottom: $spacing-base;
+
+    .course-cover {
+      width: 120px;
+      height: 90px;
+      border-radius: $border-radius-small;
+      flex-shrink: 0;
+    }
+
+    .course-details {
+      flex: 1;
+      min-width: 0;
+
+      .course-name {
+        font-size: $font-size-medium;
+        font-weight: 500;
+        color: $text-color-primary;
+        margin-bottom: $spacing-small;
+      }
+
+      .org-info {
+        display: flex;
+        align-items: center;
+        gap: $spacing-small;
+        font-size: $font-size-small;
+        color: $text-color-secondary;
+      }
+    }
+  }
+
+  .redeem-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: $spacing-base;
+    margin-top: $spacing-base;
+    border-top: 1px solid $border-color-lighter;
   }
 
   .order-card {
@@ -817,6 +1241,22 @@ onMounted(() => {
     }
   }
 
+  .refund-tip {
+    display: flex;
+    align-items: center;
+    gap: $spacing-small;
+    padding: $spacing-base;
+    margin-top: $spacing-base;
+    background: #f5f7fa;
+    border-radius: $border-radius-small;
+    color: $text-color-secondary;
+    font-size: $font-size-small;
+
+    .el-icon {
+      color: $--el-color-primary;
+    }
+  }
+
   .empty-state {
     padding: $spacing-extra-extra-large 0;
   }
@@ -853,6 +1293,63 @@ onMounted(() => {
           color: #f56c6c;
           font-size: $font-size-large;
           font-weight: bold;
+        }
+      }
+    }
+  }
+
+  // 退款记录对话框样式
+  .refund-history-dialog {
+    .history-item {
+      padding: $spacing-base;
+      background: #fff;
+      border: 1px solid $border-color-lighter;
+      border-radius: $border-radius-base;
+      margin-bottom: $spacing-base;
+
+      &.latest {
+        border-left: 4px solid #67c23a;
+        background: #f0f9ff;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: $spacing-small;
+        border-bottom: 1px solid $border-color-lighter;
+
+        .history-title {
+          font-weight: 600;
+          color: $text-color-primary;
+        }
+
+        .history-time {
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+        }
+      }
+
+      .history-content {
+        .history-reason,
+        .history-detail,
+        .history-status,
+        .history-audit-by,
+        .history-audit-time,
+        .history-audit-remark,
+        .history-refund-time {
+          display: flex;
+          margin-bottom: $spacing-small;
+
+          .label {
+            color: $text-color-secondary;
+            min-width: 100px;
+            margin-right: $spacing-small;
+          }
         }
       }
     }

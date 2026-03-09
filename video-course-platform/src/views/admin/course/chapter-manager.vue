@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import type { Course, Chapter, Lesson } from '@/utils/course-storage';
 import { getVideoById, formatDuration } from '@/utils/video-storage';
+import { updateLessonFreeStatusByPrice } from '@/utils/course-storage';
 import ChapterDrawer from './components/ChapterDrawer.vue';
 import LessonDrawer from './components/LessonDrawer.vue';
 
@@ -39,7 +40,9 @@ const currentLessonId = ref<string>();
 
 // 初始化章节数据
 function initChapters() {
-  chapters.value = JSON.parse(JSON.stringify(props.course.chapters || []));
+  // 根据课程价格自动调整课时免费状态
+  const updatedCourse = updateLessonFreeStatusByPrice(props.course);
+  chapters.value = JSON.parse(JSON.stringify(updatedCourse.chapters || []));
 }
 
 // 添加章节
@@ -116,6 +119,69 @@ function handleToggleFree(chapterId: string, lesson: Lesson) {
       targetLesson.isFree = !targetLesson.isFree;
     }
   }
+}
+
+// 批量设置免费
+function handleBatchSetFree() {
+  const totalLessons = chapters.value.reduce((sum, ch) => sum + ch.lessons.length, 0);
+  if (totalLessons === 0) {
+    ElMessage.info('暂无课时');
+    return;
+  }
+
+  ElMessageBox.confirm(
+    `确认将所有课时设置为免费吗？`,
+    '批量免费',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'success',
+    }
+  )
+    .then(() => {
+      chapters.value.forEach(chapter => {
+        chapter.lessons.forEach((lesson) => {
+          lesson.isFree = true;
+        });
+      });
+      ElMessage.success(`已将${totalLessons}个课时设置为免费`);
+    })
+    .catch(() => {});
+}
+
+// 批量取消免费
+function handleBatchCancelFree() {
+  const totalLessons = chapters.value.reduce((sum, ch) => sum + ch.lessons.length, 0);
+  if (totalLessons === 0) {
+    ElMessage.info('暂无课时');
+    return;
+  }
+
+  // 检查是否有免费课时
+  const hasFreeLessons = chapters.value.some(ch => ch.lessons.some(l => l.isFree));
+  if (!hasFreeLessons) {
+    ElMessage.info('没有免费课时');
+    return;
+  }
+
+  ElMessageBox.confirm(
+    `确认取消所有课时的免费状态吗？`,
+    '取消免费',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      chapters.value.forEach(chapter => {
+        chapter.lessons.forEach((lesson) => {
+          lesson.isFree = false;
+        });
+      });
+      ElMessage.success('已取消所有课时的免费状态');
+    })
+    .catch(() => {});
 }
 
 // 切换课时试听状态
@@ -202,13 +268,32 @@ watch(
   >
     <div class="chapter-manager">
       <div class="chapter-header">
-        <el-button type="primary" @click="handleAddChapter">
-          <el-icon><Plus /></el-icon>
-          添加章节
-        </el-button>
-        <div class="header-tip">
-          <el-icon><InfoFilled /></el-icon>
-          提示：拖拽章节可调整排序
+        <div class="header-left">
+          <el-button type="primary" @click="handleAddChapter">
+            <el-icon><Plus /></el-icon>
+            添加章节
+          </el-button>
+          <!-- 仅在付费课程时显示批量操作按钮 -->
+          <template v-if="props.course.price > 0">
+            <el-button type="success" @click="handleBatchSetFree">
+              <el-icon><PriceTag /></el-icon>
+              批量免费
+            </el-button>
+            <el-button type="warning" @click="handleBatchCancelFree">
+              <el-icon><Close /></el-icon>
+              取消免费
+            </el-button>
+          </template>
+        </div>
+        <div class="header-tips">
+          <div class="header-tip">
+            <el-icon><InfoFilled /></el-icon>
+            提示：拖拽章节可调整排序
+          </div>
+          <div class="header-tip free-tip">
+            <el-icon><PriceTag /></el-icon>
+            {{ props.course.price === 0 ? '当前为免费课程，所有课时自动免费' : '当前为付费课程，可设置部分课时免费试学' }}
+          </div>
         </div>
       </div>
 
@@ -356,10 +441,23 @@ watch(
   .chapter-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: $spacing-large;
     padding-bottom: $spacing-base;
     border-bottom: 1px solid $border-color-lighter;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: $spacing-base;
+    }
+
+    .header-tips {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+    }
 
     .header-tip {
       display: flex;
@@ -367,6 +465,11 @@ watch(
       gap: 4px;
       font-size: $font-size-small;
       color: $text-color-secondary;
+
+      &.free-tip {
+        color: #67c23a;
+        font-weight: 500;
+      }
     }
   }
 

@@ -26,7 +26,7 @@ const menuItems = computed(() => {
         icon: 'OfficeBuilding',
         children: [
           { path: '/admin/org/students', title: '学员管理' },
-          { path: '/admin/org/codes', title: '激活码管理' },
+          { path: '/admin/org/codes', title: '兑换码管理' },
           { path: '/admin/org/progress', title: '学习进度' },
         ],
       },
@@ -63,7 +63,8 @@ const menuItems = computed(() => {
       title: '订单管理',
       icon: 'ShoppingCart',
       children: [
-        { path: '/admin/order/list', title: '订单列表' },
+        { path: '/admin/order/purchase', title: '购买订单' },
+        { path: '/admin/order/redeem', title: '兑换订单' },
       ],
     },
     {

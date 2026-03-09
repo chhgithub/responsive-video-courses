@@ -75,14 +75,20 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'order',
         name: 'AdminOrder',
-        redirect: '/admin/order/list',
+        redirect: '/admin/order/purchase',
         meta: { title: '订单管理', icon: 'shopping-cart' },
         children: [
           {
-            path: 'list',
-            name: 'AdminOrderList',
-            component: () => import('@/views/admin/order/index.vue'),
-            meta: { title: '订单列表' },
+            path: 'purchase',
+            name: 'AdminOrderPurchase',
+            component: () => import('@/views/admin/order/purchase.vue'),
+            meta: { title: '购买订单' },
+          },
+          {
+            path: 'redeem',
+            name: 'AdminOrderRedeem',
+            component: () => import('@/views/admin/order/redeem.vue'),
+            meta: { title: '兑换订单' },
           },
         ],
       },
@@ -160,7 +166,7 @@ const routes: RouteRecordRaw[] = [
             path: 'codes',
             name: 'AdminOrgCodes',
             component: () => import('@/views/admin/org/codes/index.vue'),
-            meta: { title: '激活码管理' },
+            meta: { title: '兑换码管理' },
           },
           {
             path: 'progress',

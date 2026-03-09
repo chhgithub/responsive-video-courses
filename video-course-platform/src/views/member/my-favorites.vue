@@ -6,6 +6,14 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { getUserFavorites, removeFavorite, isCourseFavorited } from '@/utils/favorite-storage';
 import { getUserOrders } from '@/utils/order-storage';
 
+// 定义 props
+interface Props {
+  embedded?: boolean; // 是否作为嵌入组件使用
+}
+const props = withDefaults(defineProps<Props>(), {
+  embedded: false,
+});
+
 const router = useRouter();
 const authStore = useAuthStore();
 
@@ -128,8 +136,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="my-favorites">
-    <div class="page-header">
+  <div class="my-favorites" :class="{ 'embedded-mode': embedded }">
+    <div class="page-header" v-if="!embedded">
       <h2>我的收藏</h2>
       <p>共收藏 {{ stats.total }} 门课程（免费 {{ stats.freeCount }} 门，付费 {{ stats.paidCount }} 门）</p>
     </div>
@@ -207,7 +215,7 @@ onMounted(() => {
             </el-button>
             <el-button @click="handleViewDetail(item.courseId)">查看详情</el-button>
             <el-button
-              type="danger"
+              type="info"
               plain
               @click="handleRemoveFavorite(item.courseId, item.courseName)"
             >
@@ -240,6 +248,10 @@ onMounted(() => {
 
 .my-favorites {
   padding: $spacing-large;
+
+  &.embedded-mode {
+    padding: 0;
+  }
 
   .page-header {
     margin-bottom: $spacing-extra-large;

@@ -159,7 +159,7 @@ onMounted(() => {
       <el-card class="stat-card" shadow="hover">
         <div class="stat-content">
           <div class="stat-value">{{ statistics.totalCodes }}</div>
-          <div class="stat-label">总激活码</div>
+          <div class="stat-label">总兑换码</div>
         </div>
       </el-card>
       <el-card class="stat-card" shadow="hover">
@@ -205,13 +205,13 @@ onMounted(() => {
             {{ formatDate(row.lastWatchTime) }}
           </template>
         </el-table-column>
-        <el-table-column prop="accessSource" label="来源" width="100">
+        <!-- <el-table-column prop="accessSource" label="来源" width="100">
           <template #default="{ row }">
             <el-tag :type="row.accessSource === 'redeem' ? 'warning' : 'primary'" size="small">
               {{ row.accessSource === 'redeem' ? '兑换' : '购买' }}
             </el-tag>
           </template>
-        </el-table-column>
+        </el-table-column> -->
       </el-table>
 
       <el-empty v-if="!loading && filteredProgress.length === 0" description="暂无学习记录">

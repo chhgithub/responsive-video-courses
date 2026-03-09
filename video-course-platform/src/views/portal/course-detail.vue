@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { EditPen } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores';
 import { getPortalCourseById, type PortalCourse } from '@/utils/portal-course-adapter';
 import { hasUserPurchasedCourse } from '@/utils/order-storage';
 import { isCourseFavorited, toggleFavorite } from '@/utils/favorite-storage';
 import { getCourseLearningRecord } from '@/utils/learning-storage';
-import { getReviewsByCourseId, type CourseReview } from '@/utils/course-storage';
+import { getReviewsByCourseId, type CourseReview, addReview, updateReview } from '@/utils/course-storage';
 import { getPackagesByCourse, type CoursePackage, calculatePackageSavings, formatPackagePrice } from '@/utils/course-package-storage';
 
 // 类型定义
@@ -69,6 +70,13 @@ const activeTab = ref('intro');
 // 评价数据
 const reviews = ref<CourseReview[]>([]);
 const reviewsLoading = ref(false);
+
+// 评价对话框
+const reviewDialogVisible = ref(false);
+const reviewForm = ref({
+  rating: 0,
+  content: '',
+});
 
 // 相关套餐
 const relatedPackages = ref<CoursePackage[]>([]);
@@ -425,6 +433,102 @@ function handleBack() {
   router.push('/portal/courses');
 }
 
+// 打开评价对话框
+function handleWriteReview() {
+  const user = getCurrentUser();
+  if (!user) {
+    ElMessage.warning('请先登录');
+    router.push(`/portal/login?redirect=/portal/course/${courseId}`);
+    return;
+  }
+
+  if (!isPurchased.value) {
+    ElMessage.warning('请先购买课程');
+    return;
+  }
+
+  reviewDialogVisible.value = true;
+}
+
+// 提交评价
+function handleSubmitReview() {
+  if (reviewForm.value.rating === 0) {
+    ElMessage.warning('请选择评分');
+    return;
+  }
+  if (!reviewForm.value.content.trim()) {
+    ElMessage.warning('请输入评价内容');
+    return;
+  }
+
+  const user = getCurrentUser();
+  if (!user || !course.value) return;
+
+  // 调用添加评价 API
+  const newReview: CourseReview = {
+    reviewId: `review_${Date.now()}`,
+    courseId: parseInt(course.value.id),
+    userId: user.userId,
+    userName: user.nickname || user.username,
+    userAvatar: user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
+    rating: reviewForm.value.rating,
+    content: reviewForm.value.content.trim(),
+    reviewTime: new Date().toISOString(),
+    likes: 0,
+    status: 'pending',
+  };
+
+  addReview(newReview);
+  reviewDialogVisible.value = false;
+  reviewForm.value = { rating: 0, content: '' };
+
+  ElMessage.success('评价提交成功，等待审核');
+  loadReviews();
+}
+
+// 重置评价表单
+function handleResetReview() {
+  reviewForm.value = { rating: 0, content: '' };
+}
+
+// 回复讲师
+function handleReplyToTeacher(review: CourseReview) {
+  const user = getCurrentUser();
+  if (!user) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+
+  // 只能回复自己的评价
+  if (review.userId !== user.userId) {
+    ElMessage.warning('只能回复自己的评价');
+    return;
+  }
+
+  ElMessageBox.prompt('请输入您的回复', '回复讲师', {
+    inputPattern: /\S+/,
+    inputErrorMessage: '回复内容不能为空',
+    confirmButtonText: '提交',
+    cancelButtonText: '取消',
+    inputType: 'textarea',
+  }).then(({ value }) => {
+    if (value && value.trim()) {
+      // 更新评价，添加用户回复
+      const updatedReview: CourseReview = {
+        ...review,
+        userReplyContent: value.trim(),
+        userReplyTime: new Date().toISOString(),
+      };
+
+      updateReview(updatedReview);
+      ElMessage.success('回复成功');
+      loadReviews();
+    }
+  }).catch(() => {
+    // 用户取消
+  });
+}
+
 // 播放课时
 function playLesson(lesson: Lesson) {
   if (lesson.isTrial || lesson.isFree || userPermission.value === 'owned') {
@@ -639,189 +743,249 @@ onMounted(() => {
 
       <!-- Tab切换 -->
       <el-card class="tabs-card" shadow="never">
-        <el-tabs v-model="activeTab">
-          <el-tab-pane label="📖 课程介绍" name="intro">
-            <div class="tab-content">
-              <h2>课程介绍</h2>
-              <div class="description" v-html="course.description.replace(/\n/g, '<br>')"></div>
-            </div>
-          </el-tab-pane>
+        <div class="tabs-header">
+          <el-tabs v-model="activeTab">
+            <el-tab-pane label="📖 课程介绍" name="intro">
+              <div class="tab-content">
+                <h2>课程介绍</h2>
+                <div class="description" v-html="course.description.replace(/\n/g, '<br>')"></div>
+              </div>
+            </el-tab-pane>
 
-          <el-tab-pane label="📚 课程目录" name="catalog">
-            <div class="tab-content">
-              <h2>课程目录 (共{{ course.chapters.length }}章 {{ totalLessons }}课时)</h2>
+            <el-tab-pane label="📚 课程目录" name="catalog">
+              <div class="tab-content">
+                <h2>课程目录 (共{{ course.chapters.length }}章 {{ totalLessons }}课时)</h2>
 
-              <el-collapse>
-                <el-collapse-item
-                  v-for="chapter in course.chapters"
-                  :key="chapter.id"
-                  :title="chapter.title"
-                  :name="chapter.id"
-                >
-                  <template #title>
-                    <div class="chapter-title">
-                      {{ chapter.title }}
-                      <el-tag size="small" type="info" class="lesson-count">
-                        {{ chapter.lessons.length }}课时
-                      </el-tag>
+                <el-collapse>
+                  <el-collapse-item
+                    v-for="chapter in course.chapters"
+                    :key="chapter.id"
+                    :title="chapter.title"
+                    :name="chapter.id"
+                  >
+                    <template #title>
+                      <div class="chapter-title">
+                        {{ chapter.title }}
+                        <el-tag size="small" type="info" class="lesson-count">
+                          {{ chapter.lessons.length }}课时
+                        </el-tag>
+                      </div>
+                    </template>
+
+                    <p v-if="chapter.description" class="chapter-description">
+                      {{ chapter.description }}
+                    </p>
+
+                    <div class="lessons-list">
+                      <div
+                        v-for="lesson in chapter.lessons"
+                        :key="lesson.id"
+                        class="lesson-item"
+                        @click="playLesson(lesson)"
+                      >
+                        <div class="lesson-info">
+                          <span class="lesson-icon">
+                            {{
+                              lesson.type === 'video'
+                                ? '🎬'
+                                : lesson.type === 'audio'
+                                  ? '🎵'
+                                  : lesson.type === 'document'
+                                    ? '📄'
+                                    : '📝'
+                            }}
+                          </span>
+                          <div class="lesson-content">
+                            <p class="lesson-title">{{ lesson.title }}</p>
+                            <p class="lesson-meta">
+                              <span v-if="lesson.videoDuration">
+                                {{ formatDuration(lesson.videoDuration) }}
+                              </span>
+                              <el-tag
+                                v-if="lesson.isTrial"
+                                size="small"
+                                type="success"
+                              >
+                                试听
+                              </el-tag>
+                              <el-tag
+                                v-if="lesson.isFree"
+                                size="small"
+                                type="success"
+                              >
+                                免费
+                              </el-tag>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="lesson-action">
+                          <el-button
+                            v-if="lesson.isTrial || lesson.isFree || userPermission === 'owned'"
+                            type="primary"
+                            size="small"
+                            text
+                          >
+                            {{ lesson.isTrial ? '试听' : '播放' }}
+                          </el-button>
+                          <el-button
+                            v-else
+                            size="small"
+                            text
+                            disabled
+                          >
+                            <el-icon><Lock /></el-icon>
+                          </el-button>
+                        </div>
+                      </div>
                     </div>
-                  </template>
+                  </el-collapse-item>
+                </el-collapse>
+              </div>
+            </el-tab-pane>
 
-                  <p v-if="chapter.description" class="chapter-description">
-                    {{ chapter.description }}
-                  </p>
+            <el-tab-pane name="reviews">
+              <template #label>
+                💬 学员评价 ({{ reviews.length }})
+              </template>
+              <div class="tab-content">
+                <div class="reviews-header">
+                  <h2>学员评价</h2>
 
-                  <div class="lessons-list">
+                  <!-- 写评价按钮 -->
+                  <el-button
+                    v-if="isPurchased && authStore.isLoggedIn"
+                    type="primary"
+                    :icon="EditPen"
+                    @click="handleWriteReview"
+                  >
+                    写评价
+                  </el-button>
+                </div>
+
+                <div class="reviews-summary">
+                  <div class="rating-overview">
+                    <div class="rating-score">{{ course.rating }}</div>
+                    <el-rate
+                      v-model="course.rating"
+                      disabled
+                      show-score
+                      text-color="#ff9900"
+                    />
+                    <div class="review-count">{{ reviews.length }}条评价</div>
+                  </div>
+
+                  <div class="rating-distribution">
                     <div
-                      v-for="lesson in chapter.lessons"
-                      :key="lesson.id"
-                      class="lesson-item"
-                      @click="playLesson(lesson)"
+                      v-for="star in 5"
+                      :key="star"
+                      class="rating-bar"
                     >
-                      <div class="lesson-info">
-                        <span class="lesson-icon">
-                          {{
-                            lesson.type === 'video'
-                              ? '🎬'
-                              : lesson.type === 'audio'
-                                ? '🎵'
-                                : lesson.type === 'document'
-                                  ? '📄'
-                                  : '📝'
-                          }}
-                        </span>
-                        <div class="lesson-content">
-                          <p class="lesson-title">{{ lesson.title }}</p>
-                          <p class="lesson-meta">
-                            <span v-if="lesson.videoDuration">
-                              {{ formatDuration(lesson.videoDuration) }}
-                            </span>
-                            <el-tag
-                              v-if="lesson.isTrial"
-                              size="small"
-                              type="success"
-                            >
-                              试听
-                            </el-tag>
-                            <el-tag
-                              v-if="lesson.isFree"
-                              size="small"
-                              type="success"
-                            >
-                              免费
-                            </el-tag>
-                          </p>
+                      <span class="star-label">{{ star }}星</span>
+                      <el-progress
+                        :percentage="star === 5 ? 80 : star === 4 ? 15 : star === 3 ? 4 : star === 2 ? 1 : 0"
+                        :show-text="false"
+                        :stroke-width="8"
+                      />
+                      <span class="star-percent">
+                        {{
+                          star === 5 ? '80%' : star === 4 ? '15%' : star === 3 ? '4%' : star === 2 ? '1%' : '0%'
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <el-divider />
+
+                <div v-loading="reviewsLoading" class="reviews-content">
+                  <div v-if="reviews.length === 0" class="empty-reviews">
+                    <el-empty description="暂无评价" />
+                  </div>
+
+                  <div v-else class="reviews-list">
+                    <div
+                      v-for="(review, index) in reviews"
+                      :key="review.reviewId"
+                      class="review-item"
+                    >
+                      <div class="review-header">
+                        <el-avatar :size="40" :src="review.userAvatar" />
+                        <div class="reviewer-info">
+                          <p class="reviewer-name">{{ review.userName }}</p>
+                          <p class="review-date">{{ review.reviewTime }}</p>
+                        </div>
+                        <el-rate
+                          :model="review.rating"
+                          disabled
+                          show-score
+                          text-color="#ff9900"
+                        />
+                      </div>
+                      <p class="review-content">{{ review.content }}</p>
+
+                      <!-- 讲师回复 -->
+                      <div v-if="review.replyContent" class="review-reply teacher-reply">
+                        <div class="reply-header">
+                          <span class="reply-label">讲师回复</span>
+                          <span class="reply-time">{{ review.replyTime }}</span>
+                        </div>
+                        <p class="reply-content-text">{{ review.replyContent }}</p>
+
+                        <!-- 用户回复讲师 -->
+                        <div class="reply-actions">
+                          <el-button
+                            v-if="!review.userReplyContent"
+                            type="primary"
+                            size="small"
+                            text
+                            @click="handleReplyToTeacher(review)"
+                          >
+                            回复
+                          </el-button>
                         </div>
                       </div>
 
-                      <div class="lesson-action">
-                        <el-button
-                          v-if="lesson.isTrial || lesson.isFree || userPermission === 'owned'"
-                          type="primary"
-                          size="small"
-                          text
-                        >
-                          {{ lesson.isTrial ? '试听' : '播放' }}
-                        </el-button>
-                        <el-button
-                          v-else
-                          size="small"
-                          text
-                          disabled
-                        >
-                          <el-icon><Lock /></el-icon>
-                        </el-button>
+                      <!-- 用户对讲师回复的再回复 -->
+                      <div v-if="review.userReplyContent" class="review-reply user-reply">
+                        <div class="reply-header">
+                          <span class="reply-label">您的回复</span>
+                          <span class="reply-time">{{ review.userReplyTime }}</span>
+                        </div>
+                        <p class="reply-content-text">{{ review.userReplyContent }}</p>
                       </div>
-                    </div>
-                  </div>
-                </el-collapse-item>
-              </el-collapse>
-            </div>
-          </el-tab-pane>
-
-          <el-tab-pane name="reviews">
-            <template #label>
-              💬 学员评价 ({{ reviews.length }})
-            </template>
-            <div class="tab-content">
-              <h2>学员评价</h2>
-
-              <div class="reviews-summary">
-                <div class="rating-overview">
-                  <div class="rating-score">{{ course.rating }}</div>
-                  <el-rate
-                    v-model="course.rating"
-                    disabled
-                    show-score
-                    text-color="#ff9900"
-                  />
-                  <div class="review-count">{{ reviews.length }}条评价</div>
-                </div>
-
-                <div class="rating-distribution">
-                  <div
-                    v-for="star in 5"
-                    :key="star"
-                    class="rating-bar"
-                  >
-                    <span class="star-label">{{ star }}星</span>
-                    <el-progress
-                      :percentage="star === 5 ? 80 : star === 4 ? 15 : star === 3 ? 4 : star === 2 ? 1 : 0"
-                      :show-text="false"
-                      :stroke-width="8"
-                    />
-                    <span class="star-percent">
-                      {{
-                        star === 5 ? '80%' : star === 4 ? '15%' : star === 3 ? '4%' : star === 2 ? '1%' : '0%'
-                      }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <el-divider />
-
-              <div v-loading="reviewsLoading" class="reviews-content">
-                <div v-if="reviews.length === 0" class="empty-reviews">
-                  <el-empty description="暂无评价" />
-                </div>
-
-                <div v-else class="reviews-list">
-                  <div
-                    v-for="(review, index) in reviews"
-                    :key="review.reviewId"
-                    class="review-item"
-                  >
-                    <div class="review-header">
-                      <el-avatar :size="40" :src="review.userAvatar" />
-                      <div class="reviewer-info">
-                        <p class="reviewer-name">{{ review.userName }}</p>
-                        <p class="review-date">{{ review.reviewTime }}</p>
-                      </div>
-                      <el-rate
-                        :model="review.rating"
-                        disabled
-                        show-score
-                        text-color="#ff9900"
-                      />
-                    </div>
-                    <p class="review-content">{{ review.content }}</p>
-
-                    <!-- 讲师回复 -->
-                    <div v-if="review.replyContent" class="review-reply">
-                      <div class="reply-header">
-                        <span class="reply-label">讲师回复</span>
-                        <span class="reply-time">{{ review.replyTime }}</span>
-                      </div>
-                      <p class="reply-content-text">{{ review.replyContent }}</p>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </el-tab-pane>
-        </el-tabs>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
       </el-card>
+
+      <!-- 评价对话框 -->
+      <el-dialog v-model="reviewDialogVisible" title="课程评价" width="500px" :close-on-click-modal="false">
+        <el-form label-width="80px">
+          <el-form-item label="评分">
+            <el-rate v-model="reviewForm.rating" show-text />
+          </el-form-item>
+          <el-form-item label="评价内容">
+            <el-input
+              v-model="reviewForm.content"
+              type="textarea"
+              :rows="4"
+              maxlength="500"
+              show-word-limit
+              placeholder="请输入您对课程的评价（10-500字）"
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="handleResetReview">重置</el-button>
+          <el-button @click="reviewDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSubmitReview">提交评价</el-button>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>
@@ -1099,6 +1263,17 @@ onMounted(() => {
 }
 
 .tabs-card {
+  .tabs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-base $spacing-large 0;
+
+    :deep(.el-tabs) {
+      flex: 1;
+    }
+  }
+
   .tab-content {
     h2 {
       font-size: 20px;
@@ -1272,8 +1447,17 @@ onMounted(() => {
     .review-reply {
       margin-top: $spacing-base;
       padding: $spacing-base;
-      background: #f5f7fa;
       border-radius: $border-radius-small;
+
+      &.teacher-reply {
+        background: #f0f7ff;
+        border-left: 3px solid $--el-color-primary;
+      }
+
+      &.user-reply {
+        background: #f5f7fa;
+        border-left: 3px solid $--el-color-success;
+      }
 
       .reply-header {
         display: flex;
@@ -1295,6 +1479,11 @@ onMounted(() => {
         margin: 0;
         color: $text-color-regular;
         line-height: 1.6;
+      }
+
+      .reply-actions {
+        margin-top: $spacing-small;
+        text-align: right;
       }
     }
   }
@@ -1318,5 +1507,12 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-height: 400px;
+}
+
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-large;
 }
 </style>

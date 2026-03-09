@@ -386,10 +386,10 @@ onMounted(() => {
                 <el-icon><User /></el-icon>
                 {{ pkg.enrollCount }}人
               </span>
-              <span class="stat-item" v-if="pkg.reviewCount > 0">
+              <!-- <span class="stat-item" v-if="pkg.reviewCount > 0">
                 <el-icon><ChatDotRound /></el-icon>
                 {{ pkg.reviewCount }}条评价
-              </span>
+              </span> -->
             </div>
 
             <!-- 操作按钮 -->
@@ -397,9 +397,9 @@ onMounted(() => {
               <el-button link type="primary" size="small" @click="handleEdit(pkg)">
                 编辑
               </el-button>
-              <el-button link type="primary" size="small" @click="handleManageCourses(pkg)">
+              <!-- <el-button link type="primary" size="small" @click="handleManageCourses(pkg)">
                 课程
-              </el-button>
+              </el-button> -->
               <el-button link type="primary" size="small" @click="handleViewStudent(pkg)">
                 学员
               </el-button>

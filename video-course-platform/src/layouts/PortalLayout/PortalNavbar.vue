@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores';
 
@@ -38,7 +38,7 @@ const menuItems = [
       { path: '/portal/general/index', title: '通识教育首页' },
       { path: '/portal/general/intro', title: '通识教育介绍' },
       { path: '/portal/general/redeem', title: '课程兑换' },
-      { path: '/portal/general/my-courses', title: '我的兑换', requiresAuth: true },
+      // { path: '/portal/general/my-courses', title: '我的兑换', requiresAuth: true },
     ],
   },
   { path: '/portal/about/faculty', title: '师资队伍' },

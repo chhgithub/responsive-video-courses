@@ -223,7 +223,7 @@ function getStatusText(status: string) {
           />
         </el-form-item>
 
-        <el-form-item label="申请条件">
+        <!-- <el-form-item label="申请条件">
           <WangEditor
             v-model="configForm.requirements"
             placeholder="请输入申请条件"
@@ -237,7 +237,7 @@ function getStatusText(status: string) {
             placeholder="请输入所需材料"
             :height="200"
           />
-        </el-form-item>
+        </el-form-item> -->
       </el-form>
 
       <template #footer>

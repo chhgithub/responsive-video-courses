@@ -4,29 +4,39 @@ import {
   adminGetAllOrders,
   adminUpdateOrderStatus,
   adminAddOrderNote,
+  getOrderRefundApplications,
+  auditRefund,
+  forceRefreshOrderData,
   type Order,
   OrderStatus,
   PurchaseType,
-  getPendingRefundApplications,
-  getOrderRefundApplications,
-  auditRefund,
   type RefundApplication
 } from '@/utils/order-storage';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Search, Refresh, Download, Select, CloseBold } from '@element-plus/icons-vue';
 import OrderDetailDialog from './components/OrderDetailDialog.vue';
-import RefundAuditDialog from './components/RefundAuditDialog.vue';
 
 const loading = ref(false);
 const orders = ref<Order[]>([]);
-const pendingRefunds = ref<RefundApplication[]>([]); // 待审核退款列表
 
 // 详情对话框
 const selectedOrder = ref<Order | null>(null);
 const detailDialogVisible = ref(false);
+const detailTab = ref<'basic' | 'refund'>('basic');
 
-// 退款审核对话框
-const refundAuditDialogVisible = ref(false);
-const currentRefundApplication = ref<RefundApplication | null>(null);
+// 审核对话框
+const auditDialogVisible = ref(false);
+const auditForm = ref({
+  orderId: '',
+  applicationId: '',
+  approved: false,
+  remark: ''
+});
+const auditing = ref(false);
+
+// 审核记录对话框
+const historyDialogVisible = ref(false);
+const historyOrders = ref<Order[]>([]);
 
 // 筛选条件
 const selectedStatus = ref<OrderStatus | ''>('');
@@ -37,8 +47,8 @@ const statusOptions = [
   { label: '全部', value: '' },
   { label: '待支付', value: 'pending' },
   { label: '已支付', value: 'paid' },
-  { label: '已取消', value: 'cancelled' },
   { label: '退款审核中', value: 'refund_pending' },
+  { label: '已取消', value: 'cancelled' },
   { label: '退款中', value: 'refunding' },
   { label: '已退款', value: 'refunded' },
   { label: '退款失败', value: 'refund_failed' },
@@ -48,8 +58,8 @@ const statusOptions = [
 const statusMap: Record<OrderStatus, { text: string; type: any }> = {
   pending: { text: '待支付', type: 'warning' },
   paid: { text: '已支付', type: 'success' },
+  refund_pending: { text: '退款审核中', type: 'info' },
   cancelled: { text: '已取消', type: 'info' },
-  refund_pending: { text: '退款审核中', type: 'warning' },
   refunding: { text: '退款中', type: 'warning' },
   refunded: { text: '已退款', type: 'danger' },
   refund_failed: { text: '退款失败', type: 'danger' },
@@ -61,14 +71,9 @@ const purchaseTypeMap: Record<PurchaseType, { text: string; type: any }> = {
   redeem: { text: '兑换', type: 'success' },
 };
 
-// 检查订单是否有待审核退款
-function orderHasPendingRefund(orderId: string): boolean {
-  return pendingRefunds.value.some(r => r.orderId === orderId);
-}
-
-// 过滤后的订单
+// 过滤后的订单（只显示购买订单）
 const filteredOrders = computed(() => {
-  let result = orders.value;
+  let result = orders.value.filter(o => o.purchaseType === 'purchase');
 
   // 状态筛选
   if (selectedStatus.value) {
@@ -95,9 +100,7 @@ async function loadOrders() {
   loading.value = true;
   try {
     orders.value = adminGetAllOrders();
-    pendingRefunds.value = getPendingRefundApplications();
     console.log('加载订单:', orders.value.length, '条');
-    console.log('待审核退款:', pendingRefunds.value.length, '条');
   } catch (error) {
     console.error('加载订单失败:', error);
     ElMessage.error('加载订单失败');
@@ -107,9 +110,65 @@ async function loadOrders() {
 }
 
 // 查看详情
-function handleViewDetail(order: Order) {
+function handleViewDetail(order: Order, tab: 'basic' | 'refund' = 'basic') {
   selectedOrder.value = order;
+  detailTab.value = tab;
   detailDialogVisible.value = true;
+}
+
+// 打开审核对话框
+function handleOpenAudit(order: Order) {
+  const applications = getOrderRefundApplications(order.orderId);
+  const pendingApp = applications.find(app => app.auditStatus === 'pending');
+  if (pendingApp) {
+    auditForm.value = {
+      orderId: order.orderId,
+      applicationId: pendingApp.id,
+      approved: false,
+      remark: ''
+    };
+    auditDialogVisible.value = true;
+  } else {
+    ElMessage.warning('没有待审核的退款申请');
+  }
+}
+
+// 提交审核
+async function submitAudit() {
+  if (!auditForm.value.remark) {
+    ElMessage.warning('请填写审核意见');
+    return;
+  }
+
+  auditing.value = true;
+  try {
+    const success = auditRefund(
+      auditForm.value.applicationId,
+      auditForm.value.approved,
+      auditForm.value.remark,
+      '管理员'
+    );
+
+    if (success) {
+      ElMessage.success(auditForm.value.approved ? '审核通过' : '审核拒绝');
+      auditDialogVisible.value = true;
+      await loadOrders();
+      auditDialogVisible.value = false;
+    } else {
+      ElMessage.error('操作失败');
+    }
+  } catch (error) {
+    console.error('审核失败:', error);
+    ElMessage.error('操作失败');
+  } finally {
+    auditing.value = false;
+  }
+}
+
+// 打开审核记录
+function handleViewHistory(order: Order) {
+  // 直接打开详情对话框并切换到退款tab
+  handleViewDetail(order, 'refund');
 }
 
 // 标记为已支付
@@ -160,42 +219,30 @@ async function handleCancel(order: Order) {
   }
 }
 
-// 打开退款审核对话框
-function handleAuditRefund(order: Order) {
-  // 获取该订单的最新退款申请
-  const applications = getOrderRefundApplications(order.orderId);
-  if (applications.length === 0) {
-    ElMessage.warning('该订单暂无退款申请');
+// 退款
+async function handleRefund(order: Order) {
+  if (order.status !== 'paid') {
+    ElMessage.warning('只能对已支付订单进行退款');
     return;
   }
 
-  // 找到最新的待审核申请
-  const pendingApp = applications.find(a => a.auditStatus === 'pending');
-  if (!pendingApp) {
-    ElMessage.warning('该订单暂无待审核的退款申请');
-    return;
-  }
-
-  selectedOrder.value = order;
-  currentRefundApplication.value = pendingApp;
-  refundAuditDialogVisible.value = true;
-}
-
-// 审核退款（直接审核，不通过对话框）
-async function auditRefundApplication(application: RefundApplication, approved: boolean) {
   try {
-    const auditBy = '管理员'; // 实际项目中应从用户信息获取
-    const success = auditRefund(application.id, approved, application.auditRemark, auditBy);
+    const { value } = await ElMessageBox.prompt('请输入退款原因', '退款处理', {
+      confirmButtonText: '确认退款',
+      cancelButtonText: '取消',
+      inputPattern: /.+/,
+      inputErrorMessage: '请输入退款原因',
+    });
 
+    const success = adminUpdateOrderStatus(order.orderId, 'refunding', value);
     if (success) {
-      ElMessage.success(approved ? '审核通过' : '审核拒绝');
+      ElMessage.success('退款已提交');
       await loadOrders();
     } else {
-      ElMessage.error('审核失败');
+      ElMessage.error('退款提交失败');
     }
   } catch (error) {
-    console.error('审核失败:', error);
-    ElMessage.error('审核失败');
+    // 用户取消
   }
 }
 
@@ -268,7 +315,7 @@ onMounted(() => {
   <div class="order-list">
     <!-- 页面标题 -->
     <div class="page-header">
-      <h2>订单管理</h2>
+      <h2>购买订单管理</h2>
     </div>
 
     <!-- 筛选栏 -->
@@ -288,7 +335,7 @@ onMounted(() => {
         <el-form-item label="关键词">
           <el-input
             v-model="searchKeyword"
-            placeholder="订单号/课程名/用户名"
+            placeholder="订单号/课程名/用户名/邮箱"
             clearable
             style="width: 250px"
           >
@@ -339,18 +386,9 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="用户信息" width="180">
+        <el-table-column label="用户名" width="120">
           <template #default="{ row }">
-            <div class="user-info">
-              <el-avatar v-if="row.userAvatar" :src="row.userAvatar" :size="32" />
-              <el-avatar v-else :size="32">
-                {{ row.userName?.charAt(0) || 'U' }}
-              </el-avatar>
-              <div class="user-details">
-                <div class="user-name">{{ row.userName || row.userId }}</div>
-                <div v-if="row.userEmail" class="user-email">{{ row.userEmail }}</div>
-              </div>
-            </div>
+            <span>{{ row.userName || '-' }}</span>
           </template>
         </el-table-column>
 
@@ -359,18 +397,11 @@ onMounted(() => {
             {{ row.paymentMethod === 'alipay' ? '支付宝' : row.paymentMethod === 'wechat' ? '微信' : '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="purchaseType" label="购买方式" width="100">
-          <template #default="{ row }">
-            <el-tag :type="purchaseTypeMap[row.purchaseType].type" size="small">
-              {{ purchaseTypeMap[row.purchaseType]?.text || '-' }}
-            </el-tag>
-          </template>
-        </el-table-column>
 
         <el-table-column prop="status" label="订单状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusMap[row.status].type">
-              {{ statusMap[row.status].text }}
+            <el-tag :type="statusMap[row.status]?.type || 'info'">
+              {{ statusMap[row.status]?.text || row.status || '-' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -396,11 +427,13 @@ onMounted(() => {
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="320" fixed="right">
+        <el-table-column label="操作" width="350" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="handleViewDetail(row)">
               查看详情
             </el-button>
+
+            <!-- 待支付状态 -->
             <el-button
               v-if="row.status === 'pending'"
               link
@@ -410,42 +443,53 @@ onMounted(() => {
             >
               标记已付
             </el-button>
-            <el-button
-              v-if="row.status === 'paid' && orderHasPendingRefund(row.orderId)"
-              link
-              type="warning"
-              size="small"
-              @click="handleAuditRefund(row)"
-            >
-              <el-icon><Bell /></el-icon>
-              审核
-              <el-badge :value="1" class="audit-badge" />
-            </el-button>
+
+            <!-- 已支付状态 -->
+            <template v-if="row.status === 'paid'">
+              <el-button
+                link
+                type="danger"
+                size="small"
+                @click="handleRefund(row)"
+              >
+                退款
+              </el-button>
+            </template>
+
+            <!-- 退款审核中状态 -->
             <el-button
               v-if="row.status === 'refund_pending'"
               link
               type="warning"
               size="small"
-              @click="handleAuditRefund(row)"
+              @click="handleOpenAudit(row)"
             >
-              审核退款
+              退款审核
             </el-button>
+
+            <!-- 退款中状态 -->
             <el-button
               v-if="row.status === 'refunding'"
               link
               type="info"
               size="small"
+              @click="handleViewDetail(row, 'refund')"
             >
-              退款处理中
+              查看进度
             </el-button>
+
+            <!-- 退款成功/失败状态 -->
             <el-button
-              v-if="row.status === 'refunded'"
+              v-if="row.status === 'refunded' || row.status === 'refund_failed'"
               link
-              type="success"
+              type="info"
               size="small"
+              @click="handleViewHistory(row)"
             >
-              已退款
+              审核记录
             </el-button>
+
+            <!-- 退款失败状态 -->
             <el-button
               v-if="row.status === 'refund_failed'"
               link
@@ -455,6 +499,8 @@ onMounted(() => {
             >
               重新退款
             </el-button>
+
+            <!-- 备注按钮（所有状态） -->
             <el-button link type="info" size="small" @click="handleAddNote(row)">
               备注
             </el-button>
@@ -469,17 +515,53 @@ onMounted(() => {
     <OrderDetailDialog
       v-if="selectedOrder && detailDialogVisible"
       :order="selectedOrder"
+      :active-tab="detailTab"
       @close="detailDialogVisible = false"
+      @refresh="loadOrders"
     />
 
-    <!-- 退款审核对话框 -->
-    <RefundAuditDialog
-      v-if="selectedOrder && currentRefundApplication && refundAuditDialogVisible"
-      :order="selectedOrder"
-      :application="currentRefundApplication"
-      @close="refundAuditDialogVisible = false"
-      @success="loadOrders"
-    />
+    <!-- 审核对话框 -->
+    <el-dialog
+      v-model="auditDialogVisible"
+      title="退款审核"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="订单号">
+          {{ auditForm.orderId }}
+        </el-form-item>
+        <el-form-item label="审核结果">
+          <el-radio-group v-model="auditForm.approved">
+            <el-radio :label="true">
+              <el-icon color="#67c23a"><Select /></el-icon>
+              同意
+            </el-radio>
+            <el-radio :label="false">
+              <el-icon color="#f56c6c"><CloseBold /></el-icon>
+              拒绝
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="审核意见">
+          <el-input
+            v-model="auditForm.remark"
+            type="textarea"
+            :rows="4"
+            :placeholder="auditForm.approved ? '请输入审核通过意见' : '请输入拒绝原因'"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="auditDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="auditing" @click="submitAudit">
+          {{ auditForm.approved ? '同意退款' : '拒绝退款' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -546,34 +628,6 @@ onMounted(() => {
             color: $--el-color-danger;
             font-weight: 600;
           }
-        }
-      }
-    }
-
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: $spacing-small;
-
-      .user-details {
-        flex: 1;
-        min-width: 0;
-
-        .user-name {
-          font-size: $font-size-small;
-          color: $text-color-primary;
-          margin-bottom: $spacing-small / 2;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .user-email {
-          font-size: $font-size-small;
-          color: $text-color-secondary;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
       }
     }

@@ -3,11 +3,13 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { EditPen } from '@element-plus/icons-vue';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
 import { hasUserPurchasedCourse } from '@/utils/order-storage';
 import { getCourseLearningRecord, updateLearningProgress } from '@/utils/learning-storage';
 import { checkUserCourseAccess } from '@/utils/general-education-storage';
 import { getPackageLearningRecordsByUser } from '@/utils/course-package-storage';
+import { addReview, type CourseReview } from '@/utils/course-storage';
 
 const router = useRouter();
 const route = useRoute();
@@ -24,6 +26,13 @@ const currentLessonIndex = ref(0);
 
 // 播放器状态
 const playerReady = ref(false);
+
+// 评价对话框
+const reviewDialogVisible = ref(false);
+const reviewForm = ref({
+  rating: 0,
+  content: '',
+});
 
 // 获取当前课时
 const currentLesson = computed(() => {
@@ -169,6 +178,56 @@ function handleMarkComplete() {
   }
 }
 
+// 打开评价对话框
+function handleWriteReview() {
+  if (!authStore.userInfo) {
+    ElMessage.warning('请先登录');
+    router.push(`/portal/login?redirect=/portal/course-learn/${courseId}`);
+    return;
+  }
+
+  reviewDialogVisible.value = true;
+}
+
+// 提交评价
+function handleSubmitReview() {
+  if (reviewForm.value.rating === 0) {
+    ElMessage.warning('请选择评分');
+    return;
+  }
+  if (!reviewForm.value.content.trim()) {
+    ElMessage.warning('请输入评价内容');
+    return;
+  }
+
+  if (!course.value) return;
+
+  // 调用添加评价 API
+  const newReview: CourseReview = {
+    reviewId: `review_${Date.now()}`,
+    courseId: parseInt(courseId),
+    userId: authStore.userInfo.userId,
+    userName: authStore.userInfo.nickname || authStore.userInfo.username,
+    userAvatar: authStore.userInfo.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default',
+    rating: reviewForm.value.rating,
+    content: reviewForm.value.content.trim(),
+    reviewTime: new Date().toISOString(),
+    likes: 0,
+    status: 'pending',
+  };
+
+  addReview(newReview);
+  reviewDialogVisible.value = false;
+  reviewForm.value = { rating: 0, content: '' };
+
+  ElMessage.success('评价提交成功，等待审核');
+}
+
+// 重置评价表单
+function handleResetReview() {
+  reviewForm.value = { rating: 0, content: '' };
+}
+
 // 返回课程详情
 function handleBackToDetail() {
   router.push(`/portal/course/${courseId}`);
@@ -225,8 +284,42 @@ onMounted(() => {
                     <el-icon><Select /></el-icon>
                     标记完成
                   </el-button>
+
+                  <!-- 写评价按钮 -->
+                  <el-button
+                    v-if="authStore.isLoggedIn"
+                    type="primary"
+                    :icon="EditPen"
+                    @click="handleWriteReview"
+                  >
+                    写评价
+                  </el-button>
                 </div>
               </div>
+
+              <!-- 评价对话框 -->
+              <el-dialog v-model="reviewDialogVisible" title="课程评价" width="500px" :close-on-click-modal="false">
+                <el-form label-width="80px">
+                  <el-form-item label="评分">
+                    <el-rate v-model="reviewForm.rating" show-text />
+                  </el-form-item>
+                  <el-form-item label="评价内容">
+                    <el-input
+                      v-model="reviewForm.content"
+                      type="textarea"
+                      :rows="4"
+                      maxlength="500"
+                      show-word-limit
+                      placeholder="请输入您对课程的评价（10-500字）"
+                    />
+                  </el-form-item>
+                </el-form>
+                <template #footer>
+                  <el-button @click="handleResetReview">重置</el-button>
+                  <el-button @click="reviewDialogVisible = false">取消</el-button>
+                  <el-button type="primary" @click="handleSubmitReview">提交评价</el-button>
+                </template>
+              </el-dialog>
             </div>
 
             <!-- 课程简介 -->

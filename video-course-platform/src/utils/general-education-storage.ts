@@ -24,7 +24,7 @@ import {
 import { getPackageById } from '@/utils/course-package-storage';
 
 const STORAGE_KEY = 'general_education_data';
-const STORAGE_VERSION = '1.0';
+const STORAGE_VERSION = '1.7'; // 数据版本号，用于强制刷新
 
 // ==================== 工具函数 ====================
 
@@ -45,7 +45,7 @@ function getStorage(): GeneralEducationStorage {
     return initData;
   }
 
-  const data = JSON.parse(existing) as GeneralEducationStorage;
+  let data = JSON.parse(existing) as GeneralEducationStorage;
 
   // 版本检查和数据迁移
   if (data.version !== STORAGE_VERSION) {
@@ -100,20 +100,20 @@ function migrateData(data: any): GeneralEducationStorage {
     });
   }
 
-  // 迁移兑换记录
-  if (data.redemptionRecords) {
-    migrated.redemptionRecords = data.redemptionRecords;
-  }
+  // 迁移兑换记录（使用默认数据，不保留旧数据）
+  // if (data.redemptionRecords) {
+  //   migrated.redemptionRecords = data.redemptionRecords;
+  // }
 
   // 迁移介绍内容
   if (data.intros) {
     migrated.intros = data.intros;
   }
 
-  // 迁移用户课程访问权限
-  if (data.userCourseAccess) {
-    migrated.userCourseAccess = data.userCourseAccess;
-  }
+  // 迁移用户课程访问权限（使用默认数据，不保留旧数据）
+  // if (data.userCourseAccess) {
+  //   migrated.userCourseAccess = data.userCourseAccess;
+  // }
 
   // 初始化用户单位绑定关系
   migrated.userOrganizations = [];
@@ -127,13 +127,442 @@ function setStorage(data: GeneralEducationStorage): void {
 }
 
 function getDefaultData(): GeneralEducationStorage {
+  // 计算过期时间（30天后过期）
+  const thirtyDaysLater = new Date();
+  thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+  // 计算过期时间（已过期，设置为30天前）
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
   return {
     version: STORAGE_VERSION,
     organizations: [],
     redemptionCodes: [],
-    redemptionRecords: [],
+    redemptionRecords: [
+      // ========== 用户1的课程兑换记录 ==========
+
+      // 课程1: Vue3 - 已使用（30天后过期）
+      {
+        id: 'redeem_record_1_1',
+        codeId: 'code_001',
+        code: 'RCODE123456',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '1',
+        courseName: 'Vue3 从入门到精通',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 30,
+        ip: '192.168.1.1',
+      },
+
+      // 课程2: Vue3组件化 - 已使用（60天后过期）
+      {
+        id: 'redeem_record_1_2',
+        codeId: 'code_002',
+        code: 'RCODE789012',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        courseId: '2',
+        courseName: 'Vue3 组件化开发实战',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 60,
+        ip: '192.168.1.2',
+      },
+
+      // 课程3: Python数据分析 - 已使用（90天后过期）
+      {
+        id: 'redeem_record_1_3',
+        codeId: 'code_003',
+        code: 'RCODE345678',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '4',
+        courseName: 'Python 数据分析入门',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 90,
+        ip: '192.168.1.3',
+      },
+
+      // 课程4: React18 - 已使用（30天后过期）
+      {
+        id: 'redeem_record_1_4',
+        codeId: 'code_004',
+        code: 'REACT567890',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '6',
+        courseName: 'React 18 全栈开发实战',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 30,
+        ip: '192.168.1.4',
+      },
+
+      // 课程5: TypeScript - 已过期
+      {
+        id: 'redeem_record_1_5',
+        codeId: 'code_005',
+        code: 'TYPE234567',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        courseId: '7',
+        courseName: 'TypeScript 从入门到实战',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 30,
+        ip: '192.168.1.5',
+      },
+
+      // 课程6: Node.js - 已过期
+      {
+        id: 'redeem_record_1_6',
+        codeId: 'code_006',
+        code: 'NODE890123',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '8',
+        courseName: 'Node.js 后端开发实战',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 60,
+        ip: '192.168.1.6',
+      },
+
+      // ========== 用户1的套餐兑换记录 ==========
+
+      // 套餐1: Python数据分析套餐 - 已使用（45天后过期）
+      {
+        id: 'redeem_record_1_pkg1',
+        codeId: 'code_pkg_001',
+        code: 'PKGPYTHON001',
+        organizationId: 'org_003',
+        organizationName: 'ZZ培训中心',
+        courseId: '',
+        courseName: 'Python数据分析套餐',
+        packageId: '1',
+        packageName: 'Python数据分析套餐',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 45,
+        ip: '192.168.1.7',
+      },
+
+      // 套餐2: React全栈开发套餐 - 已使用（60天后过期）
+      {
+        id: 'redeem_record_1_pkg2',
+        codeId: 'code_pkg_002',
+        code: 'PKGREACT002',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        courseId: '',
+        courseName: 'React全栈开发套餐',
+        packageId: '2',
+        packageName: 'React全栈开发套餐',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 60,
+        ip: '192.168.1.8',
+      },
+
+      // 套餐3: Vue3全栈套餐 - 已过期
+      {
+        id: 'redeem_record_1_pkg3',
+        codeId: 'code_pkg_003',
+        code: 'PKGVEUE003',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '',
+        courseName: 'Vue3全栈开发套餐',
+        packageId: '3',
+        packageName: 'Vue3全栈开发套餐',
+        userId: '1',
+        userName: '测试用户',
+        redeemTime: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 60,
+        ip: '192.168.1.9',
+      },
+
+      // ========== 用户2的课程兑换记录 ==========
+
+      // 课程7: Vue3 - 已使用（30天后过期）
+      {
+        id: 'redeem_record_2_1',
+        codeId: 'code_007',
+        code: 'USER234567',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '1',
+        courseName: 'Vue3 从入门到精通',
+        userId: '2',
+        userName: '学员A',
+        redeemTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 30,
+        ip: '192.168.2.1',
+      },
+
+      // 课程8: React18 - 已使用（60天后过期）
+      {
+        id: 'redeem_record_2_2',
+        codeId: 'code_008',
+        code: 'USER890123',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        courseId: '6',
+        courseName: 'React 18 全栈开发实战',
+        userId: '2',
+        userName: '学员A',
+        redeemTime: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 60,
+        ip: '192.168.2.2',
+      },
+
+      // 课程9: Python - 已过期
+      {
+        id: 'redeem_record_2_3',
+        codeId: 'code_009',
+        code: 'USER456789',
+        organizationId: 'org_003',
+        organizationName: 'ZZ培训中心',
+        courseId: '4',
+        courseName: 'Python 数据分析入门',
+        userId: '2',
+        userName: '学员A',
+        redeemTime: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 60,
+        ip: '192.168.2.3',
+      },
+
+      // ========== 用户2的套餐兑换记录 ==========
+
+      // 套餐4: 前端开发套餐 - 已使用（90天后过期）
+      {
+        id: 'redeem_record_2_pkg1',
+        codeId: 'code_pkg_004',
+        code: 'PKGFRONT004',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        courseId: '',
+        courseName: '前端开发套餐',
+        packageId: '4',
+        packageName: '前端开发套餐',
+        userId: '2',
+        userName: '学员A',
+        redeemTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 90,
+        ip: '192.168.2.4',
+      },
+
+      // ========== 用户3的课程兑换记录 ==========
+
+      // 课程10: TypeScript - 已使用（90天后过期）
+      {
+        id: 'redeem_record_3_1',
+        codeId: 'code_010',
+        code: 'USER567890',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        courseId: '7',
+        courseName: 'TypeScript 从入门到实战',
+        userId: '3',
+        userName: '学员B',
+        redeemTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        accessValidDays: 90,
+        ip: '192.168.3.1',
+      },
+    ],
     intros: [],
-    userCourseAccess: [],
+    // ========== 用户课程访问权限（兑换记录） ==========
+    userCourseAccess: [
+      // === 用户1的已使用课程 ===
+
+      // 课程1：Vue3（30天后过期）
+      {
+        id: 'access_1_1',
+        userId: '1',
+        courseId: '1',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'RCODE123456',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        acquireTime: '2024-03-01T10:00:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // 课程2：Vue3组件化（60天后过期）
+      {
+        id: 'access_1_2',
+        userId: '1',
+        courseId: '2',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'RCODE789012',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        acquireTime: '2024-03-05T14:30:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // 课程3：Python数据分析（90天后过期）
+      {
+        id: 'access_1_3',
+        userId: '1',
+        courseId: '4',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'RCODE345678',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        acquireTime: '2024-03-08T09:15:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // 套餐1：Python数据分析套餐（45天后过期）
+      {
+        id: 'access_1_pkg1',
+        userId: '1',
+        courseId: '4',
+        packageName: 'Python数据分析套餐',
+        accessSource: 'redeem',
+        redemptionCode: 'RCODE901234',
+        organizationId: 'org_003',
+        organizationName: 'ZZ培训中心',
+        acquireTime: '2024-03-10T16:45:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // 课程4：React18（30天后过期）
+      {
+        id: 'access_1_4',
+        userId: '1',
+        courseId: '6',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'REACT567890',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        acquireTime: '2024-03-15T11:20:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // 套餐2：React全栈开发套餐（60天后过期）
+      {
+        id: 'access_1_pkg2',
+        userId: '1',
+        courseId: '6',
+        packageName: 'React全栈开发套餐',
+        accessSource: 'redeem',
+        redemptionCode: 'USER234567',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        acquireTime: '2024-04-12T14:30:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // === 用户1的已过期课程 ===
+
+      // 课程5：TypeScript（已过期30天）
+      {
+        id: 'access_1_5',
+        userId: '1',
+        courseId: '7',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'TYPE234567',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        acquireTime: '2024-01-15T08:30:00.000Z',
+        expireTime: thirtyDaysAgo.toISOString(),
+      },
+
+      // 课程6：Node.js（已过期60天）
+      {
+        id: 'access_1_6',
+        userId: '1',
+        courseId: '8',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'NODE890123',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        acquireTime: '2024-01-10T13:45:00.000Z',
+        expireTime: thirtyDaysAgo.toISOString(),
+      },
+
+      // === 用户2的已使用课程 ===
+
+      // 课程7：Vue3（30天后过期）
+      {
+        id: 'access_2_1',
+        userId: '2',
+        courseId: '1',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'USER234567',
+        organizationId: 'org_001',
+        organizationName: 'XX科技有限公司',
+        acquireTime: '2024-04-10T10:00:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // 课程8：React18（60天后过期）
+      {
+        id: 'access_2_2',
+        userId: '2',
+        courseId: '6',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'USER890123',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        acquireTime: '2024-04-12T14:30:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+
+      // === 用户2的已过期课程 ===
+
+      // 课程9：Python数据分析（已过期45天）
+      {
+        id: 'access_2_3',
+        userId: '2',
+        courseId: '4',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'USER456789',
+        organizationId: 'org_003',
+        organizationName: 'ZZ培训中心',
+        acquireTime: '2024-02-01T09:00:00.000Z',
+        expireTime: thirtyDaysAgo.toISOString(),
+      },
+
+      // === 用户3的已使用课程 ===
+
+      // 课程10：TypeScript（90天后过期）
+      {
+        id: 'access_3_1',
+        userId: '3',
+        courseId: '7',
+        packageName: undefined,
+        accessSource: 'redeem',
+        redemptionCode: 'USER456789',
+        organizationId: 'org_002',
+        organizationName: 'YY职业学院',
+        acquireTime: '2024-04-15T09:00:00.000Z',
+        expireTime: thirtyDaysLater.toISOString(),
+      },
+    ],
     userOrganizations: [],
   };
 }
@@ -932,11 +1361,12 @@ export function initializeDefaultOrganizations(): void {
 
     storage.organizations.push(defaultOrganization);
 
-    // 生成一些测试兑换码
+    // 生成一些测试兑换码（确保每个状态都有数据）
     const testCodes: RedemptionCode[] = [];
     const courses = getPublishedCourses();
 
-    for (let i = 0; i < 5; i++) {
+    // 未使用的兑换码（unused）
+    for (let i = 0; i < 2; i++) {
       const course = courses[i % courses.length];
       const now = new Date();
       const codeExpireTime = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
@@ -950,11 +1380,96 @@ export function initializeDefaultOrganizations(): void {
         targetIds: [course.id],
         targetName: course.title,
         codeExpireTime,
-        accessValidDays: 90, // 兑换后90天有效
+        accessValidDays: 90,
         status: 'unused',
         createTime: getCurrentTime(),
       });
     }
+
+    // 已使用的兑换码（used）
+    const usedCourse1 = courses[2];
+    const usedNow = new Date();
+    const usedUsedTime = new Date(usedNow.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString();
+
+    testCodes.push({
+      id: generateId(),
+      code: generateCode(),
+      organizationId: defaultOrganization.id,
+      organizationName: defaultOrganization.name,
+      targetType: 'course',
+      targetIds: [usedCourse1.id],
+      targetName: usedCourse1.title,
+      codeExpireTime,
+      accessValidDays: 90,
+      status: 'used',
+      usedBy: '1001', // 模拟学员ID
+      usedTime: usedUsedTime,
+      createTime: new Date(usedNow.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    const usedCourse2 = courses[3];
+    testCodes.push({
+      id: generateId(),
+      code: generateCode(),
+      organizationId: defaultOrganization.id,
+      organizationName: defaultOrganization.name,
+      targetType: 'course',
+      targetIds: [usedCourse2.id],
+      targetName: usedCourse2.title,
+      codeExpireTime,
+      accessValidDays: 90,
+      status: 'used',
+      usedBy: '1002',
+      usedTime: usedUsedTime,
+      createTime: new Date(usedNow.getTime() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    // 已过期的兑换码（expired）
+    const expiredNow = new Date();
+    const expiredTime = new Date(expiredNow.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const expireTimeOld = new Date(expiredNow.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString();
+
+    testCodes.push({
+      id: generateId(),
+      code: generateCode(),
+      organizationId: defaultOrganization.id,
+      organizationName: defaultOrganization.name,
+      targetType: 'course',
+      targetIds: [courses[0].id],
+      targetName: courses[0].title,
+      codeExpireTime: expireTimeOld,
+      accessValidDays: 90,
+      status: 'expired',
+      createTime: new Date(expiredNow.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    testCodes.push({
+      id: generateId(),
+      code: generateCode(),
+      organizationId: defaultOrganization.id,
+      organizationName: defaultOrganization.name,
+      targetType: 'course',
+      targetIds: [courses[4].id],
+      targetName: courses[4].title,
+      codeExpireTime: new Date(expiredNow.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+      status: 'expired',
+      createTime: new Date(expiredNow.getTime() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    // 已下架的兑换码（offline）
+    testCodes.push({
+      id: generateId(),
+      code: generateCode(),
+      organizationId: defaultOrganization.id,
+      organizationName: defaultOrganization.name,
+      targetType: 'course',
+      targetIds: [courses[1].id],
+      targetName: courses[1].title,
+      codeExpireTime,
+      accessValidDays: 90,
+      status: 'offline',
+      createTime: new Date(expiredNow.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+    });
 
     storage.redemptionCodes.push(...testCodes);
 
@@ -1008,6 +1523,17 @@ export function initializeDefaultOrganizations(): void {
     setStorage(storage);
     console.log('默认单位数据初始化完成！');
   }
+}
+
+/**
+ * 强制刷新数据（用于测试）
+ */
+export function forceRefreshGeneralEducationData(): void {
+  console.log('强制刷新通识教育数据...');
+  localStorage.removeItem(STORAGE_KEY);
+  const data = getDefaultData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  console.log('通识教育数据刷新完成！');
 }
 
 

@@ -39,6 +39,8 @@ async function handleLogin() {
       avatar: user.avatar,
       phone: user.phone,
       email: user.email,
+      roles: user.role ? [user.role] : [],
+      organizationId: user.organizationId,
     });
 
     ElMessage.success('登录成功');
@@ -86,7 +88,9 @@ async function handleLogin() {
             :closable="false"
             show-icon
           >
-            用户名: <code>test</code> 密码: <code>test</code>
+            <div>普通用户: <code>test</code> 密码: <code>test</code></div>
+            <!-- <div>总管理员: <code>admin</code> 密码: <code>123456</code></div> -->
+            <div>单位管理员: <code>org_admin</code> 密码: <code>123456</code></div>
           </el-alert>
         </el-form-item>
       </el-form>

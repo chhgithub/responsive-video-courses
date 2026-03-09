@@ -53,7 +53,8 @@ export interface RedemptionCode {
   codeExpireTime?: string;  // 兑换码过期时间（空=永不过期）
 
   // 兑换后有效期
-  accessValidDays?: number; // 兑换后有效期天数（空=永不过期）
+  accessValidDays?: number; // 兑换后有效期天数（空=永不过期）- 统一有效期
+  targetAccessValidDays?: Record<string, number>; // 每个目标的有效期（key: targetId, value: days）
 
   status: RedemptionCodeStatus;
   usedBy?: string;        // 使用者用户ID
@@ -107,11 +108,14 @@ export interface RedemptionRecord {
   code: string;           // 兑换码
   organizationId: string; // 单位ID
   organizationName: string; // 单位名称
-  courseId: string;       // 课程ID
-  courseName: string;     // 课程名称
+  courseId: string;       // 课程ID（套餐兑换时为空或多个ID用逗号分隔）
+  courseName: string;     // 课程名称（套餐兑换时为套餐名称）
+  packageId?: string;     // 套餐ID（可选，套餐兑换时使用）
+  packageName?: string;   // 套餐名称（可选，套餐兑换时使用）
   userId: string;         // 兑换用户ID
   userName: string;       // 用户名
   redeemTime: string;     // 兑换时间
+  accessValidDays?: number; // 兑换后剩余有效天数（用于判断是否过期）
   ip?: string;            // IP地址
 }
 

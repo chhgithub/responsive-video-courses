@@ -303,7 +303,9 @@ watch(() => formData.value.videoType, () => {
 
       <el-form-item label="免费课时" prop="isFree">
         <el-switch v-model="formData.isFree" active-text="是" inactive-text="否" />
-        <div class="form-hint">免费课时无需购买即可观看</div>
+        <div class="form-hint">
+          免费课时无需购买即可观看。如果课程价格为0，所有课时将自动免费
+        </div>
       </el-form-item>
 
       <el-form-item label="可试听" prop="isTrial">

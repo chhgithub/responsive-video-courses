@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores';
 import { redeemCourse, validateRedemptionCode, getAllOrganizations } from '@/utils/general-education-storage';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
 import { getPackageById } from '@/utils/course-package-storage';
+import { CircleCheck, Collection, ArrowRight } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -17,6 +18,47 @@ const codeInput = ref('');
 const validationResult = ref<any>(null);
 const items = ref<any[]>([]); // 可能是课程或套餐
 const targetType = ref<'course' | 'package'>('course');
+
+// 课程选择对话框
+const courseSelectDialogVisible = ref(false);
+const selectedPackage = ref<any>(null);
+
+// 套餐选择对话框
+const packageSelectDialogVisible = ref(false);
+
+// 课程选择对话框提示文本
+const selectTipText = computed(() => {
+  if (targetType.value === 'course') {
+    return `您已兑换${items.value.length}门课程，请选择要学习的课程：`;
+  }
+
+  // 套餐类型
+  if (selectedPackage.value) {
+    return `您选择了"${selectedPackage.value.packageName}"套餐，请从以下课程中选择：`;
+  }
+
+  return `您已兑换${items.value.length}门课程，请选择要学习的课程：`;
+});
+
+// 计算是否显示"返回套餐"按钮
+const showReturnButton = computed(() => {
+  // 仅当选择了套餐时才显示
+  return !!selectedPackage.value;
+});
+
+// 返回套餐选择页面
+const handleReturnToPackageSelect = (pkg: any) => {
+  // 关闭课程选择对话框
+  courseSelectDialogVisible.value = false;
+  // 重新打开套餐选择对话框
+  // selectedPackage 保持不变，用户可以切换其他套餐
+  packageSelectDialogVisible.value = true;
+};
+
+// 重新设置选中的套餐（用于返回套餐后清空）
+const handleResetPackage = () => {
+  selectedPackage.value = null;
+};
 
 // 第一步：验证兑换码
 async function handleValidateCode() {
@@ -115,19 +157,135 @@ function handleRedeemAgain() {
 
 // 跳转学习
 function handleGoToCourse() {
-  if (items.value.length > 0) {
-    // 如果是课程，直接跳转；如果是套餐，跳转到第一个课程
-    const firstItem = items.value[0];
-    if (targetType.value === 'course') {
-      // 确保课程ID是字符串类型
-      const courseId = firstItem.id.toString();
-      router.push(`/portal/course-learn/${courseId}`);
-    } else {
-      // 套餐：跳转到第一个课程，确保课程ID是字符串类型
-      const courseId = firstItem.courses[0].courseId.toString();
-      router.push(`/portal/course-learn/${courseId}`);
+  const firstItem = items.value[0];
+  if (!firstItem) return;
+
+  // ===== 课程类型 =====
+  if (targetType.value === 'course') {
+    // 单个课程 → 直接跳转课程学习页
+    if (items.value.length === 1) {
+      router.push(`/portal/course-learn/${firstItem.id}`);
+      return;
+    }
+    // 多个课程 → 显示课程选择对话框
+    courseSelectDialogVisible.value = true;
+    return;
+  }
+
+  // ===== 套餐类型 =====
+  if (targetType.value === 'package') {
+    // 单个套餐（任意课程数）→ 显示课程选择对话框（统一行为）
+    if (items.value.length === 1) {
+      selectedPackage.value = firstItem;
+      courseSelectDialogVisible.value = true;
+      return;
+    }
+    // 多个套餐 → 显示套餐选择对话框
+    if (items.value.length > 1) {
+      packageSelectDialogVisible.value = true;
+      return;
     }
   }
+}
+
+// 选择套餐（套餐选择对话框）
+function handleSelectPackage(pkg: any) {
+  // 保存选中的套餐
+  selectedPackage.value = pkg;
+
+  // 判断课程数
+  if (pkg.courses.length > 1) {
+    // 多门课程：关闭套餐对话框，打开课程选择对话框
+    // packageSelectDialogVisible.value = false;
+    courseSelectDialogVisible.value = true;
+    return;
+  }
+
+  // 1门课程：直接跳转到课程学习页
+  if (pkg.courses.length === 1) {
+    const courseId = pkg.courses[0].courseId.toString();
+    router.push(`/portal/course-learn/${courseId}`);
+    packageSelectDialogVisible.value = false;
+    courseSelectDialogVisible.value = false;
+    return;
+  }
+}
+
+// 课程选择对话框关闭
+function onCourseSelectDialogClosed() {
+  // 保持 selectedPackage 不变，不清空
+  // 这样用户可以继续从套餐中选择
+}
+
+// 套餐选择对话框关闭
+function onPackageSelectDialogClosed() {
+  // 清空 selectedPackage
+  selectedPackage.value = null;
+}
+
+// 选择课程学习（从套餐中选择）
+function handleSelectCourse(course: any) {
+  if (!course || !course.id) {
+    ElMessage.warning('课程信息无效');
+    return;
+  }
+
+  const courseId = course.id.toString();
+  router.push(`/portal/course-learn/${courseId}`);
+  courseSelectDialogVisible.value = false;
+
+  // 如果是从套餐中选择，不清空 selectedPackage
+  // 如果是独立课程兑换，才清空
+  if (!course.packageName) {
+    selectedPackage.value = null;
+  }
+}
+
+// 获取所有可学习的课程列表
+function getAllAvailableCourses() {
+  const courses: any[] = [];
+  if (targetType.value === 'course') {
+    // 课程类型：直接添加所有课程
+    for (const item of items.value) {
+      courses.push({
+        id: item.id,
+        title: item.title,
+        coverImage: item.coverImage,
+        type: 'course'
+      });
+    }
+  } else {
+    // 套餐类型：展开选中套餐的所有课程
+    const pkgToShow = selectedPackage.value || items.value[0];
+
+    for (const course of pkgToShow.courses) {
+      courses.push({
+        id: course.courseId,
+        title: course.courseName,
+        coverImage: pkgToShow.packageCover,
+        packageName: pkgToShow.packageName,
+        isRequired: course.isRequired,
+        type: 'package-course'
+      });
+    }
+  }
+  return courses;
+}
+
+// 获取某个目标的有效期天数
+function getTargetAccessValidDays(targetId: string): number | undefined {
+  // 优先使用独立有效期
+  if (validationResult.value?.targetAccessValidDays?.[targetId]) {
+    return validationResult.value.targetAccessValidDays[targetId];
+  }
+  // 其次使用统一有效期
+  return validationResult.value?.accessValidDays;
+}
+
+// 格式化有效期显示
+function formatAccessValidDays(days?: number): string {
+  if (!days) return '永不过期';
+  return `${days}天`;
 }
 
 // 格式化过期时间
@@ -239,19 +397,19 @@ function formatExpireTime(expireTime: string) {
           <div v-if="redeemStep === 2 && items.length > 0" class="step-content">
             <el-card class="course-card" shadow="hover">
               <template #header>
-                <h2>确认兑换{{ targetType === 'package' ? '套餐' : '课程' }}</h2>
+                <div class="card-header">
+                  <h2>确认兑换{{ targetType === 'package' ? '套餐' : '课程' }}</h2>
+                  <span class="item-count">共{{ targetType === 'course' ? items.length + '个课程' : items.length + '个套餐' }}</span>
+                </div>
               </template>
 
-              <div v-for="(item, index) in items" :key="index" class="course-item">
-                <div v-if="targetType === 'course'" class="course-detail">
-                  <el-image
-                    :src="item.coverImage"
-                    fit="cover"
-                    class="course-cover"
-                  />
-                  <div class="course-info">
-                    <h3 class="course-title">{{ item.title }}</h3>
-                    <div class="course-meta">
+              <!-- 课程类型：网格布局 -->
+              <div v-if="targetType === 'course'" class="courses-grid">
+                <div v-for="item in items" :key="item.id" class="course-card-item">
+                  <el-image :src="item.coverImage" fit="cover" class="item-cover" />
+                  <div class="item-info">
+                    <h4 class="item-title">{{ item.title }}</h4>
+                    <div class="item-meta">
                       <el-tag size="small">{{ item.category }}</el-tag>
                       <span class="separator">•</span>
                       <el-rate
@@ -261,36 +419,49 @@ function formatExpireTime(expireTime: string) {
                         text-color="#ff9900"
                       />
                     </div>
-                    <p class="course-desc">{{ item.courseIntro }}</p>
-                  </div>
-                </div>
-
-                <div v-else class="package-detail">
-                  <el-image
-                    :src="item.packageCover"
-                    fit="cover"
-                    class="course-cover"
-                  />
-                  <div class="course-info">
-                    <h3 class="course-title">{{ item.packageName }}</h3>
-                    <p class="course-desc">{{ item.packageDesc }}</p>
-                    <div class="package-courses">
-                      <p><strong>包含课程：</strong></p>
-                      <!-- <ul> -->
-                        <!-- <li v-for="course in item.courses" :key="course.courseId">
-                          {{ course.courseName }} {{ course.isRequired ? '(必修)' : '(选修)' }}
-                        </li> -->
-                      <!-- </ul> -->
+                    <div class="item-validity">
+                      有效期：{{ formatAccessValidDays(getTargetAccessValidDays(item.id)) }}
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <el-divider v-if="index < items.length - 1" />
+              <!-- 套餐类型：列表+网格展示包含课程 -->
+              <div v-else class="packages-list">
+                <div v-for="(pkg, index) in items" :key="index" class="package-item">
+                  <div class="package-header">
+                    <el-image :src="pkg.packageCover" fit="cover" class="package-cover" />
+                    <div class="package-basic">
+                      <h4 class="package-title">{{ pkg.packageName }}</h4>
+                      <p class="package-desc">{{ pkg.packageDesc }}</p>
+                      <div class="package-validity">
+                        有效期：{{ formatAccessValidDays(getTargetAccessValidDays(pkg.packageId.toString())) }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="package-courses-wrapper">
+                    <div class="courses-label">
+                      <el-icon><Collection /></el-icon>
+                      <span>包含课程 ({{ pkg.courses.length }})</span>
+                    </div>
+                    <div class="courses-sub-grid">
+                      <div v-for="course in pkg.courses" :key="course.courseId" class="course-mini-card">
+                        <!-- <el-tag :type="course.isRequired ? 'warning' : 'info'" size="small">
+                          {{ course.isRequired ? '必修' : '选修' }}
+                        </el-tag> -->
+                        <span class="course-mini-name">{{ course.courseName }}</span>
+                        <!-- <div class="course-mini-validity">
+                          有效期：{{ formatAccessValidDays(getTargetAccessValidDays(course.courseId.toString())) }}
+                        </div> -->
+                      </div>
+                    </div>
+                  </div>
+                  <el-divider v-if="index < items.length - 1" />
+                </div>
               </div>
 
               <div class="course-access">
                 <p><strong>类型：</strong>{{ targetType === 'package' ? '课程套餐' : '课程' }}</p>
-                <p><strong>有效期：</strong>{{ validationResult?.accessValidDays ? `${validationResult.accessValidDays}天` : '永不过期' }}</p>
                 <p><strong>单位：</strong>{{ validationResult?.organizationName }}</p>
               </div>
 
@@ -316,22 +487,69 @@ function formatExpireTime(expireTime: string) {
                   <CircleCheck />
                 </el-icon>
                 <h2 class="success-title">兑换成功！</h2>
-                <p class="success-message">您已成功获得{{ targetType === 'package' ? '套餐' : '课程' }}访问权限</p>
+                <p class="success-message">
+                  您已成功获得{{ targetType === 'package' ? '课程套餐' : '课程' }}访问权限
+                </p>
 
-                <el-descriptions :column="1" border class="success-info">
-                  <el-descriptions-item :label="targetType === 'package' ? '套餐名称' : '课程名称'">
-                    {{ items.map(item => targetType === 'course' ? item.title : item.packageName).join(', ') }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="类型">
-                    {{ targetType === 'package' ? '课程套餐' : '课程' }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="有效期">
-                    {{ validationResult?.accessValidDays ? `${validationResult.accessValidDays}天` : '永不过期' }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="兑换码">
-                    {{ codeInput }}
-                  </el-descriptions-item>
-                </el-descriptions>
+                <div class="success-summary">
+                  <div class="summary-item">
+                    <span class="summary-label">类型：</span>
+                    <span class="summary-value">{{ targetType === 'package' ? '课程套餐' : '课程' }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">数量：</span>
+                    <span class="summary-value">{{ targetType === 'package' ? items.length + '个套餐' : items.length + '个课程' }}</span>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">兑换码：</span>
+                    <span class="summary-value">{{ codeInput }}</span>
+                  </div>
+                </div>
+
+                <!-- 课程列表展示 -->
+                <div class="success-items">
+                  <h3 v-if="targetType === 'course'" class="success-section-title">已获得课程</h3>
+                  <h3 v-else class="success-section-title">已获得套餐</h3>
+
+                  <!-- 课程类型：简洁列表 -->
+                  <div v-if="targetType === 'course'" class="success-courses-list">
+                    <div v-for="item in items" :key="item.id" class="success-course-item">
+                      <el-image :src="item.coverImage" fit="cover" class="success-course-cover" />
+                      <div class="success-course-info">
+                        <h4>{{ item.title }}</h4>
+                        <span class="success-course-meta">{{ item.category }}</span>
+                        <div class="success-course-validity">
+                          有效期：{{ formatAccessValidDays(getTargetAccessValidDays(item.id)) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 套餐类型：展开显示所有课程 -->
+                  <div v-else class="success-packages-list">
+                    <div v-for="(pkg, pIndex) in items" :key="pIndex" class="success-package-item">
+                      <div class="success-package-header">
+                        <el-icon><Collection /></el-icon>
+                        <span class="success-package-name">{{ pkg.packageName }}</span>
+                        <div class="success-package-validity">
+                          有效期：{{ formatAccessValidDays(getTargetAccessValidDays(pkg.packageId.toString())) }}
+                        </div>
+                        <el-tag size="small" type="info">{{ pkg.courses.length }}门课程</el-tag>
+                      </div>
+                      <div class="success-package-courses">
+                        <div v-for="(course, cIndex) in pkg.courses" :key="cIndex" class="success-package-course">
+                          <!-- <el-tag :type="course.isRequired ? 'warning' : 'info'" size="small">
+                            {{ course.isRequired ? '必修' : '选修' }}
+                          </el-tag> -->
+                          <span>{{ course.courseName }}</span>
+                          <!-- <div class="success-package-course-validity">
+                            有效期：{{ formatAccessValidDays(getTargetAccessValidDays(course.courseId.toString())) }}
+                          </div> -->
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div class="success-actions">
                   <el-button @click="handleGoToCourse" type="primary" size="large">
@@ -347,6 +565,90 @@ function formatExpireTime(expireTime: string) {
         </div>
       </div>
     </section>
+
+    <!-- 课程选择对话框 -->
+    <el-dialog
+      v-model="courseSelectDialogVisible"
+      title="选择要学习的课程"
+      width="700px"
+      destroy-on-close
+      @closed="onCourseSelectDialogClosed"
+    >
+      <div class="course-select-content">
+        <p class="select-tip">{{ selectTipText }}</p>
+        <el-scrollbar max-height="500px">
+          <div class="course-list-select">
+            <div
+              v-for="course in getAllAvailableCourses()"
+              :key="course.id"
+              class="course-item-select"
+              @click="handleSelectCourse(course)"
+            >
+              <el-image :src="course.coverImage" fit="cover" class="select-course-cover" />
+              <div class="select-course-info">
+                <h4>{{ course.title }}</h4>
+                <p v-if="course.packageName" class="select-course-package">{{ course.packageName }}</p>
+                <div class="select-course-validity">
+                  有效期：{{ formatAccessValidDays(getTargetAccessValidDays(course.id)) }}
+                </div>
+                <div v-if="course.isRequired !== undefined" class="select-course-optional">
+                  <!-- <el-tag :type="course.isRequired ? 'warning' : 'info'" size="small">
+                    {{ course.isRequired ? '必修' : '选修' }}
+                  </el-tag> -->
+                </div>
+              </div>
+              <el-icon class="select-arrow" color="#409eff"><ArrowRight /></el-icon>
+            </div>
+          </div>
+        </el-scrollbar>
+      </div>
+    </el-dialog>
+
+    <!-- 套餐选择对话框 -->
+    <el-dialog
+      v-model="packageSelectDialogVisible"
+      title="选择要学习的套餐"
+      width="800px"
+      destroy-on-close
+      @closed="onPackageSelectDialogClosed"
+    >
+      <div class="package-select-content">
+        <el-scrollbar max-height="500px">
+          <div class="package-list-select">
+            <div
+              v-for="(pkg, index) in items"
+              :key="index"
+              class="package-item-select"
+              @click="handleSelectPackage(pkg)"
+            >
+              <el-image :src="pkg.packageCover" fit="cover" class="select-package-cover" />
+              <div class="select-package-info">
+                <h4>{{ pkg.packageName }}</h4>
+                <p class="select-package-desc">{{ pkg.packageDesc }}</p>
+                <div class="select-package-meta">
+                  <span class="select-package-validity">
+                    有效期：{{ formatAccessValidDays(getTargetAccessValidDays(pkg.packageId.toString())) }}
+                  </span>
+                  <el-tag size="small" type="info">{{ pkg.courses.length }}门课程</el-tag>
+                </div>
+                <div class="select-package-courses">
+                  <div v-for="(course, cIndex) in pkg.courses" :key="cIndex" class="package-course-mini">
+                    <!-- <el-tag :type="course.isRequired ? 'warning' : 'info'" size="small">
+                      {{ course.isRequired ? '必修' : '选修' }}
+                    </el-tag> -->
+                    <span class="package-course-name">{{ course.courseName }}</span>
+                  </div>
+                </div>
+              </div>
+              <el-icon class="select-arrow" color="#409eff"><ArrowRight /></el-icon>
+            </div>
+          </div>
+        </el-scrollbar>
+      </div>
+      <template #footer>
+        <el-button @click="packageSelectDialogVisible = false">取消</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -442,8 +744,77 @@ function formatExpireTime(expireTime: string) {
   }
 }
 
-// Course Detail
-.course-item {
+// Course Card Header
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    color: $text-color-primary;
+  }
+
+  .item-count {
+    font-size: $font-size-base;
+    color: $text-color-secondary;
+  }
+}
+
+// Course Detail - Grid Layout
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $spacing-large;
+  margin-bottom: $spacing-large;
+}
+
+.course-card-item {
+  border: 1px solid $border-color-light;
+  border-radius: $border-radius-base;
+  overflow: hidden;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: $box-shadow-light;
+    border-color: $--el-color-primary;
+  }
+
+  .item-cover {
+    width: 100%;
+    height: 180px;
+  }
+
+  .item-info {
+    padding: $spacing-base;
+
+    .item-title {
+      font-size: 16px;
+      color: $text-color-primary;
+      margin: 0 0 $spacing-small 0;
+      font-weight: 600;
+    }
+
+    .item-meta {
+      display: flex;
+      align-items: center;
+      gap: $spacing-small;
+
+      .separator {
+        color: $text-color-secondary;
+      }
+    }
+  }
+}
+
+// Package Detail - List Layout
+.packages-list {
+  margin-bottom: $spacing-large;
+}
+
+.package-item {
   margin-bottom: $spacing-large;
 
   &:last-child {
@@ -451,74 +822,88 @@ function formatExpireTime(expireTime: string) {
   }
 }
 
-.course-detail,
-.package-detail {
+.package-header {
   display: flex;
   gap: $spacing-large;
+  margin-bottom: $spacing-base;
 
-  .course-cover {
+  .package-cover {
     width: 240px;
     height: 160px;
     border-radius: $border-radius-base;
     flex-shrink: 0;
   }
 
-  .course-info {
+  .package-basic {
     flex: 1;
 
-    .course-title {
-      font-size: 24px;
+    .package-title {
+      font-size: 20px;
       color: $text-color-primary;
-      margin: 0 0 $spacing-base 0;
+      margin: 0 0 $spacing-small 0;
+      font-weight: 600;
     }
 
-    .course-meta {
-      display: flex;
-      align-items: center;
-      gap: $spacing-small;
-      margin-bottom: $spacing-base;
-
-      .separator {
-        color: $text-color-secondary;
-      }
-    }
-
-    .course-desc {
+    .package-desc {
       font-size: $font-size-base;
-      line-height: 1.8;
+      line-height: 1.6;
       color: $text-color-regular;
-      margin-bottom: $spacing-base;
-    }
-
-    .course-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: $spacing-small;
-      margin-bottom: $spacing-large;
-    }
-
-    .package-courses {
-      margin-bottom: $spacing-base;
-
-      p {
-        font-size: $font-size-base;
-        color: $text-color-primary;
-        margin: 0 0 $spacing-small 0;
-      }
-
-      ul {
-        padding-left: 20px;
-        margin: 0;
-
-        li {
-          line-height: 1.8;
-          color: $text-color-regular;
-        }
-      }
+      margin: 0;
     }
   }
 }
 
+.package-courses-wrapper {
+  margin-top: $spacing-large;
+  padding: $spacing-large;
+  background: $background-color-light;
+  border-radius: $border-radius-base;
+
+  .courses-label {
+    display: flex;
+    align-items: center;
+    gap: $spacing-small;
+    margin-bottom: $spacing-base;
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-color-primary;
+
+    .el-icon {
+      color: $--el-color-primary;
+    }
+  }
+
+  .courses-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: $spacing-small;
+  }
+
+  .course-mini-card {
+    display: flex;
+    align-items: center;
+    gap: $spacing-small;
+    padding: $spacing-small;
+    background: #fff;
+    border-radius: $border-radius-small;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #ecf5ff;
+    }
+
+    .course-mini-name {
+      flex: 1;
+      font-size: $font-size-small;
+      color: $text-color-regular;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// Course Access
 .course-access {
   margin-top: $spacing-large;
   padding-top: $spacing-large;
@@ -568,11 +953,127 @@ function formatExpireTime(expireTime: string) {
       margin-bottom: $spacing-large;
     }
 
-    .success-info {
-      margin-bottom: $spacing-large;
+    .success-summary {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: $spacing-large;
+      margin-bottom: $spacing-extra-large;
+      padding: $spacing-large;
+      background: $background-color-light;
+      border-radius: $border-radius-base;
 
-      :deep(.el-descriptions__label) {
-        font-weight: 600;
+      .summary-item {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-small;
+
+        .summary-label {
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+        }
+
+        .summary-value {
+          font-size: $font-size-base;
+          font-weight: 600;
+          color: $text-color-primary;
+        }
+      }
+    }
+
+    .success-items {
+      text-align: left;
+      margin-bottom: $spacing-extra-large;
+
+      .success-section-title {
+        font-size: 18px;
+        color: $text-color-primary;
+        margin: 0 0 $spacing-large 0;
+        text-align: center;
+      }
+
+      .success-courses-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: $spacing-base;
+      }
+
+      .success-course-item {
+        display: flex;
+        gap: $spacing-base;
+        padding: $spacing-base;
+        background: $background-color-light;
+        border-radius: $border-radius-base;
+        align-items: center;
+
+        .success-course-cover {
+          width: 80px;
+          height: 60px;
+          border-radius: $border-radius-small;
+          flex-shrink: 0;
+        }
+
+        .success-course-info {
+          flex: 1;
+          overflow: hidden;
+
+          h4 {
+            font-size: 14px;
+            color: $text-color-primary;
+            margin: 0 0 $spacing-small 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .success-course-meta {
+            font-size: $font-size-small;
+            color: $text-color-secondary;
+          }
+        }
+      }
+
+      .success-packages-list {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-large;
+      }
+
+      .success-package-item {
+        border: 1px solid $border-color-light;
+        border-radius: $border-radius-base;
+        overflow: hidden;
+
+        .success-package-header {
+          display: flex;
+          align-items: center;
+          gap: $spacing-small;
+          padding: $spacing-base $spacing-large;
+          background: #ecf5ff;
+
+          .success-package-name {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 600;
+            color: $text-color-primary;
+          }
+        }
+
+        .success-package-courses {
+          padding: $spacing-large;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: $spacing-small;
+        }
+
+        .success-package-course {
+          display: flex;
+          align-items: center;
+          gap: $spacing-small;
+          padding: $spacing-small;
+          font-size: $font-size-small;
+          color: $text-color-regular;
+        }
       }
     }
 
@@ -583,5 +1084,208 @@ function formatExpireTime(expireTime: string) {
       align-items: center;
     }
   }
+}
+
+// Course Select Dialog
+.course-select-content {
+  .select-tip {
+    text-align: center;
+    color: $text-color-secondary;
+    margin-bottom: $spacing-large;
+  }
+
+  .course-list-select {
+    .course-item-select {
+      display: flex;
+      gap: $spacing-base;
+      padding: $spacing-base;
+      border-radius: $border-radius-base;
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover {
+        background: $background-color-light;
+        transform: translateX(4px);
+      }
+
+      .select-course-cover {
+        width: 100px;
+        height: 70px;
+        border-radius: $border-radius-small;
+        flex-shrink: 0;
+      }
+
+      .select-course-info {
+        flex: 1;
+        overflow: hidden;
+
+        h4 {
+          font-size: 15px;
+          color: $text-color-primary;
+          margin: 0 0 $spacing-small 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .select-course-package {
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+          margin: 0 0 $spacing-small 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .select-course-validity {
+          margin-top: $spacing-small;
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+        }
+
+        .select-course-optional {
+          display: flex;
+          align-items: center;
+          gap: $spacing-small;
+        }
+      }
+
+      .select-arrow {
+        display: flex;
+        align-items: center;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+// Course Validity Display
+.item-validity {
+  margin-top: $spacing-small;
+  padding-top: $spacing-small;
+  border-top: 1px solid $border-color-lighter;
+  font-size: $font-size-small;
+  color: $text-color-secondary;
+}
+
+.package-validity {
+  margin-top: $spacing-small;
+  font-size: $font-size-base;
+  color: $--el-color-primary;
+  font-weight: 600;
+}
+
+.course-mini-validity {
+  font-size: $font-size-extra-small;
+  color: $text-color-secondary;
+  margin-top: $spacing-small;
+}
+
+// Package Select Dialog
+.package-select-content {
+  .package-list-select {
+    .package-item-select {
+      display: flex;
+      gap: $spacing-large;
+      padding: $spacing-base;
+      border-radius: $border-radius-base;
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover {
+        background: $background-color-light;
+        transform: translateX(4px);
+      }
+
+      .select-package-cover {
+        width: 120px;
+        height: 80px;
+        border-radius: $border-radius-base;
+        flex-shrink: 0;
+      }
+
+      .select-package-info {
+        flex: 1;
+        overflow: hidden;
+
+        h4 {
+          font-size: 16px;
+          color: $text-color-primary;
+          margin: 0 0 $spacing-small 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .select-package-desc {
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+          margin: 0 0 $spacing-base 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .select-package-meta {
+          display: flex;
+          align-items: center;
+          gap: $spacing-small;
+          margin-top: $spacing-small;
+        }
+
+        .select-package-validity {
+          font-size: $font-size-small;
+          color: $text-color-secondary;
+        }
+
+        .select-package-courses {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: $spacing-small;
+          margin-top: $spacing-base;
+        }
+
+        .package-course-mini {
+          display: flex;
+          align-items: center;
+          gap: $spacing-small;
+          font-size: $font-size-small;
+          color: $text-color-regular;
+        }
+
+        .package-course-name {
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .select-arrow {
+        display: flex;
+        align-items: center;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+// Success Page Validity Display
+.success-course-validity,
+.success-package-validity,
+.success-package-course-validity {
+  margin-top: $spacing-small;
+  font-size: $font-size-small;
+  color: $text-color-secondary;
+}
+
+// Dialog Footer
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: $spacing-base;
 }
 </style>

@@ -3,9 +3,18 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores';
 import { ElMessage } from 'element-plus';
+import { VideoPlay } from '@element-plus/icons-vue';
 import { getUserOrders } from '@/utils/order-storage';
 import { getUserLearningRecords } from '@/utils/learning-storage';
 import { getPortalCourseById } from '@/utils/portal-course-adapter';
+import { getUserRedeemedCourses } from '@/utils/general-education-storage';
+import {
+  getPackageLearningRecordsByUser,
+  getPackageById,
+  calculatePackageProgress,
+  type PackageLearningRecord,
+  type CoursePackage,
+} from '@/utils/course-package-storage';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -13,35 +22,58 @@ const authStore = useAuthStore();
 const loading = ref(false);
 const activeTab = ref<'learning' | 'completed'>('learning');
 
-// 课程列表（包含学习记录）
-interface CourseWithProgress {
-  orderId: string;
-  courseId: string;
-  courseName: string;
-  courseCover: string;
+// 统一的学习项目类型
+type ItemType = 'course' | 'package';
+
+// 课程/套餐列表（包含学习记录）
+interface LearningItem {
+  itemId: string;
+  itemType: ItemType; // 课程或套餐
+  orderId?: string; // 订单ID（如果有）
+  source: 'purchase' | 'redeem'; // 来源：购买/兑换
+
+  // 课程字段
+  courseId?: string;
+  courseName?: string;
+  courseCover?: string;
+  totalLessons?: number;
+  completedLessons?: number;
+
+  // 套餐字段
+  packageId?: number;
+  packageName?: string;
+  packageCover?: string;
+  packageDesc?: string;
+  totalCourses?: number;
+  completedCourses?: number;
+  courses?: Array<{
+    courseId: number;
+    courseName: string;
+    courseCover: string;
+  }>;
+
+  // 通用字段
   price: number;
   progress: number;
   lastWatchTime: string;
   totalWatchDuration: number;
-  completedLessons: number;
-  totalLessons: number;
 }
 
-const coursesWithProgress = ref<CourseWithProgress[]>([]);
+const learningItems = ref<LearningItem[]>([]);
 
-// 计算显示的课程
-const displayedCourses = computed(() => {
+// 计算显示的项目
+const displayedItems = computed(() => {
   if (activeTab.value === 'learning') {
-    return coursesWithProgress.value.filter((c) => c.progress < 100);
+    return learningItems.value.filter((item) => item.progress < 100);
   } else {
-    return coursesWithProgress.value.filter((c) => c.progress >= 100);
+    return learningItems.value.filter((item) => item.progress >= 100);
   }
 });
 
 // 统计数据
 const stats = computed(() => {
-  const learning = coursesWithProgress.value.filter((c) => c.progress < 100).length;
-  const completed = coursesWithProgress.value.filter((c) => c.progress >= 100).length;
+  const learning = learningItems.value.filter((item) => item.progress < 100).length;
+  const completed = learningItems.value.filter((item) => item.progress >= 100).length;
   return { learning, completed };
 });
 
@@ -51,32 +83,111 @@ async function loadMyCourses() {
 
   loading.value = true;
   try {
-    // 获取用户订单（已购买的课程）
+    const allItems: LearningItem[] = [];
+
+    // 1. 获取用户订单（已购买的课程和套餐）
     const orders = getUserOrders(authStore.userInfo.userId);
     const paidOrders = orders.filter((o) => o.status === 'paid');
 
-    // 获取学习记录
-    const learningRecords = getUserLearningRecords(authStore.userInfo.userId);
+    // 2. 获取用户兑换的课程
+    const redeemedCourses = getUserRedeemedCourses(authStore.userInfo.userId);
 
-    // 合并数据
-    coursesWithProgress.value = paidOrders.map((order) => {
-      const record = learningRecords.find((r) => r.courseId === order.courseId);
+    // 3. 获取课程学习记录
+    const courseLearningRecords = getUserLearningRecords(authStore.userInfo.userId);
 
-      return {
-        orderId: order.orderId,
-        courseId: order.courseId,
-        courseName: order.courseName,
-        courseCover: order.courseCover,
-        price: order.price,
+    // 4. 获取套餐学习记录
+    const packageLearningRecords = getPackageLearningRecordsByUser(authStore.userInfo.userId);
+
+    // 5. 处理购买的课程
+    for (const order of paidOrders) {
+      if (order.type === 'course') {
+        const record = courseLearningRecords.find((r) => r.courseId === order.courseId);
+        const course = getPortalCourseById(order.courseId);
+
+        allItems.push({
+          itemId: order.courseId,
+          itemType: 'course',
+          orderId: order.orderId,
+          source: 'purchase',
+          courseId: order.courseId,
+          courseName: order.courseName,
+          courseCover: order.courseCover,
+          price: order.price,
+          progress: record?.progress || 0,
+          lastWatchTime: record?.lastWatchTime || '-',
+          totalWatchDuration: record?.totalWatchDuration || 0,
+          completedLessons: record?.completedLessons?.length || 0,
+          totalLessons: course?.lessons?.length || 0,
+        });
+      }
+    }
+
+    // 6. 处理购买的套餐
+    for (const order of paidOrders) {
+      if (order.type === 'package') {
+        const pkg = getPackageById(parseInt(order.packageId || '0'));
+        if (!pkg) continue;
+
+        const record = packageLearningRecords.find((r) => r.packageId === pkg.packageId);
+
+        allItems.push({
+          itemId: `package_${pkg.packageId}`,
+          itemType: 'package',
+          orderId: order.orderId,
+          source: 'purchase',
+          packageId: pkg.packageId,
+          packageName: order.packageName || pkg.packageName,
+          packageCover: order.packageCover || pkg.packageCover,
+          packageDesc: pkg.packageDesc,
+          price: order.price,
+          progress: record?.progress || 0,
+          lastWatchTime: record?.lastWatchTime || '-',
+          totalWatchDuration: record?.totalWatchDuration || 0,
+          totalCourses: pkg.courses.length,
+          completedCourses: record?.completedCourses?.length || 0,
+          courses: pkg.courses.map(c => ({
+            courseId: c.courseId,
+            courseName: c.courseName,
+            courseCover: c.courseCover,
+          })),
+        });
+      }
+    }
+
+    // 7. 处理兑换的课程
+    for (const access of redeemedCourses) {
+      // 检查是否已经在购买的课程中（去重）
+      if (allItems.some((item) => item.itemType === 'course' && item.courseId === access.courseId)) {
+        continue;
+      }
+
+      const record = courseLearningRecords.find((r) => r.courseId === access.courseId);
+      const course = getPortalCourseById(access.courseId);
+
+      allItems.push({
+        itemId: access.courseId,
+        itemType: 'course',
+        orderId: access.id,
+        source: 'redeem',
+        courseId: access.courseId,
+        courseName: access.packageName || course?.title || '未知课程',
+        courseCover: course?.cover || 'https://picsum.photos/seed/default/300/200',
+        price: 0,
+        packageName: access.packageName,
         progress: record?.progress || 0,
         lastWatchTime: record?.lastWatchTime || '-',
         totalWatchDuration: record?.totalWatchDuration || 0,
         completedLessons: record?.completedLessons?.length || 0,
-        totalLessons: 0, // TODO: 从课程数据获取总课时数
-      };
-    });
+        totalLessons: course?.lessons?.length || 0,
+      });
+    }
 
-    console.log('加载我的课程:', coursesWithProgress.value.length);
+    learningItems.value = allItems;
+
+    console.log('加载我的课程:', learningItems.value.length);
+    console.log('购买课程:', paidOrders.filter(o => o.type === 'course').length,
+                '购买套餐:', paidOrders.filter(o => o.type === 'package').length,
+                '兑换课程:', redeemedCourses.length);
   } catch (error: any) {
     ElMessage.error(error.message || '加载课程失败');
   } finally {
@@ -84,19 +195,42 @@ async function loadMyCourses() {
   }
 }
 
-// 继续学习
-function handleContinueLearning(courseId: string) {
+// 继续学习（课程）
+function handleContinueCourse(courseId: string) {
   router.push(`/portal/course-learn/${courseId}`);
 }
 
-// 重新学习
-function handleRelearn(courseId: string) {
-  router.push(`/portal/course-learn/${courseId}`);
+// 继续学习（套餐）
+function handleContinuePackage(packageId: number, courses: any[]) {
+  if (courses && courses.length > 0) {
+    // 找到第一个未完成的课程
+    const firstCourse = courses[0];
+    router.push(`/portal/course-learn/${firstCourse.courseId}`);
+  }
 }
 
 // 查看课程详情
-function handleViewDetail(courseId: string) {
+function handleViewCourseDetail(courseId: string) {
   router.push(`/portal/course/${courseId}`);
+}
+
+// 查看套餐详情
+function handleViewPackageDetail(packageId: number) {
+  router.push(`/portal/package/${packageId}`);
+}
+
+// 点击学习项目（课程或套餐）
+function handleItemClick(item: LearningItem) {
+  if (item.itemType === 'course') {
+    handleContinueLearning(item.courseId!);
+  } else {
+    handleContinuePackage(item.packageId!, item.courses || []);
+  }
+}
+
+// 继续学习（根据类型调用）
+function handleContinueLearning(courseId: string) {
+  router.push(`/portal/course-learn/${courseId}`);
 }
 
 // 切换 tab
@@ -113,7 +247,7 @@ onMounted(() => {
   <div class="my-courses">
     <div class="page-header">
       <h2>我的课程</h2>
-      <p>查看您购买的课程和学习进度</p>
+      <p>查看您购买的课程、套餐和学习进度</p>
     </div>
 
     <!-- Tab 切换 -->
@@ -141,12 +275,96 @@ onMounted(() => {
       <el-skeleton :rows="3" animated />
     </div>
 
-    <!-- 课程列表 -->
-    <div v-else-if="displayedCourses.length > 0" class="courses-list">
-      <div v-for="course in displayedCourses" :key="course.orderId" class="course-card">
+    <!-- 课程/套餐列表 -->
+    <div v-else-if="displayedItems.length > 0" class="courses-list">
+      <!-- 套餐卡片 -->
+      <div
+        v-for="item in displayedItems.filter(i => i.itemType === 'package')"
+        :key="item.itemId"
+        class="course-card package-card"
+      >
+        <!-- 套餐封面 -->
+        <div class="course-cover" @click="handleViewPackageDetail(item.packageId!)">
+          <el-image :src="item.packageCover" fit="cover" />
+          <div class="play-overlay">
+            <el-icon class="play-icon"><VideoPlay /></el-icon>
+          </div>
+          <div class="package-badge">套餐</div>
+        </div>
+
+        <!-- 套餐信息 -->
+        <div class="course-info">
+          <h3 class="course-title" @click="handleViewPackageDetail(item.packageId!)">
+            {{ item.packageName }}
+          </h3>
+          <!-- 来源标签 -->
+          <div class="course-tags">
+            <el-tag :type="item.source === 'purchase' ? 'success' : 'warning'" size="small">
+              {{ item.source === 'purchase' ? '购买' : '兑换' }}
+            </el-tag>
+            <el-tag type="primary" size="small">{{ item.totalCourses }} 门课程</el-tag>
+          </div>
+
+          <!-- 套餐描述 -->
+          <p v-if="item.packageDesc" class="package-desc">{{ item.packageDesc }}</p>
+
+          <!-- 学习进度 -->
+          <div class="progress-section">
+            <div class="progress-header">
+              <span class="progress-label">学习进度</span>
+              <span class="progress-percent">{{ item.progress }}%</span>
+            </div>
+            <el-progress :percentage="item.progress" :show-text="false" />
+            <div class="progress-info">
+              <span class="last-watch">最后学习：{{ item.lastWatchTime }}</span>
+              <span class="watch-duration">
+                已学习 {{ Math.floor(item.totalWatchDuration / 60) }} 分钟
+              </span>
+            </div>
+          </div>
+
+          <!-- 套餐包含的课程 -->
+          <div v-if="item.courses && item.courses.length > 0" class="package-courses">
+            <div class="courses-title">包含课程</div>
+            <div class="mini-courses-list">
+              <div
+                v-for="course in item.courses.slice(0, 3)"
+                :key="course.courseId"
+                class="mini-course-item"
+                @click="handleContinueLearning(course.courseId.toString())"
+              >
+                <el-image :src="course.courseCover" fit="cover" />
+                <span>{{ course.courseName }}</span>
+              </div>
+              <div v-if="item.courses.length > 3" class="more-courses">
+                +{{ item.courses.length - 3 }} 门
+              </div>
+            </div>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="course-actions">
+            <el-button
+              type="primary"
+              :icon="VideoPlay"
+              @click="handleContinuePackage(item.packageId!, item.courses || [])"
+            >
+              {{ activeTab === 'learning' ? '继续学习' : '重新学习' }}
+            </el-button>
+            <el-button @click="handleViewPackageDetail(item.packageId!)">查看详情</el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 课程卡片 -->
+      <div
+        v-for="item in displayedItems.filter(i => i.itemType === 'course')"
+        :key="item.itemId"
+        class="course-card"
+      >
         <!-- 课程封面 -->
-        <div class="course-cover" @click="handleViewDetail(course.courseId)">
-          <el-image :src="course.courseCover" fit="cover" />
+        <div class="course-cover" @click="handleViewCourseDetail(item.courseId!)">
+          <el-image :src="item.courseCover" fit="cover" />
           <div class="play-overlay">
             <el-icon class="play-icon"><VideoPlay /></el-icon>
           </div>
@@ -154,21 +372,30 @@ onMounted(() => {
 
         <!-- 课程信息 -->
         <div class="course-info">
-          <h3 class="course-title" @click="handleViewDetail(course.courseId)">
-            {{ course.courseName }}
+          <h3 class="course-title" @click="handleViewCourseDetail(item.courseId!)">
+            {{ item.courseName }}
           </h3>
+          <!-- 课程来源标签 -->
+          <div class="course-tags">
+            <el-tag :type="item.source === 'purchase' ? 'success' : 'warning'" size="small">
+              {{ item.source === 'purchase' ? '购买' : '兑换' }}
+            </el-tag>
+            <el-tag v-if="item.packageName" size="small" type="info">
+              {{ item.packageName }}
+            </el-tag>
+          </div>
 
           <!-- 学习进度 -->
           <div class="progress-section">
             <div class="progress-header">
               <span class="progress-label">学习进度</span>
-              <span class="progress-percent">{{ course.progress }}%</span>
+              <span class="progress-percent">{{ item.progress }}%</span>
             </div>
-            <el-progress :percentage="course.progress" :show-text="false" />
+            <el-progress :percentage="item.progress" :show-text="false" />
             <div class="progress-info">
-              <span class="last-watch">最后学习：{{ course.lastWatchTime }}</span>
+              <span class="last-watch">最后学习：{{ item.lastWatchTime }}</span>
               <span class="watch-duration"
-                >已学习 {{ Math.floor(course.totalWatchDuration / 60) }} 分钟</span
+                >已学习 {{ Math.floor(item.totalWatchDuration / 60) }} 分钟</span
               >
             </div>
           </div>
@@ -178,11 +405,11 @@ onMounted(() => {
             <el-button
               type="primary"
               :icon="VideoPlay"
-              @click="handleContinueLearning(course.courseId)"
+              @click="handleContinueLearning(item.courseId!)"
             >
               {{ activeTab === 'learning' ? '继续学习' : '重新学习' }}
             </el-button>
-            <el-button @click="handleViewDetail(course.courseId)">查看详情</el-button>
+            <el-button @click="handleViewCourseDetail(item.courseId!)">查看详情</el-button>
           </div>
         </div>
       </div>
@@ -280,6 +507,15 @@ onMounted(() => {
       box-shadow: $box-shadow-base;
       transform: translateY(-2px);
     }
+
+    // 套餐卡片特殊样式
+    &.package-card {
+      border: 2px solid #e6a23c;
+
+      .course-title {
+        color: #e6a23c;
+      }
+    }
   }
 
   .course-cover {
@@ -288,6 +524,20 @@ onMounted(() => {
     height: 200px;
     cursor: pointer;
     overflow: hidden;
+
+    .package-badge {
+      position: absolute;
+      top: $spacing-small;
+      right: $spacing-small;
+      background: linear-gradient(135deg, #e6a23c 0%, #f09a5f 100%);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: $border-radius-small;
+      font-size: $font-size-small;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(230, 162, 60, 0.4);
+      z-index: 1;
+    }
 
     :deep(.el-image) {
       width: 100%;
@@ -322,16 +572,92 @@ onMounted(() => {
     padding: $spacing-large;
   }
 
+  // 套餐卡片特殊处理
+  .package-card .course-info {
+    padding: $spacing-large;
+  }
+
   .course-title {
     font-size: $font-size-large;
     font-weight: 600;
     color: $text-color-primary;
-    margin-bottom: $spacing-base;
+    margin-bottom: $spacing-small;
     cursor: pointer;
     transition: $transition-base;
 
     &:hover {
       color: $--el-color-primary;
+    }
+  }
+
+  .course-tags {
+    display: flex;
+    gap: $spacing-small;
+    margin-bottom: $spacing-base;
+  }
+
+  .package-desc {
+    color: $text-color-secondary;
+    font-size: $font-size-small;
+    margin-bottom: $spacing-base;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .package-courses {
+    margin-bottom: $spacing-base;
+
+    .courses-title {
+      font-size: $font-size-small;
+      color: $text-color-secondary;
+      margin-bottom: $spacing-small;
+      font-weight: 500;
+    }
+
+    .mini-courses-list {
+      display: flex;
+      gap: $spacing-small;
+      align-items: center;
+
+      .mini-course-item {
+        display: flex;
+        align-items: center;
+        gap: $spacing-small;
+        background: $background-color-base;
+        padding: $spacing-small;
+        border-radius: $border-radius-small;
+        cursor: pointer;
+        transition: $transition-base;
+
+        &:hover {
+          background: #ecf5ff;
+        }
+
+        :deep(.el-image) {
+          width: 40px;
+          height: 40px;
+          border-radius: $border-radius-small;
+          flex-shrink: 0;
+        }
+
+        span {
+          font-size: $font-size-extra-small;
+          color: $text-color-primary;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      .more-courses {
+        font-size: $font-size-extra-small;
+        color: $text-color-secondary;
+        padding: $spacing-small;
+      }
     }
   }
 

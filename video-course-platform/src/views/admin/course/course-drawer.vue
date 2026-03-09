@@ -43,6 +43,9 @@ const formData = ref({
   status: 'offline',
 });
 
+// 计算课程是否免费
+const isCourseFree = computed(() => formData.value.price === 0);
+
 // 上传文件列表
 const coverFileList = ref([]);
 const uploading = ref(false);
@@ -312,22 +315,31 @@ watch(
         </el-select>
       </el-form-item>
 
-      <el-form-item label="价格" prop="price">
-        <el-input-number v-model="formData.price" :min="0" :precision="2" style="width: 100%" />
-      </el-form-item>
-
-      <el-form-item label="原价" prop="originalPrice">
+      <el-form-item label="课程价格" prop="price">
         <el-input-number
-          v-model="formData.originalPrice"
+          v-model="formData.price"
           :min="0"
           :precision="2"
+          placeholder="设置为0表示免费课程"
           style="width: 100%"
         />
+        <div class="form-hint">
+          {{ isCourseFree ? '当前为免费课程' : '当前为付费课程，可在章节管理中设置部分课时免费试学' }}
+        </div>
       </el-form-item>
 
-      <el-form-item label="免费课程" prop="isFree">
-        <el-switch v-model="formData.isFree" active-text="是" inactive-text="否" />
-      </el-form-item>
+      <template v-if="!isCourseFree">
+        <el-form-item label="原价" prop="originalPrice">
+          <el-input-number
+            v-model="formData.originalPrice"
+            :min="0"
+            :precision="2"
+            placeholder="用于显示优惠折扣"
+            style="width: 100%"
+          />
+          <div class="form-hint">可选，用于显示划线价格和折扣信息</div>
+        </el-form-item>
+      </template>
 
       <el-form-item label="有效期（天）" prop="validDays">
         <el-input-number
@@ -412,5 +424,16 @@ watch(
   display: flex;
   justify-content: flex-end;
   gap: $spacing-base;
+}
+
+.form-hint {
+  margin-top: 4px;
+  font-size: $font-size-small;
+  color: $text-color-secondary;
+}
+
+.info-text {
+  color: $text-color-regular;
+  font-size: $font-size-base;
 }
 </style>

@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { ArrowLeft } from '@element-plus/icons-vue';
 import { getUserById } from '@/utils/user-storage';
 import { getUserOrders } from '@/utils/order-storage';
 import { getUserLearningRecords, getLearningStats } from '@/utils/learning-storage';
+// 动态导入子页面组件
+import { defineAsyncComponent } from 'vue';
 
 const router = useRouter();
-const route = useRoute();
 const authStore = useAuthStore();
 
 // 返回上一页
@@ -18,6 +19,28 @@ function handleBack() {
 }
 
 const loading = ref(false);
+
+// 内容类型状态
+type ContentType = 'courses' | 'orders' | 'favorites' | 'settings' | 'org-info';
+const contentType = ref<ContentType>('courses');
+
+// 动态导入子页面组件
+import MyFavorites from '../my-favorites.vue';
+
+const components = {
+  courses: defineAsyncComponent(() => import('./courses.vue')),
+  orders: defineAsyncComponent(() => import('./orders.vue')),
+  favorites: defineAsyncComponent({
+    loader: () => new Promise(resolve => resolve(MyFavorites)),
+    loadingComponent: ElSkeleton,
+    delay: 200,
+  }),
+  settings: defineAsyncComponent(() => import('./settings.vue')),
+  'org-info': defineAsyncComponent(() => import('./org-info.vue')),
+};
+
+// 当前显示的组件
+const currentComponent = computed(() => components[contentType.value]);
 
 // 用户信息
 const userInfo = ref({
@@ -30,19 +53,23 @@ const userInfo = ref({
 });
 
 // 菜单项
-const menuItems = [
-  { key: 'courses', label: '我的课程', icon: '📚', route: '/member/profile/courses' },
-  { key: 'orders', label: '订单记录', icon: '📋', route: '/member/profile/orders' },
-  { key: 'settings', label: '账号设置', icon: '⚙️', route: '/member/profile/settings' },
-];
+const menuItems = computed(() => {
+  const items = [
+    { key: 'courses', label: '我的课程', icon: '📚', route: '/member/profile/courses' },
+    { key: 'orders', label: '订单记录', icon: '📋', route: '/member/profile/orders' },
+    { key: 'favorites', label: '我的收藏', icon: '❤️', route: '/member/my-favorites' },
+    { key: 'settings', label: '账号设置', icon: '⚙️', route: '/member/profile/settings' },
+  ];
 
-const activeTab = computed(() => {
-  const path = route.path;
-  if (path.includes('/courses')) return 'courses';
-  if (path.includes('/orders')) return 'orders';
-  if (path.includes('/settings')) return 'settings';
-  return 'courses';
+  // 单位管理员可以看到单位信息
+  if (authStore.userInfo?.roles?.includes('org_admin')) {
+    items.splice(3, 0, { key: 'org-info', label: '单位信息', icon: '🏢', route: '/member/profile/org-info' });
+  }
+
+  return items;
 });
+
+const activeTab = computed(() => contentType.value);
 
 // 加载用户信息
 async function loadUserInfo() {
@@ -79,9 +106,9 @@ async function loadUserInfo() {
   }
 }
 
-// 导航到指定路由
-function handleNavigate(route: string) {
-  router.push(route);
+// 导航到指定内容类型
+function handleNavigate(type: ContentType) {
+  contentType.value = type;
 }
 
 // 退出登录
@@ -173,7 +200,7 @@ onMounted(() => {
               :key="item.key"
               class="quick-link"
               :class="{ active: activeTab === item.key }"
-              @click="handleNavigate(item.route)"
+              @click="handleNavigate(item.key as ContentType)"
             >
               <div class="link-icon">{{ item.icon }}</div>
               <div class="link-label">{{ item.label }}</div>
@@ -184,7 +211,11 @@ onMounted(() => {
 
       <!-- 子路由内容 -->
       <div class="content-area">
-        <router-view></router-view>
+        <component
+          :is="currentComponent"
+          v-if="currentComponent"
+          :embedded="contentType === 'favorites'"
+        />
       </div>
     </div>
   </div>
@@ -309,8 +340,12 @@ onMounted(() => {
 
 .links-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: $spacing-base;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .quick-link {

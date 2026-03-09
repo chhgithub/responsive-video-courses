@@ -52,10 +52,10 @@ async function handleSave() {
   }
 }
 
-// 切换发布状态
-function handleTogglePublish() {
-  emit('togglePublish');
-}
+// 切换发布状态（不再使用）
+// function handleTogglePublish() {
+//   emit('togglePublish');
+// }
 
 </script>
 
@@ -67,15 +67,6 @@ function handleTogglePublish() {
         <h3>{{ titleMap[subCategory] }}内容编辑</h3>
       </div>
       <div class="toolbar-right">
-        <el-tag :type="formData.isPublished ? 'success' : 'info'" size="large">
-          {{ formData.isPublished ? '已发布' : '草稿' }}
-        </el-tag>
-        <el-button
-          :type="formData.isPublished ? 'warning' : 'success'"
-          @click="handleTogglePublish"
-        >
-          {{ formData.isPublished ? '取消发布' : '发布' }}
-        </el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">
           保存
         </el-button>

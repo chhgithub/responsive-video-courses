@@ -70,22 +70,22 @@ async function handleSave(data: AboutUsInfo) {
   }
 }
 
-// 切换发布状态
-async function handleTogglePublish() {
-  if (!currentData.value) return;
-
-  try {
-    const result = await adminAboutUsApi.togglePublish(activeTab.value);
-    if (result && currentData.value) {
-      currentData.value.isPublished = !currentData.value.isPublished;
-      tabData.value[activeTab.value] = currentData.value;
-      ElMessage.success(currentData.value.isPublished ? '已发布' : '已取消发布');
-    }
-  } catch (error) {
-    console.error('操作失败:', error);
-    ElMessage.error('操作失败');
-  }
-}
+// 切换发布状态（不再使用）
+// async function handleTogglePublish() {
+//   if (!currentData.value) return;
+//
+//   try {
+//     const result = await adminAboutUsApi.togglePublish(activeTab.value);
+//     if (result && currentData.value) {
+//       currentData.value.isPublished = !currentData.value.isPublished;
+//       tabData.value[activeTab.value] = currentData.value;
+//       ElMessage.success(currentData.value.isPublished ? '已发布' : '已取消发布');
+//     }
+//   } catch (error) {
+//     console.error('操作失败:', error);
+//     ElMessage.error('操作失败');
+//   }
+// }
 
 onMounted(() => {
   loadAllData();
@@ -115,7 +115,6 @@ onMounted(() => {
             sub-category="research"
             :saving="saving"
             @save="handleSave"
-            @toggle-publish="handleTogglePublish"
           />
         </el-tab-pane>
 
@@ -133,7 +132,6 @@ onMounted(() => {
             sub-category="digital"
             :saving="saving"
             @save="handleSave"
-            @toggle-publish="handleTogglePublish"
           />
         </el-tab-pane>
 
@@ -151,7 +149,6 @@ onMounted(() => {
             sub-category="education"
             :saving="saving"
             @save="handleSave"
-            @toggle-publish="handleTogglePublish"
           />
         </el-tab-pane>
 
@@ -168,7 +165,6 @@ onMounted(() => {
             :data="currentData"
             :saving="saving"
             @save="handleSave"
-            @toggle-publish="handleTogglePublish"
           />
         </el-tab-pane>
       </el-tabs>

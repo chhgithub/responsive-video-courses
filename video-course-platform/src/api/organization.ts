@@ -25,8 +25,8 @@ export function getOrgStudents() {
 }
 
 /**
- * 获取本单位的激活码列表（只读）
- * @returns 本单位的所有激活码
+ * 获取本单位的兑换码列表（只读）
+ * @returns 本单位的所有兑换码
  */
 export function getOrgRedemptionCodes() {
   const allCodes = getAllRedemptionCodes();
@@ -34,8 +34,8 @@ export function getOrgRedemptionCodes() {
 }
 
 /**
- * 获取本单位的激活码使用记录
- * @returns 本单位的激活码使用记录
+ * 获取本单位的兑换码使用记录
+ * @returns 本单位的兑换码使用记录
  */
 export function getOrgRedemptionRecords() {
   const allRecords = getAllRedemptionRecords();
@@ -112,20 +112,20 @@ export function getOrgStudentDetail(userId: string) {
 }
 
 /**
- * 获取激活码的详细使用信息
- * @param codeId 激活码ID
- * @returns 激活码使用详情
+ * 获取兑换码的详细使用信息
+ * @param codeId 兑换码ID
+ * @returns 兑换码使用详情
  */
 export function getOrgCodeDetail(codeId: string) {
   const code = getAllRedemptionCodes().find(c => c.id === codeId);
   if (!code) {
-    throw new Error('激活码不存在');
+    throw new Error('兑换码不存在');
   }
 
-  // 检查激活码是否属于本单位
+  // 检查兑换码是否属于本单位
   const orgId = getCurrentOrgId();
   if (code.organizationId !== orgId) {
-    throw new Error('无权访问该激活码');
+    throw new Error('无权访问该兑换码');
   }
 
   // 获取使用记录
@@ -165,7 +165,7 @@ export function getOrgStatistics() {
       return access.length > 0;
     }).length,
 
-    // 激活码统计
+    // 兑换码统计
     totalCodes: codes.length,
     unusedCodes: codes.filter(c => c.status === 'unused').length,
     usedCodes: codes.filter(c => c.status === 'used').length,
@@ -207,9 +207,9 @@ export function searchOrgStudents(keyword: string) {
 }
 
 /**
- * 筛选本单位的激活码
+ * 筛选本单位的兑换码
  * @param status 状态
- * @returns 匹配的激活码列表
+ * @returns 匹配的兑换码列表
  */
 export function filterOrgCodes(status?: string) {
   const codes = getOrgRedemptionCodes();

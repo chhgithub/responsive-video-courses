@@ -325,10 +325,10 @@ function handleVideoUrlInput() {
         />
       </el-form-item>
 
-      <el-form-item label="分类" prop="category">
+      <el-form-item label="视频分类" prop="category">
         <el-select
           v-model="formData.category"
-          placeholder="请选择分类"
+          placeholder="请选择视频分类"
           filterable
           allow-create
           style="width: 100%"

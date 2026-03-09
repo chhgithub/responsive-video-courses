@@ -22,6 +22,35 @@ export function setupRouterGuard(router: Router) {
       // 已登录用户访问登录页，重定向到后台主页Banner配置
       next({ path: '/admin/home/banner' });
     } else {
+      // 获取用户角色
+      const roles = authStore.userInfo?.roles || [];
+
+      // 单位管理员专属页面权限检查
+      if (to.meta?.orgAdminOnly) {
+        if (!authStore.isLoggedIn) {
+          next({
+            path: '/login',
+            query: { redirect: to.fullPath },
+          });
+          return false;
+        }
+
+        if (!roles.includes('org_admin')) {
+          next({
+            path: '/portal',
+          });
+          return false;
+        }
+      }
+
+      // 管理员专属页面权限检查
+      if (to.meta?.adminOnly && !roles.includes('admin') && !roles.includes('org_admin')) {
+        next({
+          path: '/portal',
+        });
+        return false;
+      }
+
       next();
     }
   });

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { ElDrawer, ElMessage, ElMessageBox } from 'element-plus';
 import { getAllCourses, initCourseData, deleteCourse, updateCourseStatus, copyCourse, type Course } from '@/utils/course-storage';
 import CourseDrawer from './course-drawer.vue';
 import ChapterManager from './chapter-manager.vue';
@@ -46,6 +47,20 @@ const currentCourseForReview = ref<Course>();
 // 学员列表弹窗
 const showStudentList = ref(false);
 const currentCourseForStudent = ref<Course>();
+
+// 打开评价管理
+function openReviewDrawer(course: Course) {
+  currentCourseForReview.value = course;
+  showReviewList.value = true;
+}
+
+// 监听评价管理弹窗关闭，刷新课程数据
+watch(showReviewList, (val) => {
+  if (!val) {
+    currentCourseForReview.value = null;
+    loadCourses();
+  }
+});
 
 // 生成 Mock 课程数据
 function generateMockCourses(): Course[] {
@@ -367,6 +382,7 @@ onMounted(() => {
             <el-button link type="primary" size="small" @click="handleManageChapter(row)">章节</el-button>
             <el-button link type="primary" size="small" @click="handleCopyLink(row)">复制链接</el-button>
             <el-button link type="primary" size="small" @click="handleViewStudent(row)">学员</el-button>
+            <el-button link type="warning" size="small" @click="openReviewDrawer(row)">评价管理</el-button>
             <el-dropdown @command="(cmd) => handleMoreCommand(cmd, row)">
               <el-button link type="primary" size="small">
                 更多<el-icon><ArrowDown /></el-icon>

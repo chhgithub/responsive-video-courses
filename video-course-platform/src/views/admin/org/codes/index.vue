@@ -19,7 +19,7 @@ const statusMap = {
   expired: { text: '已过期', type: 'danger' },
 };
 
-// 加载激活码列表
+// 加载兑换码列表
 function loadCodes() {
   loading.value = true;
   try {
@@ -31,7 +31,7 @@ function loadCodes() {
   }
 }
 
-// 过滤激活码
+// 过滤兑换码
 const filteredCodes = computed(() => {
   return filterOrgCodes(selectedStatus.value);
 });
@@ -57,7 +57,7 @@ function getUserName(userId: string): string {
   return user?.nickname || user?.username || userId;
 }
 
-// 复制激活码
+// 复制兑换码
 function copyCode(code: string) {
   navigator.clipboard.writeText(code);
   ElMessage.success('已复制到剪贴板');
@@ -71,7 +71,7 @@ function exportCodes() {
 onMounted(() => {
   // 初始化默认单位数据（如果不存在）
   initializeDefaultOrganizations();
-  // 加载激活码列表
+  // 加载兑换码列表
   loadCodes();
 });
 </script>
@@ -79,7 +79,7 @@ onMounted(() => {
 <template>
   <div class="codes-page">
     <div class="page-header">
-      <h2>激活码管理</h2>
+      <h2>兑换码管理</h2>
       <!-- <div class="header-actions">
         <el-button @click="exportCodes">
           <el-icon><Download /></el-icon>
@@ -114,7 +114,7 @@ onMounted(() => {
       <el-card class="stat-card" shadow="hover">
         <div class="stat-content">
           <div class="stat-value">{{ statistics.totalCodes }}</div>
-          <div class="stat-label">总激活码</div>
+          <div class="stat-label">总兑换码</div>
         </div>
       </el-card>
       <el-card class="stat-card" shadow="hover">
@@ -137,10 +137,10 @@ onMounted(() => {
       </el-card>
     </div>
 
-    <!-- 激活码列表 -->
+    <!-- 兑换码列表 -->
     <el-card class="table-card" shadow="never">
       <el-table :data="filteredCodes" stripe>
-        <el-table-column label="激活码" width="180">
+        <el-table-column label="兑换码" width="180">
           <template #default="{ row }">
             <el-tag style="font-family: monospace;">{{ row.code }}</el-tag>
           </template>
@@ -190,15 +190,15 @@ onMounted(() => {
         </el-table-column>
       </el-table>
 
-      <el-empty v-if="!loading && filteredCodes.length === 0" description="暂无激活码">
+      <el-empty v-if="!loading && filteredCodes.length === 0" description="暂无兑换码">
         <el-button type="primary" @click="loadCodes">刷新</el-button>
       </el-empty>
     </el-card>
 
     <!-- 详情对话框 -->
-    <el-dialog v-model="detailDialogVisible" title="激活码详情" width="800px">
+    <el-dialog v-model="detailDialogVisible" title="兑换码详情" width="800px">
       <el-descriptions v-if="currentCode" :column="2" border>
-        <el-descriptions-item label="激活码">{{ currentCode.code }}</el-descriptions-item>
+        <el-descriptions-item label="兑换码">{{ currentCode.code }}</el-descriptions-item>
         <el-descriptions-item label="兑换内容">{{ currentCode.targetName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="类型">
           <el-tag :type="currentCode.targetType === 'package' ? 'warning' : 'primary'" size="small">

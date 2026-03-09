@@ -98,43 +98,9 @@ async function handleUpdateModule(moduleId: string, moduleData: any) {
         currentData.value.modules[index] = moduleData;
       }
     }
-    ElMessage.success('模块保存成功');
   } catch (error) {
     console.error('保存失败:', error);
     ElMessage.error('保存失败');
-  }
-}
-
-// 切换模块发布状态
-async function handleToggleModulePublish(moduleId: string) {
-  try {
-    await adminCertCenterApi.toggleModulePublish(activeTab.value, moduleId);
-    if (currentData.value) {
-      const module = currentData.value.modules.find(m => m.id === moduleId);
-      if (module) {
-        module.isPublished = !module.isPublished;
-      }
-    }
-    ElMessage.success('状态更新成功');
-  } catch (error) {
-    console.error('操作失败:', error);
-    ElMessage.error('操作失败');
-  }
-}
-
-// 切换认证项目发布状态
-async function handleToggleCertPublish() {
-  if (!currentData.value) return;
-
-  try {
-    await adminCertCenterApi.toggleCertPublish(activeTab.value);
-    if (currentData.value) {
-      currentData.value.isPublished = !currentData.value.isPublished;
-    }
-    ElMessage.success(currentData.value.isPublished ? '已发布' : '已取消发布');
-  } catch (error) {
-    console.error('操作失败:', error);
-    ElMessage.error('操作失败');
   }
 }
 
@@ -167,8 +133,6 @@ onMounted(() => {
             :module-title-map="moduleTitleMap"
             @update-cert="handleUpdateCert"
             @update-module="handleUpdateModule"
-            @toggle-module-publish="handleToggleModulePublish"
-            @toggle-cert-publish="handleToggleCertPublish"
           />
         </el-tab-pane>
 
@@ -187,8 +151,6 @@ onMounted(() => {
             :module-title-map="moduleTitleMap"
             @update-cert="handleUpdateCert"
             @update-module="handleUpdateModule"
-            @toggle-module-publish="handleToggleModulePublish"
-            @toggle-cert-publish="handleToggleCertPublish"
           />
         </el-tab-pane>
 
@@ -207,8 +169,6 @@ onMounted(() => {
             :module-title-map="moduleTitleMap"
             @update-cert="handleUpdateCert"
             @update-module="handleUpdateModule"
-            @toggle-module-publish="handleToggleModulePublish"
-            @toggle-cert-publish="handleToggleCertPublish"
           />
         </el-tab-pane>
 
@@ -227,8 +187,6 @@ onMounted(() => {
             :module-title-map="moduleTitleMap"
             @update-cert="handleUpdateCert"
             @update-module="handleUpdateModule"
-            @toggle-module-publish="handleToggleModulePublish"
-            @toggle-cert-publish="handleToggleCertPublish"
           />
         </el-tab-pane>
 
@@ -247,8 +205,6 @@ onMounted(() => {
             :module-title-map="moduleTitleMap"
             @update-cert="handleUpdateCert"
             @update-module="handleUpdateModule"
-            @toggle-module-publish="handleToggleModulePublish"
-            @toggle-cert-publish="handleToggleCertPublish"
           />
         </el-tab-pane>
       </el-tabs>
