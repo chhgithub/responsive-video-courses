@@ -215,10 +215,10 @@ onMounted(() => {
 
             <!-- 套餐标签 -->
             <div class="package-tags">
-              <el-tag type="success" v-if="pkg.isTrial">支持试学 {{ pkg.trialDays }}天</el-tag>
+              <!-- <el-tag type="success" v-if="pkg.isTrial">支持试学 {{ pkg.trialDays }}天</el-tag> -->
               <el-tag type="info">{{ pkg.courses.length }}门课程</el-tag>
               <el-tag>{{ pkg.enrollCount }}人购买</el-tag>
-              <el-tag type="warning">{{ pkg.rating }}分</el-tag>
+              <!-- <el-tag type="warning">{{ pkg.rating }}分</el-tag> -->
             </div>
 
             <!-- 价格信息 -->
