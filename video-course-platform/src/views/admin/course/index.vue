@@ -6,6 +6,7 @@ import CourseDrawer from './course-drawer.vue';
 import ChapterManager from './chapter-manager.vue';
 import ReviewList from './review-list.vue';
 import StudentList from './student-list.vue';
+import FeaturedModal from './featured-modal.vue';
 
 const loading = ref(false);
 const courses = ref<Course[]>([]);
@@ -17,6 +18,7 @@ const searchForm = ref({
   categoryId: undefined as number | undefined,
   teacherId: undefined as number | undefined,
   status: undefined as string | undefined,
+  isFeatured: undefined as boolean | undefined,
 });
 
 // 分页
@@ -47,6 +49,39 @@ const currentCourseForReview = ref<Course>();
 // 学员列表弹窗
 const showStudentList = ref(false);
 const currentCourseForStudent = ref<Course>();
+
+// 精选设置弹窗
+const showFeaturedModal = ref(false);
+const currentCourseForFeatured = ref<Course>();
+
+// 打开精选设置弹窗
+function openFeaturedModal(course: Course) {
+  currentCourseForFeatured.value = course;
+  showFeaturedModal.value = true;
+}
+
+// 取消精选
+function removeFeatured(course: Course) {
+  ElMessageBox.confirm(
+    `确认取消课程"${course.courseName}"的精选吗？`,
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      updateCourse(course.courseId, {
+        isFeatured: false,
+        featuredOrder: 0,
+        featuredReason: '',
+      });
+      ElMessage.success('已取消精选');
+      loadCourses();
+    })
+    .catch(() => {});
+}
 
 // 打开评价管理
 function openReviewDrawer(course: Course) {
@@ -80,6 +115,9 @@ async function loadCourses() {
     if (searchForm.value.status) {
       filtered = filtered.filter((c) => c.status === searchForm.value.status);
     }
+    if (searchForm.value.isFeatured !== undefined) {
+      filtered = filtered.filter((c) => c.isFeatured === searchForm.value.isFeatured);
+    }
 
     pagination.value.total = filtered.length;
 
@@ -103,6 +141,7 @@ function handleReset() {
     categoryId: undefined,
     teacherId: undefined,
     status: undefined,
+    isFeatured: undefined,
   };
   pagination.value.page = 1;
   loadCourses();
@@ -209,6 +248,17 @@ function handleDrawerSuccess() {
   loadCourses();
 }
 
+function handleFeaturedUpdate(updatedData: any) {
+  updateCourse(updatedData.courseId, {
+    isFeatured: updatedData.isFeatured,
+    featuredOrder: updatedData.featuredOrder,
+    featuredReason: updatedData.featuredReason,
+  });
+  ElMessage.success('精选设置已更新');
+  showFeaturedModal.value = false;
+  loadCourses();
+}
+
 function handleChapterSuccess() {
   showChapterManager.value = false;
   loadCourses();
@@ -304,6 +354,18 @@ onMounted(() => {
             <el-option label="已上架" value="published" />
           </el-select>
         </el-form-item>
+        <el-form-item label="精选状态">
+          <el-select
+            v-model="searchForm.isFeatured"
+            placeholder="请选择精选状态"
+            clearable
+            style="width: 120px"
+          >
+            <el-option label="全部" :value="undefined" />
+            <el-option label="精选课程" :value="true" />
+            <el-option label="普通课程" :value="false" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
@@ -376,8 +438,32 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column prop="isFeatured" label="精选状态" width="100">
           <template #default="{ row }">
+            <el-tag v-if="row.isFeatured" type="success">精选</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="!row.isFeatured"
+              link
+              type="primary"
+              size="small"
+              @click="openFeaturedModal(row)"
+            >
+              精选
+            </el-button>
+            <el-button
+              v-else
+              link
+              type="warning"
+              size="small"
+              @click="removeFeatured(row)"
+            >
+              取消精选
+            </el-button>
             <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button link type="primary" size="small" @click="handleManageChapter(row)">章节</el-button>
             <el-button link type="primary" size="small" @click="handleCopyLink(row)">复制链接</el-button>
@@ -447,6 +533,14 @@ onMounted(() => {
       v-model:visible="showStudentList"
       :course-id="currentCourseForStudent.courseId"
       :course-name="currentCourseForStudent.courseName"
+    />
+
+    <!-- 精选设置弹窗 -->
+    <FeaturedModal
+      v-if="currentCourseForFeatured"
+      :course="currentCourseForFeatured"
+      @update="handleFeaturedUpdate"
+      @close="showFeaturedModal = false"
     />
   </div>
 </template>

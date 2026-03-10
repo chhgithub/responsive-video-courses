@@ -8,6 +8,8 @@ import {
   getActiveHotTopics,
 } from '@/utils/news-storage';
 import { getPublishedCourses } from '@/utils/portal-course-adapter';
+import { getFeaturedCourses, courseSorter } from '@/utils/course-sort';
+import { getAllCourses } from '@/utils/course-storage';
 import type { PortalCourse } from '@/utils/portal-course-adapter';
 import { addConsultation } from '@/utils/consultation-storage';
 import { ElMessage } from 'element-plus';

@@ -82,6 +82,11 @@ export interface Course {
   rating: number;
   reviewCount: number;
   sortOrder: number;
+
+  // 精选课程相关字段
+  isFeatured?: boolean;      // 是否精选
+  featuredOrder?: number;    // 精选排序（无上限）
+  featuredReason?: string;   // 精选理由
 }
 
 // 课程评价接口
@@ -213,6 +218,9 @@ const defaultCourses: Course[] = [
     rating: 4.8,
     reviewCount: 128,
     sortOrder: 1,
+    isFeatured: true,
+    featuredOrder: 100,
+    featuredReason: 'Vue3课程内容优质，学员评价高，报名人数多'
   },
   {
     courseId: 2,
@@ -240,6 +248,9 @@ const defaultCourses: Course[] = [
     rating: 4.9,
     reviewCount: 256,
     sortOrder: 2,
+    isFeatured: true,
+    featuredOrder: 200,
+    featuredReason: 'React实战课程，最新React 18技术栈，实战项目丰富'
   },
   {
     courseId: 3,
@@ -267,6 +278,9 @@ const defaultCourses: Course[] = [
     rating: 4.7,
     reviewCount: 64,
     sortOrder: 3,
+    isFeatured: false,
+    featuredOrder: 0,
+    featuredReason: ''
   },
 ];
 

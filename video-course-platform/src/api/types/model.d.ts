@@ -59,6 +59,11 @@ export interface Course {
   createTime: string;
   updateTime?: string;
   chapters?: CourseChapter[];
+
+  // 精选课程相关字段
+  isFeatured?: boolean;      // 是否精选
+  featuredOrder?: number;    // 精选排序（无上限）
+  featuredReason?: string;   // 精选理由
 }
 
 // 课程章节

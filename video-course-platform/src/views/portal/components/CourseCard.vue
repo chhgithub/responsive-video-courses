@@ -43,7 +43,7 @@ function goToDetail() {
   <div class="course-card" @click="goToDetail">
     <div class="course-cover">
       <img :src="course.cover" :alt="course.title" />
-      <div v-if="discount" class="discount-badge">{{ discount }}</div>
+      <!-- <div v-if="discount" class="discount-badge">{{ discount }}</div> -->
     </div>
     <div class="course-info">
       <h3 class="course-title">{{ course.title }}</h3>

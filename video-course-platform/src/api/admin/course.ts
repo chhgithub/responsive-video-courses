@@ -4,6 +4,7 @@ import type { Course, CourseQuery, PageResult } from '../types';
 const Api = {
   courseList: '/admin/course/list',
   courseInfo: '/admin/course',
+  featured: '/admin/course/featured',
 };
 
 export const adminCourseApi = {
@@ -50,5 +51,19 @@ export const adminCourseApi = {
   // 获取讲师列表
   teacherList(): Promise<any[]> {
     return request.get('/admin/course/teacher-list');
+  },
+
+  // 更新精选设置
+  updateFeatured(courseId: string, data: {
+    isFeatured: boolean;
+    featuredOrder: number;
+    featuredReason?: string;
+  }): Promise<void> {
+    return request.put(`${Api.featured}/${courseId}`, data);
+  },
+
+  // 获取精选课程列表
+  getFeatured(limit = 4): Promise<Course[]> {
+    return request.get(Api.featured, { params: { limit } });
   },
 };
