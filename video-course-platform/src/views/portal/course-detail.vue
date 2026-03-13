@@ -307,7 +307,13 @@ function checkStatus() {
   if (!course.value) return;
 
   // 检查购买状态
-  isPurchased.value = checkPurchaseStatus(courseId);
+  const actualPurchased = checkPurchaseStatus(courseId);
+  // 原型模拟：
+  // Vue3 从入门到精通 (id=1) 设置为已购买
+  // React 实战开发 (id=2) 强制设置为未购买
+  isPurchased.value = courseId === '1' || (courseId !== '2' && actualPurchased);
+
+  console.log('课程状态 - courseId:', courseId, '实际购买:', actualPurchased, '最终状态:', isPurchased.value);
 
   // 检查收藏状态
   isFavorite.value = checkFavoriteStatus(courseId);
@@ -353,7 +359,28 @@ function formatDuration(seconds: number): string {
 }
 
 // 免费试听
-function onTrialClick(lesson: Lesson) {
+function onTrialClick(lesson?: Lesson) {
+  if (!lesson) {
+    // 如果传入的课时为空，从课程中查找第一个试听课
+    if (!course.value || !course.value.chapters.length) {
+      ElMessage.warning('暂无试听内容');
+      return;
+    }
+
+    for (const chapter of course.value.chapters) {
+      const trialLesson = chapter.lessons.find(l => l.isTrial || l.isFree);
+      if (trialLesson) {
+        lesson = trialLesson;
+        break;
+      }
+    }
+
+    if (!lesson) {
+      ElMessage.warning('暂无试听内容');
+      return;
+    }
+  }
+
   router.push(`/portal/course-learn/${courseId}?lessonId=${lesson.id}`);
 }
 
@@ -686,7 +713,7 @@ onMounted(() => {
                 </el-button>
 
                 <el-button
-                  v-else-if="course.trialLessonId"
+                  v-if="course.trialLessonId"
                   type="success"
                   :icon="VideoPlay"
                   @click="onTrialClick(course.chapters[0]?.lessons[0])"

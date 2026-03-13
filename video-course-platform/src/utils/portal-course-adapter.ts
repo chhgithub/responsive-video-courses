@@ -52,6 +52,24 @@ export interface PortalCourse {
 
 // 后台课程映射到前台课程
 function mapAdminCourseToPortal(adminCourse: AdminCourse): PortalCourse {
+  // 查找第一个试听课ID
+  let trialLessonId: string | undefined;
+  if (adminCourse.isTrial) {
+    // 优先使用 trialLessonIds
+    if (adminCourse.trialLessonIds.length > 0) {
+      trialLessonId = adminCourse.trialLessonIds[0];
+    } else {
+      // 如果 trialLessonIds 为空，从章节中查找第一个 isTrial: true 的课时
+      for (const chapter of adminCourse.chapters) {
+        const trialLesson = chapter.lessons.find(l => l.isTrial);
+        if (trialLesson) {
+          trialLessonId = trialLesson.lessonId;
+          break;
+        }
+      }
+    }
+  }
+
   return {
     // 基础字段映射
     id: String(adminCourse.courseId),
@@ -69,9 +87,7 @@ function mapAdminCourseToPortal(adminCourse: AdminCourse): PortalCourse {
     studentCount: adminCourse.enrollCount,
     price: adminCourse.price,
     isFree: adminCourse.isFree,
-    trialLessonId: adminCourse.isTrial && adminCourse.trialLessonIds.length > 0
-      ? adminCourse.trialLessonIds[0]
-      : undefined,
+    trialLessonId,
     ageRange: undefined, // 后台暂无年龄段字段
 
     // 后台完整数据

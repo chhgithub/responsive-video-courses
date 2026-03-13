@@ -224,7 +224,7 @@ onMounted(() => {
       <!-- 标签筛选 -->
       <el-card class="filter-card">
         <!-- 年龄标签 -->
-        <div class="filter-group">
+        <!-- <div class="filter-group">
           <span class="filter-label">年龄：</span>
           <el-button
             v-for="tag in ageTags"
@@ -236,7 +236,7 @@ onMounted(() => {
           >
             {{ tag }}
           </el-button>
-        </div>
+        </div> -->
 
         <!-- 分类标签 -->
         <div class="filter-group">

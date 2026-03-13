@@ -276,14 +276,14 @@ onMounted(() => {
                     下一课时
                     <el-icon><ArrowRight /></el-icon>
                   </el-button>
-                  <el-button
+                  <!-- <el-button
                     type="success"
                     :disabled="!currentLesson"
                     @click="handleMarkComplete"
                   >
                     <el-icon><Select /></el-icon>
                     标记完成
-                  </el-button>
+                  </el-button> -->
 
                   <!-- 写评价按钮 -->
                   <el-button

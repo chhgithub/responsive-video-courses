@@ -151,9 +151,9 @@ export function getAllOrders(forceInit = false): Order[] {
         userName: '测试用户',
         userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=test',
         userEmail: 'test@example.com',
-        courseId: '2',
+        courseId: '99',
         courseName: 'Vue3 组件化开发实战',
-        courseCover: 'https://picsum.photos/seed/course2/300/200',
+        courseCover: 'https://picsum.photos/seed/course99/300/200',
         price: 299,
         originalPrice: 399,
         status: 'paid',
@@ -212,9 +212,9 @@ export function getAllOrders(forceInit = false): Order[] {
             originalPrice: 199,
           },
           {
-            courseId: 2,
+            courseId: 99,
             courseName: 'Vue3 组件化开发实战',
-            courseCover: 'https://picsum.photos/seed/course2/300/200',
+            courseCover: 'https://picsum.photos/seed/course99/300/200',
             originalPrice: 299,
           },
           {
@@ -449,9 +449,9 @@ export function getAllOrders(forceInit = false): Order[] {
             originalPrice: 199,
           },
           {
-            courseId: 2,
+            courseId: 99,
             courseName: 'Vue3 组件化开发实战',
-            courseCover: 'https://picsum.photos/seed/course2/300/200',
+            courseCover: 'https://picsum.photos/seed/course99/300/200',
             originalPrice: 299,
           },
           {
