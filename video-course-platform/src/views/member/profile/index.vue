@@ -165,7 +165,7 @@ onMounted(() => {
           </div>
 
           <!-- 统计数据 -->
-          <div class="stats-section">
+          <!-- <div class="stats-section">
             <div class="stat-item">
               <div class="stat-icon">📚</div>
               <div class="stat-content">
@@ -187,7 +187,7 @@ onMounted(() => {
                 <div class="stat-label">学习时长</div>
               </div>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
 

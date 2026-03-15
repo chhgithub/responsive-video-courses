@@ -28,6 +28,8 @@ const formData = ref({
   videoType: 'upload' as 'upload' | 'library' | 'third-party',
   videoId: '',
   videoUrl: '',
+  videoDescription: '',
+  videoCategory: '',
   duration: 0,
   isFree: false,
   isTrial: false,
@@ -35,6 +37,18 @@ const formData = ref({
 
 // 视频列表
 const videoList = ref(getAllVideos());
+
+// 视频分类选项
+const categoryOptions = [
+  '前端开发',
+  '后端开发',
+  '人工智能',
+  '数据科学',
+  '产品设计',
+  '移动开发',
+  '云计算',
+  '其他',
+];
 
 // 上传文件列表
 const videoFileList = ref<UploadUserFile[]>([]);
@@ -73,6 +87,8 @@ watch(
             videoType: 'upload',
             videoId: 'v1',
             videoUrl: '',
+            videoDescription: '这是课时视频的描述',
+            videoCategory: '前端开发',
             duration: 1800,
             isFree: false,
             isTrial: true,
@@ -95,6 +111,8 @@ function resetForm() {
     videoType: 'upload',
     videoId: '',
     videoUrl: '',
+    videoDescription: '',
+    videoCategory: '',
     duration: 0,
     isFree: false,
     isTrial: false,
@@ -286,6 +304,36 @@ watch(() => formData.value.videoType, () => {
           />
         </el-form-item>
       </template>
+
+      <!-- 视频描述 -->
+      <el-form-item label="视频描述" prop="videoDescription">
+        <el-input
+          v-model="formData.videoDescription"
+          type="textarea"
+          :rows="3"
+          placeholder="请输入视频描述"
+          maxlength="500"
+          show-word-limit
+        />
+      </el-form-item>
+
+      <!-- 视频分类 -->
+      <el-form-item label="视频分类" prop="videoCategory">
+        <el-select
+          v-model="formData.videoCategory"
+          placeholder="请选择视频分类"
+          filterable
+          allow-create
+          style="width: 100%"
+        >
+          <el-option
+            v-for="cat in categoryOptions"
+            :key="cat"
+            :label="cat"
+            :value="cat"
+          />
+        </el-select>
+      </el-form-item>
 
       <!-- 学习时长 -->
       <el-form-item label="学习时长" prop="duration">

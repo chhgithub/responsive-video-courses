@@ -177,10 +177,10 @@ watch(
           <div class="stat-number">{{ statistics.completed }}</div>
           <div class="stat-label">已完成</div>
         </div>
-        <div class="stat-card">
+        <!-- <div class="stat-card">
           <div class="stat-number">{{ statistics.avgProgress }}%</div>
           <div class="stat-label">平均进度</div>
-        </div>
+        </div> -->
       </div>
 
       <!-- 筛选栏 -->
@@ -367,7 +367,7 @@ watch(
 .student-list {
   .statistics-cards {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: $spacing-base;
     margin-bottom: $spacing-large;
 

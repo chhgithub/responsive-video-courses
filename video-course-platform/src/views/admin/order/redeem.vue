@@ -418,14 +418,14 @@ onMounted(() => {
             <el-button link type="info" size="small" @click="handleAddNote(row)">
               备注
             </el-button>
-            <el-button
+            <!-- <el-button
               v-if="row.status === 'completed'"
               link
               type="danger"
               size="small"
             >
               取消订单
-            </el-button>
+            </el-button> -->
           </template>
         </el-table-column>
       </el-table>

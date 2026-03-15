@@ -79,8 +79,7 @@ function mapAdminCourseToPortal(adminCourse: AdminCourse): PortalCourse {
     category: adminCourse.categoryName,
     tags: [
       adminCourse.difficulty === 'beginner' ? '入门' :
-      adminCourse.difficulty === 'intermediate' ? '进阶' :
-      adminCourse.difficulty === 'advanced' ? '高级' : adminCourse.difficulty,
+      adminCourse.difficulty === 'advanced' ? '高级' : '',
       adminCourse.courseType === 'paid' ? '付费' : '免费',
     ].filter(Boolean),
     rating: adminCourse.rating,
